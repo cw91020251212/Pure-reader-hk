@@ -8,22 +8,6 @@
     <meta property="og:title" content="PureRead HK｜純淨閱讀器">
     <meta property="og:description" content="純淨閱讀、文章整理與文字朗讀工具。">
     <meta property="og:type" content="website">
-    <link rel="icon" href="./favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png">
-    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
-    <link rel="manifest" href="./manifest.json">
-    
-    <!-- PWA：註冊 Service Worker（GitHub Pages / Chrome 安裝需要） -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then((reg) => console.log('[PureRead HK] SW registered:', reg.scope))
-            .catch((err) => console.warn('[PureRead HK] SW registration failed:', err));
-        });
-      }
-    </script>
     <title>PureRead HK｜純淨閱讀器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -48,9 +32,10 @@
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* 刪除模式 CSS */
         .delete-mode-active * { cursor: crosshair !important; }
         .delete-target-hover { outline: 2px dashed #ef4444 !important; background-color: rgba(239, 68, 68, 0.05) !important; border-radius: 4px; opacity: 0.8; }
-        .selected-for-deletion { background-color: #fef08a !important; outline: 2px solid #eab308 !important; border-radius: 4px; opacity: 1 !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .selected-for-deletion { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
         
         .util-copy-btn { user-select: none; }
         
@@ -68,9 +53,10 @@
         .panel-row { display: flex; justify-content: space-between; align-items: center; }
         .panel-label { font-size: 14px; font-weight: bold; color: #581c87; white-space: nowrap; }
         .btn-group { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
+        
         .action-btn { background: #f3e8ff; border: none; border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
         .action-btn:hover { background: #e9d5ff; }
-        .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 12px; font-size: 13px; }
+        .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px; }
         
         .tts-btn { background: #9333ea; color: white; border: none; border-radius: 8px; padding: 0 16px; height: 36px; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px; }
         .tts-btn:hover { background: #7e22ce; }
@@ -110,7 +96,7 @@
                 </button>
             </div>
             
-            <p class="text-slate-600 font-medium text-sm mb-6">實體檔案將支援「同段暫停」、「高光標示」與「強制開關」功能。</p>
+            <p class="text-slate-600 font-medium text-sm mb-6">實體檔案將支援「同段暫停」、「高光標示」、「強制開關」及「浮動垃圾桶」功能。</p>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <input type="url" id="urlInput" placeholder="請貼上完整網址..." data-title="第一步：輸入網址" data-intro="喺度貼上你想淨化或朗讀嘅文章連結。" class="flex-1 px-4 py-3 rounded-xl border border-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-600 outline-none transition-all text-slate-800 placeholder-slate-500 font-medium">
@@ -154,9 +140,19 @@
     <div class="fab-container">
         <button class="fab-toggle" onclick="toggleReaderControls()" title="開啟/關閉設定">⚙️</button>
         <div class="control-panel collapsed" id="readerControls">
+            
+            <!-- 新增：浮動垃圾桶與刪除模式 -->
+            <div class="panel-row">
+                <span class="panel-label">🗑️ 整理文章</span>
+                <div class="btn-group">
+                    <button id="panelToggleDeleteBtn" class="action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300" onclick="toggleDeleteMode()">🔲 點選</button>
+                    <button id="panelExecuteDeleteBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 hidden" onclick="executeDelete()">🗑️ 刪除</button>
+                </div>
+            </div>
+            <div style="height: 1px; background: rgba(216, 180, 254, 0.4); margin: 4px 0;"></div>
+
             <div class="panel-row">
                 <span class="panel-label">操控模式</span>
-                <!-- 改用紅綠燈開關設計，一目了然 -->
                 <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 點讀：開</button>
             </div>
             <div class="panel-row">
@@ -181,7 +177,6 @@
             </div>
             <div class="panel-row" style="margin-top: 4px;">
                 <button id="exportTtsBtn" class="tts-btn" onclick="toggleExportTts()">▶️ 開始朗讀</button>
-                <!-- 加入明確的停止按鈕 -->
                 <button class="action-btn stop-btn" onclick="stopExportTts()">⏹️ 停止</button>
             </div>
         </div>
@@ -314,27 +309,70 @@
             document.getElementById('errorMessage').classList.remove('hidden');
         }
 
+        // ================= 強化版：垃圾桶與刪除邏輯 =================
         function toggleDeleteMode() {
-            const btn = document.getElementById('toggleDeleteBtn');
             isDeleteMode = !isDeleteMode;
+            
+            const topBtn = document.getElementById('toggleDeleteBtn');
+            const panelBtn = document.getElementById('panelToggleDeleteBtn');
+            const executeBtn = document.getElementById('panelExecuteDeleteBtn');
+            
             if (isDeleteMode) {
-                btn.innerHTML = '✅ 退出刪除';
-                btn.classList.replace('bg-red-50', 'bg-red-600');
-                btn.classList.replace('text-red-600', 'text-white');
+                // UI 狀態：開啟
+                if(topBtn) {
+                    topBtn.innerHTML = '✅ 退出刪除';
+                    topBtn.classList.replace('bg-red-50', 'bg-red-600');
+                    topBtn.classList.replace('text-red-600', 'text-white');
+                }
+                if(panelBtn) {
+                    panelBtn.innerHTML = '✅ 退出';
+                    panelBtn.className = 'action-btn wide bg-red-600 text-white hover:bg-red-700';
+                }
+                if(executeBtn) executeBtn.classList.remove('hidden'); // 顯示執行刪除掣
+                
                 contentArea.classList.add('delete-mode-active');
                 contentArea.addEventListener('mouseover', highlightElement);
                 contentArea.addEventListener('mouseout', unhighlightElement);
                 contentArea.addEventListener('click', toggleSelection);
+                
+                // 開啟刪除模式時，自動停止朗讀，避免衝突
+                if(isPlaying) stopExportTts();
+                
             } else {
-                btn.innerHTML = '🗑️ 開啟刪除';
-                btn.classList.replace('bg-red-600', 'bg-red-50');
-                btn.classList.replace('text-white', 'text-red-600');
+                // UI 狀態：關閉
+                if(topBtn) {
+                    topBtn.innerHTML = '🗑️ 開啟刪除';
+                    topBtn.classList.replace('bg-red-600', 'bg-red-50');
+                    topBtn.classList.replace('text-white', 'text-red-600');
+                }
+                if(panelBtn) {
+                    panelBtn.innerHTML = '🔲 點選';
+                    panelBtn.className = 'action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300';
+                }
+                if(executeBtn) executeBtn.classList.add('hidden'); // 隱藏執行刪除掣
+                
                 contentArea.classList.remove('delete-mode-active');
                 contentArea.removeEventListener('mouseover', highlightElement);
                 contentArea.removeEventListener('mouseout', unhighlightElement);
                 contentArea.removeEventListener('click', toggleSelection);
+                
                 contentArea.querySelectorAll('.delete-target-hover').forEach(el => el.classList.remove('delete-target-hover'));
+                contentArea.querySelectorAll('.selected-for-deletion').forEach(el => el.classList.remove('selected-for-deletion'));
+                selectedElements.clear();
             }
+        }
+
+        function executeDelete() {
+            if (selectedElements.size > 0) {
+                selectedElements.forEach(el => el.remove());
+                selectedElements.clear();
+            }
+            // 執行完刪除，自動退出模式，還原介面
+            if (isDeleteMode) {
+                toggleDeleteMode();
+            }
+            // 由於 DOM 已經改變，重新綁定 TTS
+            prepareTTS();
         }
 
         function highlightElement(e) { if (e.target === contentArea || selectedElements.has(e.target) || e.target.closest('.util-copy-btn')) return; e.target.classList.add('delete-target-hover'); }
@@ -355,15 +393,13 @@
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
-            const isOn = document.body.dataset.clickRead !== 'off'; // 檢查現時狀態
+            const isOn = document.body.dataset.clickRead !== 'off'; 
             
             if(isOn) {
-                // 關閉點讀模式
                 document.body.dataset.clickRead = 'off';
                 btn.innerHTML = '🔴 點讀：關';
                 btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200';
             } else {
-                // 開啟點讀模式
                 document.body.dataset.clickRead = 'on';
                 btn.innerHTML = '🟢 點讀：開';
                 btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200';
@@ -602,15 +638,17 @@
         h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; }
         h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; }
         
+        /* 刪除模式與互動 CSS */
         .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; font-size: var(--base-font-size); margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
         
-        /* 只有在開啟點讀模式時，才有互動效果 */
+        .delete-mode-active * { cursor: crosshair !important; }
+        .delete-target-hover { outline: 2px dashed #ef4444 !important; background-color: rgba(239, 68, 68, 0.05) !important; border-radius: 4px; opacity: 0.8; }
+        .selected-for-deletion { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
+        
         [data-click-read="on"] .readable-item { cursor: pointer; }
         [data-click-read="on"] .readable-item:hover { background-color: #f1f5f9; box-shadow: inset 3px 0 0 #d8b4fe; }
         
-        /* 正常朗讀高光：紫色實線 */
         .reading-highlight { background-color: #f3e8ff !important; border: 2px solid #e9d5ff !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
-        /* 暫停高光：黃色虛線 */
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
         
         img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; }
@@ -632,7 +670,8 @@
         .btn-group { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
         .action-btn { background: #f3e8ff; border: none; border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
         .action-btn:hover { background: #e9d5ff; }
-        .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 12px; font-size: 13px; }
+        .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px; }
+        .hidden { display: none !important; }
         
         .tts-btn { background: #9333ea; color: white; border: none; border-radius: 8px; padding: 0 16px; height: 36px; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px; }
         .tts-btn:hover { background: #7e22ce; }
@@ -647,6 +686,16 @@
     <div class="fab-container">
         <button class="fab-toggle" onclick="toggleReaderControls()" title="設定">⚙️</button>
         <div class="control-panel collapsed" id="readerControls">
+            
+            <div class="panel-row">
+                <span class="panel-label">🗑️ 整理文章</span>
+                <div class="btn-group">
+                    <button id="panelToggleDeleteBtn" class="action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300" onclick="toggleDeleteMode()">🔲 點選</button>
+                    <button id="panelExecuteDeleteBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 hidden" onclick="executeDelete()">🗑️ 刪除</button>
+                </div>
+            </div>
+            <div style="height: 1px; background: rgba(216, 180, 254, 0.4); margin: 4px 0;"></div>
+
             <div class="panel-row">
                 <span class="panel-label">操控模式</span>
                 <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 點讀：開</button>
@@ -683,11 +732,69 @@
     </div>
 
     <script>
+        let isDeleteMode = false;
+        let selectedElements = new Set();
+        const contentArea = document.getElementById('content-wrapper');
+
         function toggleReaderControls() {
             const controls = document.getElementById('readerControls');
             controls.classList.toggle('collapsed');
         }
         
+        function toggleDeleteMode() {
+            isDeleteMode = !isDeleteMode;
+            const panelBtn = document.getElementById('panelToggleDeleteBtn');
+            const executeBtn = document.getElementById('panelExecuteDeleteBtn');
+            
+            if (isDeleteMode) {
+                if(panelBtn) {
+                    panelBtn.innerHTML = '✅ 退出';
+                    panelBtn.className = 'action-btn wide bg-red-600 text-white hover:bg-red-700';
+                }
+                if(executeBtn) executeBtn.classList.remove('hidden');
+                
+                contentArea.classList.add('delete-mode-active');
+                contentArea.addEventListener('mouseover', highlightElement);
+                contentArea.addEventListener('mouseout', unhighlightElement);
+                contentArea.addEventListener('click', toggleSelection);
+                if(isPlaying) stopExportTts();
+            } else {
+                if(panelBtn) {
+                    panelBtn.innerHTML = '🔲 點選';
+                    panelBtn.className = 'action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300';
+                }
+                if(executeBtn) executeBtn.classList.add('hidden');
+                
+                contentArea.classList.remove('delete-mode-active');
+                contentArea.removeEventListener('mouseover', highlightElement);
+                contentArea.removeEventListener('mouseout', unhighlightElement);
+                contentArea.removeEventListener('click', toggleSelection);
+                
+                contentArea.querySelectorAll('.delete-target-hover').forEach(el => el.classList.remove('delete-target-hover'));
+                contentArea.querySelectorAll('.selected-for-deletion').forEach(el => el.classList.remove('selected-for-deletion'));
+                selectedElements.clear();
+            }
+        }
+
+        function executeDelete() {
+            if (selectedElements.size > 0) {
+                selectedElements.forEach(el => el.remove());
+                selectedElements.clear();
+            }
+            if (isDeleteMode) toggleDeleteMode();
+            prepareTTS();
+        }
+
+        function highlightElement(e) { if (e.target === contentArea || selectedElements.has(e.target) || e.target.closest('.util-copy-btn')) return; e.target.classList.add('delete-target-hover'); }
+        function unhighlightElement(e) { if (e.target === contentArea) return; e.target.classList.remove('delete-target-hover'); }
+        function toggleSelection(e) {
+            if (!isDeleteMode || e.target === contentArea || e.target.closest('.util-copy-btn')) return;
+            e.preventDefault(); e.stopPropagation(); 
+            const el = e.target;
+            if (selectedElements.has(el)) { selectedElements.delete(el); el.classList.remove('selected-for-deletion'); } 
+            else { selectedElements.add(el); el.classList.remove('delete-target-hover'); el.classList.add('selected-for-deletion'); }
+        }
+
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
             const isOn = document.body.dataset.clickRead !== 'off';
@@ -832,7 +939,7 @@
                     newEl.addEventListener('click', (e) => {
                         if(e.target.tagName === 'A') return; 
                         
-                        if (document.body.dataset.clickRead === 'off') return; 
+                        if (document.body.dataset.clickRead === 'off' || isDeleteMode) return; 
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
@@ -933,6 +1040,4 @@
     </script>
 </body>
 </html>
-
-
 
