@@ -8,6 +8,22 @@
     <meta property="og:title" content="PureRead HK｜純淨閱讀器">
     <meta property="og:description" content="純淨閱讀、文章整理與文字朗讀工具。">
     <meta property="og:type" content="website">
+    <link rel="icon" href="./favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png">
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- PWA：註冊 Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('[PureRead HK] SW registered:', reg.scope))
+            .catch((err) => console.warn('[PureRead HK] SW registration failed:', err));
+        });
+      }
+    </script>
     <title>PureRead HK｜純淨閱讀器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -34,6 +50,8 @@
 
         /* 刪除模式 CSS */
         .delete-mode-active * { cursor: crosshair !important; }
+        .delete-mode-active a { pointer-events: none !important; cursor: crosshair !important; text-decoration: none !important; }
+        
         .delete-target-hover { outline: 2px dashed #ef4444 !important; background-color: rgba(239, 68, 68, 0.05) !important; border-radius: 4px; opacity: 0.8; }
         .selected-for-deletion { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
         
@@ -67,13 +85,10 @@
         
         .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; font-size: var(--base-font-size); margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
         
-        /* 只有在開啟點讀模式時，才有互動效果 */
         [data-click-read="on"] .readable-item { cursor: pointer; }
         [data-click-read="on"] .readable-item:hover { background-color: #f1f5f9; box-shadow: inset 3px 0 0 #d8b4fe; }
         
-        /* 正常朗讀高光：紫色實線 */
         .reading-highlight { background-color: #f3e8ff !important; border: 2px solid #e9d5ff !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
-        /* 暫停高光：黃色虛線 */
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
     </style>
 </head>
@@ -96,7 +111,7 @@
                 </button>
             </div>
             
-            <p class="text-slate-600 font-medium text-sm mb-6">實體檔案將支援「同段暫停」、「高光標示」、「強制開關」及「浮動垃圾桶」功能。</p>
+            <p class="text-slate-600 font-medium text-sm mb-6">實體檔案將支援「同段暫停」、「強制開關」及「連續點擊刪除」功能。</p>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <input type="url" id="urlInput" placeholder="請貼上完整網址..." data-title="第一步：輸入網址" data-intro="喺度貼上你想淨化或朗讀嘅文章連結。" class="flex-1 px-4 py-3 rounded-xl border border-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-600 outline-none transition-all text-slate-800 placeholder-slate-500 font-medium">
@@ -116,13 +131,21 @@
         <div id="articleContainer" class="bg-white rounded-2xl shadow-sm p-6 sm:p-10 border border-slate-300 hidden relative overflow-hidden">
             <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 pb-6 border-b border-slate-200 gap-4">
                 <h2 class="text-lg font-bold text-slate-500 whitespace-nowrap">提取結果 (編輯區)</h2>
-                <div class="flex flex-wrap gap-2 w-full xl:w-auto">
-                    <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：開啟刪除" data-intro="如有需要，開啟「刪除模式」點擊刪走唔要嘅段落。" class="flex-1 sm:flex-none bg-red-50 hover:bg-red-100 text-red-700 font-bold px-4 py-3 rounded-xl border border-red-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
-                        <span>🗑️ 開啟刪除</span>
+                
+                <!-- 【修復揮春排版】：改用 flex-col sm:flex-row 確保手機橫向佔滿不換行斷字 -->
+                <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                    <!-- 清理開關按鈕 (不使用垃圾桶圖示) -->
+                    <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <span id="toggleDeleteText">🧹 開始清理</span>
                     </button>
-                    <button id="downloadBtn" onclick="downloadHTML()" data-title="最後一步：生成實體檔案" data-intro="生成獨立檔案。入面會有全新分層卡片設定同真聲切換功能！" class="flex-1 sm:flex-none bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-4 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                    <!-- 執行刪除按鈕 (真正的垃圾桶) -->
+                    <button id="executeDeleteBtn" onclick="executeDelete()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl border border-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm hidden">
+                        <span>✂️ 刪除所選</span>
+                    </button>
+                    <!-- 下載按鈕 -->
+                    <button id="downloadBtn" onclick="downloadHTML()" data-title="最後一步：儲存檔案" data-intro="生成獨立檔案。入面會有全新設定同真聲切換功能！" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        生成實體檔案
+                        <span>儲存檔案</span>
                     </button>
                 </div>
             </div>
@@ -136,21 +159,10 @@
         </footer>
     </div>
 
-    <!-- 全新分層卡片式控制面板 -->
+    <!-- 浮動設定面板 (已經徹底剷走假垃圾桶) -->
     <div class="fab-container">
-        <button class="fab-toggle" onclick="toggleReaderControls()" title="開啟/關閉設定">⚙️</button>
+        <button class="fab-toggle" onclick="toggleReaderControls()" title="設定">⚙️</button>
         <div class="control-panel collapsed" id="readerControls">
-            
-            <!-- 新增：浮動垃圾桶與刪除模式 -->
-            <div class="panel-row">
-                <span class="panel-label">🗑️ 整理文章</span>
-                <div class="btn-group">
-                    <button id="panelToggleDeleteBtn" class="action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300" onclick="toggleDeleteMode()">🔲 點選</button>
-                    <button id="panelExecuteDeleteBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 hidden" onclick="executeDelete()">🗑️ 刪除</button>
-                </div>
-            </div>
-            <div style="height: 1px; background: rgba(216, 180, 254, 0.4); margin: 4px 0;"></div>
-
             <div class="panel-row">
                 <span class="panel-label">操控模式</span>
                 <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 點讀：開</button>
@@ -158,8 +170,8 @@
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
                 <div class="btn-group">
-                    <button class="action-btn" onclick="adjustSize(-2)">A-</button>
-                    <button class="action-btn" onclick="adjustSize(2)">A+</button>
+                    <button class="action-btn" onclick="adjustSize(-2)" title="縮細文字">A-</button>
+                    <button class="action-btn" onclick="adjustSize(2)" title="放大文字">A+</button>
                 </div>
             </div>
             <div class="panel-row">
@@ -169,20 +181,32 @@
             <div class="panel-row">
                 <span class="panel-label">語速調整</span>
                 <select id="rateSelect" class="custom-select" onchange="changeRate()">
-                    <option value="0.75">慢速</option>
-                    <option value="1.0" selected>正常</option>
-                    <option value="1.25">稍快</option>
-                    <option value="1.5">極快</option>
+                    <option value="0.75">慢速 0.75x</option>
+                    <option value="1.0" selected>正常 1.00x</option>
+                    <option value="1.25">稍快 1.25x</option>
+                    <option value="1.5">極快 1.50x</option>
                 </select>
             </div>
             <div class="panel-row" style="margin-top: 4px;">
                 <button id="exportTtsBtn" class="tts-btn" onclick="toggleExportTts()">▶️ 開始朗讀</button>
-                <button class="action-btn stop-btn" onclick="stopExportTts()">⏹️ 停止</button>
+                <button class="action-btn stop-btn" onclick="stopExportTts()" title="停止朗讀">⏹️ 停止</button>
             </div>
         </div>
     </div>
 
     <script>
+        // 【核心防護：SafeStorage】防止手機本地檔案無法存取 localStorage 導致死機
+        const SafeStorage = {
+            get: function(key) {
+                try { return window.localStorage.getItem(key); } 
+                catch(e) { return null; }
+            },
+            set: function(key, val) {
+                try { window.localStorage.setItem(key, val); } 
+                catch(e) { console.warn("Local storage disabled."); }
+            }
+        };
+
         let articleTitle = "純淨文章";
         let isDeleteMode = false;
         let selectedElements = new Set();
@@ -194,17 +218,17 @@
                 steps: [
                     { element: document.querySelector('#urlInput'), intro: '第一步：喺度貼上你想淨化嘅文章連結。' },
                     { element: document.querySelector('#fetchBtn'), intro: '第二步：撳呢度過濾廣告。' },
-                    { element: document.querySelector('#uploadBtn'), intro: '或者：如果有現成檔案，直接上傳。' },
-                    { element: document.querySelector('#toggleDeleteBtn'), intro: '第三步：如果仲有多餘內容，可以開啟「刪除模式」手動點擊刪除。' },
-                    { element: document.querySelector('#downloadBtn'), intro: '最後一步：生成實體檔案！' }
+                    { element: document.querySelector('#toggleDeleteBtn'), intro: '第三步：需要刪除多餘內容時，撳呢度開啟連續清理模式。' },
+                    { element: document.querySelector('.fab-container'), intro: '第四步：打開右下角設定，可以調整朗讀與文字大小。' },
+                    { element: document.querySelector('#downloadBtn'), intro: '最後一步：儲存獨立檔案！' }
                 ]
             }).start();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
-            if(!localStorage.getItem('tutorialSeen')) {
-                setTimeout(() => { startTutorial(); localStorage.setItem('tutorialSeen', 'true'); }, 500);
+            if(!SafeStorage.get('tutorialSeen_v6')) {
+                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
         });
 
@@ -309,47 +333,40 @@
             document.getElementById('errorMessage').classList.remove('hidden');
         }
 
-        // ================= 強化版：垃圾桶與刪除邏輯 =================
+        // ================= 強化版：連續點擊刪除邏輯 =================
+        function getValidTarget(el) {
+            if (el === contentArea || el.closest('.util-copy-btn')) return null;
+            const readable = el.closest('.readable-item') || el;
+            if (contentArea.contains(readable)) return readable;
+            return null;
+        }
+
         function toggleDeleteMode() {
             isDeleteMode = !isDeleteMode;
-            
-            const topBtn = document.getElementById('toggleDeleteBtn');
-            const panelBtn = document.getElementById('panelToggleDeleteBtn');
-            const executeBtn = document.getElementById('panelExecuteDeleteBtn');
+            const toggleText = document.getElementById('toggleDeleteText');
+            const toggleBtn = document.getElementById('toggleDeleteBtn');
+            const executeBtn = document.getElementById('executeDeleteBtn');
             
             if (isDeleteMode) {
-                // UI 狀態：開啟
-                if(topBtn) {
-                    topBtn.innerHTML = '✅ 退出刪除';
-                    topBtn.classList.replace('bg-red-50', 'bg-red-600');
-                    topBtn.classList.replace('text-red-600', 'text-white');
+                if(toggleText) toggleText.innerText = '✅ 完成清理';
+                if(toggleBtn) toggleBtn.className = 'w-full sm:w-auto bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-5 py-3 rounded-xl border border-indigo-300 transition-colors flex items-center justify-center gap-2 shadow-sm';
+                
+                if(executeBtn) {
+                    if (selectedElements.size > 0) executeBtn.classList.remove('hidden');
+                    else executeBtn.classList.add('hidden');
                 }
-                if(panelBtn) {
-                    panelBtn.innerHTML = '✅ 退出';
-                    panelBtn.className = 'action-btn wide bg-red-600 text-white hover:bg-red-700';
-                }
-                if(executeBtn) executeBtn.classList.remove('hidden'); // 顯示執行刪除掣
                 
                 contentArea.classList.add('delete-mode-active');
                 contentArea.addEventListener('mouseover', highlightElement);
                 contentArea.addEventListener('mouseout', unhighlightElement);
                 contentArea.addEventListener('click', toggleSelection);
-                
-                // 開啟刪除模式時，自動停止朗讀，避免衝突
+
                 if(isPlaying) stopExportTts();
-                
             } else {
-                // UI 狀態：關閉
-                if(topBtn) {
-                    topBtn.innerHTML = '🗑️ 開啟刪除';
-                    topBtn.classList.replace('bg-red-600', 'bg-red-50');
-                    topBtn.classList.replace('text-white', 'text-red-600');
-                }
-                if(panelBtn) {
-                    panelBtn.innerHTML = '🔲 點選';
-                    panelBtn.className = 'action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300';
-                }
-                if(executeBtn) executeBtn.classList.add('hidden'); // 隱藏執行刪除掣
+                if(toggleText) toggleText.innerText = '🧹 開始清理';
+                if(toggleBtn) toggleBtn.className = 'w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm';
+                
+                if(executeBtn) executeBtn.classList.add('hidden');
                 
                 contentArea.classList.remove('delete-mode-active');
                 contentArea.removeEventListener('mouseover', highlightElement);
@@ -367,22 +384,54 @@
                 selectedElements.forEach(el => el.remove());
                 selectedElements.clear();
             }
-            // 執行完刪除，自動退出模式，還原介面
-            if (isDeleteMode) {
-                toggleDeleteMode();
-            }
-            // 由於 DOM 已經改變，重新綁定 TTS
-            prepareTTS();
+            // 執行後不再自動退出，讓用家可以繼續刪除
+            const executeBtn = document.getElementById('executeDeleteBtn');
+            if(executeBtn) executeBtn.classList.add('hidden');
+            
+            prepareTTS(); 
         }
 
-        function highlightElement(e) { if (e.target === contentArea || selectedElements.has(e.target) || e.target.closest('.util-copy-btn')) return; e.target.classList.add('delete-target-hover'); }
-        function unhighlightElement(e) { if (e.target === contentArea) return; e.target.classList.remove('delete-target-hover'); }
         function toggleSelection(e) {
-            if (!isDeleteMode || e.target === contentArea || e.target.closest('.util-copy-btn')) return;
-            e.preventDefault(); e.stopPropagation(); 
-            const el = e.target;
-            if (selectedElements.has(el)) { selectedElements.delete(el); el.classList.remove('selected-for-deletion'); } 
-            else { selectedElements.add(el); el.classList.remove('delete-target-hover'); el.classList.add('selected-for-deletion'); }
+            if (!isDeleteMode) return;
+            
+            // 防連結跳轉
+            if (e.target.closest('a')) {
+                e.preventDefault();
+            }
+
+            const target = getValidTarget(e.target);
+            if (!target) return;
+
+            e.preventDefault(); 
+            e.stopPropagation();
+
+            if (selectedElements.has(target)) {
+                selectedElements.delete(target);
+                target.classList.remove('selected-for-deletion');
+            } else {
+                selectedElements.add(target);
+                target.classList.remove('delete-target-hover');
+                target.classList.add('selected-for-deletion');
+            }
+
+            // 動態顯示或隱藏執行按鈕
+            const executeBtn = document.getElementById('executeDeleteBtn');
+            if (executeBtn) {
+                if (selectedElements.size > 0) executeBtn.classList.remove('hidden');
+                else executeBtn.classList.add('hidden');
+            }
+        }
+
+        function highlightElement(e) { 
+            const target = getValidTarget(e.target);
+            if (!target || selectedElements.has(target)) return; 
+            target.classList.add('delete-target-hover'); 
+        }
+        
+        function unhighlightElement(e) { 
+            const target = getValidTarget(e.target);
+            if (!target) return; 
+            target.classList.remove('delete-target-hover'); 
         }
 
         // ================= 編輯器預覽用 JS 邏輯 =================
@@ -406,19 +455,22 @@
             }
         }
 
-        let currentSize = 18;
+        let currentSize = parseInt(SafeStorage.get('fontSize_' + document.title)) || 18;
+        document.documentElement.style.setProperty('--base-font-size', currentSize + 'px');
+        
         function adjustSize(delta) {
             currentSize += delta;
             if (currentSize < 12) currentSize = 12;
             if (currentSize > 36) currentSize = 36;
             document.documentElement.style.setProperty('--base-font-size', currentSize + 'px');
+            SafeStorage.set('fontSize_' + document.title, currentSize);
         }
 
         let isPlaying = false, isPaused = false, isManualJump = false;
-        let utterances = [], currentIndex = 0;
+        let utterances = [], currentIndex = parseInt(SafeStorage.get('ttsBookmark_' + document.title)) || 0;
         
-        let selectedVoiceName = localStorage.getItem('ttsVoiceName_v18') || ''; 
-        let currentRate = 1.0;
+        let selectedVoiceName = SafeStorage.get('ttsVoiceName_v18') || ''; 
+        let currentRate = parseFloat(SafeStorage.get('ttsRate_' + document.title)) || 1.0;
 
         function populateVoices() {
             let voices = window.speechSynthesis.getVoices();
@@ -470,10 +522,12 @@
 
         function changeVoice() { 
             selectedVoiceName = document.getElementById('voiceSelect').value; 
+            SafeStorage.set('ttsVoiceName_v18', selectedVoiceName);
             restartTTSWithNewSettings(); 
         }
         function changeRate() { 
             currentRate = parseFloat(document.getElementById('rateSelect').value); 
+            SafeStorage.set('ttsRate_' + document.title, currentRate);
             restartTTSWithNewSettings(); 
         }
         function restartTTSWithNewSettings() {
@@ -515,6 +569,7 @@
                         });
                         newEl.classList.add('reading-highlight');
                         if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        SafeStorage.set('ttsBookmark_' + document.title, uIndex);
                         currentIndex = uIndex; 
                     };
                     u.onend = () => {
@@ -527,24 +582,23 @@
                     utterances.push({ u: u, el: newEl });
                     
                     newEl.addEventListener('click', (e) => {
-                        if(e.target.tagName === 'A') return; 
+                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
+                            e.preventDefault();
+                        }
                         
-                        // 【強制鎖定】如果底層屬性係 off，或者處於刪除模式，強行退出，無任何反應！
-                        if (document.body.dataset.clickRead === 'off' || isDeleteMode) return; 
+                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
+                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
-                        // 【同段暫停邏輯】如果點擊的正是目前朗讀中的段落
                         if (uIndex === currentIndex && isPlaying) {
                             if (isPaused) {
-                                // 恢復朗讀
                                 window.speechSynthesis.resume();
                                 isPaused = false;
                                 document.getElementById('exportTtsBtn').innerHTML = '⏸️ 暫停朗讀';
                                 newEl.classList.remove('paused-highlight');
                                 newEl.classList.add('reading-highlight');
                             } else {
-                                // 暫停朗讀
                                 window.speechSynthesis.pause();
                                 isPaused = true;
                                 document.getElementById('exportTtsBtn').innerHTML = '▶️ 繼續朗讀';
@@ -552,7 +606,6 @@
                                 newEl.classList.add('paused-highlight');
                             }
                         } else {
-                            // 點擊其他段落，直接切換跳讀
                             startReadingFrom(uIndex);
                         }
                     });
@@ -580,7 +633,6 @@
                     window.speechSynthesis.resume(); 
                     isPaused = false; 
                     btn.innerHTML = '⏸️ 暫停朗讀'; 
-                    // 恢復紫色高光
                     let currentEl = utterances[currentIndex].el;
                     currentEl.classList.remove('paused-highlight');
                     currentEl.classList.add('reading-highlight');
@@ -589,7 +641,6 @@
                     window.speechSynthesis.pause(); 
                     isPaused = true; 
                     btn.innerHTML = '▶️ 繼續朗讀'; 
-                    // 變成黃色虛線高光
                     let currentEl = utterances[currentIndex].el;
                     currentEl.classList.remove('reading-highlight');
                     currentEl.classList.add('paused-highlight');
@@ -686,16 +737,6 @@
     <div class="fab-container">
         <button class="fab-toggle" onclick="toggleReaderControls()" title="設定">⚙️</button>
         <div class="control-panel collapsed" id="readerControls">
-            
-            <div class="panel-row">
-                <span class="panel-label">🗑️ 整理文章</span>
-                <div class="btn-group">
-                    <button id="panelToggleDeleteBtn" class="action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300" onclick="toggleDeleteMode()">🔲 點選</button>
-                    <button id="panelExecuteDeleteBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 hidden" onclick="executeDelete()">🗑️ 刪除</button>
-                </div>
-            </div>
-            <div style="height: 1px; background: rgba(216, 180, 254, 0.4); margin: 4px 0;"></div>
-
             <div class="panel-row">
                 <span class="panel-label">操控模式</span>
                 <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 點讀：開</button>
@@ -732,67 +773,14 @@
     </div>
 
     <script>
-        let isDeleteMode = false;
-        let selectedElements = new Set();
-        const contentArea = document.getElementById('content-wrapper');
+        const SafeStorage = {
+            get: function(key) { try { return window.localStorage.getItem(key); } catch(e) { return null; } },
+            set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
+        };
 
         function toggleReaderControls() {
             const controls = document.getElementById('readerControls');
             controls.classList.toggle('collapsed');
-        }
-        
-        function toggleDeleteMode() {
-            isDeleteMode = !isDeleteMode;
-            const panelBtn = document.getElementById('panelToggleDeleteBtn');
-            const executeBtn = document.getElementById('panelExecuteDeleteBtn');
-            
-            if (isDeleteMode) {
-                if(panelBtn) {
-                    panelBtn.innerHTML = '✅ 退出';
-                    panelBtn.className = 'action-btn wide bg-red-600 text-white hover:bg-red-700';
-                }
-                if(executeBtn) executeBtn.classList.remove('hidden');
-                
-                contentArea.classList.add('delete-mode-active');
-                contentArea.addEventListener('mouseover', highlightElement);
-                contentArea.addEventListener('mouseout', unhighlightElement);
-                contentArea.addEventListener('click', toggleSelection);
-                if(isPlaying) stopExportTts();
-            } else {
-                if(panelBtn) {
-                    panelBtn.innerHTML = '🔲 點選';
-                    panelBtn.className = 'action-btn wide bg-slate-200 text-slate-700 hover:bg-slate-300';
-                }
-                if(executeBtn) executeBtn.classList.add('hidden');
-                
-                contentArea.classList.remove('delete-mode-active');
-                contentArea.removeEventListener('mouseover', highlightElement);
-                contentArea.removeEventListener('mouseout', unhighlightElement);
-                contentArea.removeEventListener('click', toggleSelection);
-                
-                contentArea.querySelectorAll('.delete-target-hover').forEach(el => el.classList.remove('delete-target-hover'));
-                contentArea.querySelectorAll('.selected-for-deletion').forEach(el => el.classList.remove('selected-for-deletion'));
-                selectedElements.clear();
-            }
-        }
-
-        function executeDelete() {
-            if (selectedElements.size > 0) {
-                selectedElements.forEach(el => el.remove());
-                selectedElements.clear();
-            }
-            if (isDeleteMode) toggleDeleteMode();
-            prepareTTS();
-        }
-
-        function highlightElement(e) { if (e.target === contentArea || selectedElements.has(e.target) || e.target.closest('.util-copy-btn')) return; e.target.classList.add('delete-target-hover'); }
-        function unhighlightElement(e) { if (e.target === contentArea) return; e.target.classList.remove('delete-target-hover'); }
-        function toggleSelection(e) {
-            if (!isDeleteMode || e.target === contentArea || e.target.closest('.util-copy-btn')) return;
-            e.preventDefault(); e.stopPropagation(); 
-            const el = e.target;
-            if (selectedElements.has(el)) { selectedElements.delete(el); el.classList.remove('selected-for-deletion'); } 
-            else { selectedElements.add(el); el.classList.remove('delete-target-hover'); el.classList.add('selected-for-deletion'); }
         }
 
         function toggleClickToRead() {
@@ -810,7 +798,7 @@
             }
         }
 
-        let currentSize = parseInt(localStorage.getItem('fontSize_' + document.title)) || 18;
+        let currentSize = parseInt(SafeStorage.get('fontSize_' + document.title)) || 18;
         document.documentElement.style.setProperty('--base-font-size', currentSize + 'px');
         
         function adjustSize(delta) {
@@ -818,14 +806,14 @@
             if (currentSize < 12) currentSize = 12;
             if (currentSize > 36) currentSize = 36;
             document.documentElement.style.setProperty('--base-font-size', currentSize + 'px');
-            localStorage.setItem('fontSize_' + document.title, currentSize);
+            SafeStorage.set('fontSize_' + document.title, currentSize);
         }
 
         let isPlaying = false, isPaused = false, isManualJump = false;
-        let utterances = [], currentIndex = parseInt(localStorage.getItem('ttsBookmark_' + document.title)) || 0;
+        let utterances = [], currentIndex = parseInt(SafeStorage.get('ttsBookmark_' + document.title)) || 0;
         
-        let selectedVoiceName = localStorage.getItem('ttsVoiceName_v18') || '';
-        let currentRate = parseFloat(localStorage.getItem('ttsRate_' + document.title)) || 1.0;
+        let selectedVoiceName = SafeStorage.get('ttsVoiceName_v18') || '';
+        let currentRate = parseFloat(SafeStorage.get('ttsRate_' + document.title)) || 1.0;
 
         function populateVoices() {
             let voices = window.speechSynthesis.getVoices();
@@ -877,12 +865,12 @@
 
         function changeVoice() { 
             selectedVoiceName = document.getElementById('voiceSelect').value; 
-            localStorage.setItem('ttsVoiceName_v18', selectedVoiceName);
+            SafeStorage.set('ttsVoiceName_v18', selectedVoiceName);
             restartTTSWithNewSettings(); 
         }
         function changeRate() { 
             currentRate = parseFloat(document.getElementById('rateSelect').value); 
-            localStorage.setItem('ttsRate_' + document.title, currentRate);
+            SafeStorage.set('ttsRate_' + document.title, currentRate);
             restartTTSWithNewSettings(); 
         }
         function restartTTSWithNewSettings() {
@@ -924,7 +912,7 @@
                         });
                         newEl.classList.add('reading-highlight');
                         if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        localStorage.setItem('ttsBookmark_' + document.title, uIndex);
+                        SafeStorage.set('ttsBookmark_' + document.title, uIndex);
                         currentIndex = uIndex; 
                     };
                     u.onend = () => {
@@ -937,9 +925,12 @@
                     utterances.push({ u: u, el: newEl });
                     
                     newEl.addEventListener('click', (e) => {
-                        if(e.target.tagName === 'A') return; 
+                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
+                            e.preventDefault();
+                        }
                         
-                        if (document.body.dataset.clickRead === 'off' || isDeleteMode) return; 
+                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
+                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
@@ -980,19 +971,19 @@
             let btn = document.getElementById('exportTtsBtn');
             if (utterances.length === 0) prepareTTS();
             if (utterances.length === 0) return;
-            
             if (isPlaying) {
-                if (isPaused) {
+                if (isPaused) { 
                     window.speechSynthesis.resume(); 
                     isPaused = false; 
-                    btn.innerHTML = '⏸️ 暫停朗讀';
+                    btn.innerHTML = '⏸️ 暫停朗讀'; 
                     let currentEl = utterances[currentIndex].el;
                     currentEl.classList.remove('paused-highlight');
                     currentEl.classList.add('reading-highlight');
-                } else {
+                } 
+                else { 
                     window.speechSynthesis.pause(); 
                     isPaused = true; 
-                    btn.innerHTML = '▶️ 繼續朗讀';
+                    btn.innerHTML = '▶️ 繼續朗讀'; 
                     let currentEl = utterances[currentIndex].el;
                     currentEl.classList.remove('reading-highlight');
                     currentEl.classList.add('paused-highlight');
@@ -1012,8 +1003,68 @@
             });
             setTimeout(() => { isManualJump = false; }, 50);
         }
-
+        
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) prepareTTS(); };
+
+        // ================= 還原：最原始簡單的點擊選取邏輯 =================
+        let isDeleteMode = false;
+        let selectedElements = new Set();
+
+        function getValidTarget(el) {
+            if (el === contentArea || el.closest('.util-copy-btn')) return null;
+            const readable = el.closest('.readable-item') || el;
+            if (contentArea.contains(readable)) return readable;
+            return null;
+        }
+
+        function toggleDeleteMode() {
+            isDeleteMode = !isDeleteMode;
+            return;
+        }
+
+        function executeDelete() {
+            if (selectedElements.size > 0) {
+                selectedElements.forEach(el => el.remove());
+                selectedElements.clear();
+            }
+            if (isDeleteMode) toggleDeleteMode();
+        }
+
+        function toggleSelection(e) {
+            if (!isDeleteMode) return;
+            
+            // 防連結跳轉
+            if (e.target.closest('a')) {
+                e.preventDefault();
+            }
+
+            const target = getValidTarget(e.target);
+            if (!target) return;
+
+            e.preventDefault(); 
+            e.stopPropagation();
+
+            if (selectedElements.has(target)) {
+                selectedElements.delete(target);
+                target.classList.remove('selected-for-deletion');
+            } else {
+                selectedElements.add(target);
+                target.classList.remove('delete-target-hover');
+                target.classList.add('selected-for-deletion');
+            }
+        }
+
+        function highlightElement(e) { 
+            const target = getValidTarget(e.target);
+            if (!target || selectedElements.has(target)) return; 
+            target.classList.add('delete-target-hover'); 
+        }
+        
+        function unhighlightElement(e) { 
+            const target = getValidTarget(e.target);
+            if (!target) return; 
+            target.classList.remove('delete-target-hover'); 
+        }
 
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
@@ -1040,4 +1091,6 @@
     </script>
 </body>
 </html>
+
+
 
