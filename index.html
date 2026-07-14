@@ -14,7 +14,6 @@
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
     <link rel="manifest" href="./manifest.json">
     
-    <!-- PWA：註冊 Service Worker -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -40,7 +39,10 @@
         .markdown-body p { margin-top: 0; margin-bottom: 16px; font-size: 1.125rem; }
         .markdown-body img { max-width: 100%; height: auto; object-fit: contain; background-color: #fff; border-radius: 8px; margin: 16px auto; display: block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .markdown-body blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #6366f1; border-radius: 4px; margin: 0 0 16px 0; position: relative; }
-        .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto; position: relative; margin-bottom: 16px; }
+        
+        .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; position: relative; margin-bottom: 16px; white-space: pre-wrap; word-break: break-word; }
+        .markdown-body code { white-space: pre-wrap; word-break: break-word; }
+        
         .markdown-body ul, .markdown-body ol { padding-left: 2em; margin-bottom: 16px; }
         .markdown-body li { margin-bottom: 0.25em; }
         .markdown-body a { color: #4f46e5; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
@@ -62,11 +64,46 @@
         .introjs-nextbutton { background-color: #4f46e5 !important; color: white !important; border: none !important; }
         .introjs-prevbutton { color: #4f46e5 !important; }
         
-        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 12px; z-index: 1000; user-select: none; }
-        .fab-toggle { background: rgba(216, 180, 254, 0.9); backdrop-filter: blur(4px); color: #581c87; border: 1px solid rgba(233, 213, 255, 0.5); width: 48px; height: 48px; border-radius: 50%; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(216, 180, 254, 0.4); display: flex; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s; }
-        .fab-toggle:hover { transform: scale(1.05); background: rgba(216, 180, 254, 1); }
+        /* 浮動按鈕 3D 漸變與透明投影樣式 */
+        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 12px; z-index: 1000; user-select: none; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(216, 180, 254, 0.6); position: absolute; bottom: 60px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); }
+        .fab-toggle { 
+            background: linear-gradient(225deg, #e9d5ff 0%, #9333ea 100%); 
+            color: white; 
+            border: 1px solid rgba(255, 255, 255, 0.4); 
+            width: 48px; height: 48px; border-radius: 50%; font-size: 24px; cursor: pointer; 
+            box-shadow: -4px 4px 0px rgba(107, 33, 168, 0.4); 
+            display: flex; align-items: center; justify-content: center; 
+            transition: all 0.15s; z-index: 60; 
+        }
+        .fab-toggle:hover { transform: translate(1px, -1px); box-shadow: -5px 5px 0px rgba(107, 33, 168, 0.4); }
+        .fab-toggle:active { transform: translate(-4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+        
+        .scroll-btn { 
+            background: linear-gradient(225deg, #ffffff 0%, #cbd5e1 100%); 
+            color: #334155; 
+            border: 1px solid rgba(255, 255, 255, 0.6); 
+            width: 48px; height: 48px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            box-shadow: -4px 4px 0px rgba(100, 116, 139, 0.4); 
+            transition: all 0.15s; z-index: 40;
+        }
+        .scroll-btn:hover { color: #0f172a; transform: translate(1px, -1px); box-shadow: -5px 5px 0px rgba(100, 116, 139, 0.4); }
+        .scroll-btn:active { transform: translate(-4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+
+        .trash-btn { 
+            background: linear-gradient(225deg, #fca5a5 0%, #dc2626 100%); 
+            color: white; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            width: 48px; height: 48px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            box-shadow: -4px 4px 0px rgba(153, 27, 27, 0.4); 
+            transition: all 0.15s; z-index: 50; font-size: 20px; 
+        }
+        .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -5px 5px 0px rgba(153, 27, 27, 0.4); }
+        .trash-btn:active { transform: translate(-4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+        
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(216, 180, 254, 0.6); position: absolute; bottom: 60px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; }
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         .panel-row { display: flex; justify-content: space-between; align-items: center; }
         .panel-label { font-size: 14px; font-weight: bold; color: #581c87; white-space: nowrap; }
@@ -81,7 +118,7 @@
         .stop-btn { background: #fee2e2; color: #ef4444; width: auto; padding: 0 16px; font-size: 14px; }
         .stop-btn:hover { background: #fecaca; }
         
-        .custom-select { flex: 1; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 6px 24px 6px 10px; color: #6b21a8; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
+        .custom-select { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 6px 24px 6px 10px; color: #6b21a8; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
         
         .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; font-size: var(--base-font-size); margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
         
@@ -92,9 +129,9 @@
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans flex flex-col" data-click-read="on">
+<body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="on">
 
-    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-1 w-full">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-1 w-full relative">
         <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-300 mb-8">
             <div class="flex items-center justify-between mb-2 flex-nowrap gap-2">
                 <div class="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -132,17 +169,13 @@
             <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 pb-6 border-b border-slate-200 gap-4">
                 <h2 class="text-lg font-bold text-slate-500 whitespace-nowrap">提取結果 (編輯區)</h2>
                 
-                <!-- 【修復揮春排版】：改用 flex-col sm:flex-row 確保手機橫向佔滿不換行斷字 -->
                 <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-                    <!-- 清理開關按鈕 (不使用垃圾桶圖示) -->
                     <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <span id="toggleDeleteText">🧹 開始清理</span>
                     </button>
-                    <!-- 執行刪除按鈕 (真正的垃圾桶) -->
                     <button id="executeDeleteBtn" onclick="executeDelete()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl border border-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm hidden">
                         <span>✂️ 刪除所選</span>
                     </button>
-                    <!-- 下載按鈕 -->
                     <button id="downloadBtn" onclick="downloadHTML()" data-title="最後一步：儲存檔案" data-intro="生成獨立檔案。入面會有全新設定同真聲切換功能！" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>儲存檔案</span>
@@ -159,13 +192,26 @@
         </footer>
     </div>
 
-    <!-- 浮動設定面板 (已經徹底剷走假垃圾桶) -->
     <div class="fab-container">
-        <button class="fab-toggle" onclick="toggleReaderControls()" title="設定">⚙️</button>
+        <!-- 主設定選單按鈕 (改為三橫線圖示) -->
+        <button class="fab-toggle" onclick="toggleReaderControls()" title="選單">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        
+        <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 20 4 5 20 5" /></svg>
+        </button>
+        
+        <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 4 4 19 20 19" /></svg>
+        </button>
+        
+        <button id="fabExecuteDeleteBtn" onclick="executeDelete()" class="trash-btn hidden" title="刪除所選">🗑️</button>
+        
         <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
-                <span class="panel-label">操控模式</span>
-                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 點讀：開</button>
+                <span class="panel-label">朗讀功能</span>
+                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
             </div>
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
@@ -195,16 +241,9 @@
     </div>
 
     <script>
-        // 【核心防護：SafeStorage】防止手機本地檔案無法存取 localStorage 導致死機
         const SafeStorage = {
-            get: function(key) {
-                try { return window.localStorage.getItem(key); } 
-                catch(e) { return null; }
-            },
-            set: function(key, val) {
-                try { window.localStorage.setItem(key, val); } 
-                catch(e) { console.warn("Local storage disabled."); }
-            }
+            get: function(key) { try { return window.localStorage.getItem(key); } catch(e) { return null; } },
+            set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
 
         let articleTitle = "純淨文章";
@@ -230,7 +269,33 @@
             if(!SafeStorage.get('tutorialSeen_v6')) {
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
+            checkScrollButtons();
         });
+
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function scrollToBottom() { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
+        
+        function checkScrollButtons() {
+            const topBtn = document.getElementById('scrollToTopBtn');
+            const bottomBtn = document.getElementById('scrollToBottomBtn');
+            if (!topBtn || !bottomBtn) return;
+            
+            if (window.scrollY > 300) {
+                topBtn.classList.remove('hidden');
+            } else {
+                topBtn.classList.add('hidden');
+            }
+            
+            const isAtBottom = (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50;
+            const isLongPage = document.body.offsetHeight > window.innerHeight * 1.5;
+            
+            if (isLongPage && !isAtBottom) {
+                bottomBtn.classList.remove('hidden');
+            } else {
+                bottomBtn.classList.add('hidden');
+            }
+        }
+        window.addEventListener('scroll', checkScrollButtons);
 
         function copyToClipboard(text, btnElement, successMsg) {
             const textArea = document.createElement("textarea");
@@ -242,7 +307,10 @@
                 const originalText = btnElement.innerHTML;
                 btnElement.innerHTML = successMsg;
                 btnElement.classList.add('bg-emerald-100', 'text-emerald-700');
-                setTimeout(() => { btnElement.innerHTML = originalText; btnElement.classList.remove('bg-emerald-100', 'text-emerald-700'); }, 2000);
+                setTimeout(() => { 
+                    btnElement.innerHTML = originalText; 
+                    btnElement.classList.remove('bg-emerald-100', 'text-emerald-700'); 
+                }, 2000);
             } catch (err) { }
             document.body.removeChild(textArea);
         }
@@ -305,19 +373,44 @@
             let contentToSanitize = wrapper ? wrapper.innerHTML : tempDiv.innerHTML;
             const cleanHTML = DOMPurify.sanitize(contentToSanitize);
             contentArea.innerHTML = cleanHTML;
-            injectSmartButtons();
+            
             document.getElementById('articleContainer').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
             
-            setTimeout(() => { populateVoices(); prepareTTS(); }, 500);
+            setTimeout(() => { 
+                populateVoices(); 
+                prepareTTS(); 
+                injectSmartButtons(); 
+            }, 500);
+            setTimeout(checkScrollButtons, 600);
         }
 
         function injectSmartButtons() {
-            contentArea.querySelectorAll('pre, blockquote').forEach(block => {
+            contentArea.querySelectorAll('pre, blockquote, p, div').forEach(block => {
+                if (block.tagName === 'P' || block.tagName === 'DIV') {
+                    if (block.tagName === 'DIV' && block.querySelectorAll('p, div, pre, blockquote').length > 0) return;
+                    
+                    const text = block.innerText.trim();
+                    const isPrompt = /^(prompt|提示詞|指令)[:：]/i.test(text) || 
+                                     (text.length > 15 && /^(prompt|提示詞|指令|請扮演|你是一個|你是一名|幫我|請以|作為一個|Act as|I want you to act as)/i.test(text));
+                    if (!isPrompt) return;
+                }
+                
+                if (block.querySelector('.util-copy-btn')) return;
+
+                block.style.position = 'relative';
                 const btn = document.createElement('button');
                 btn.innerHTML = '📋 複製內容';
-                btn.className = 'util-copy-btn absolute top-2 right-2 bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-xs px-2 py-1 rounded transition-colors shadow-sm font-medium backdrop-blur-sm z-10';
-                btn.addEventListener('click', (e) => { e.preventDefault(); e.stopPropagation(); copyToClipboard(block.innerText.replace('📋 複製內容', '').trim(), btn, '✅ 已複製'); });
+                btn.className = 'util-copy-btn absolute top-2 right-2 bg-slate-200/90 hover:bg-slate-300 text-slate-700 text-xs px-2 py-1 rounded transition-colors shadow-sm font-medium backdrop-blur-sm z-50';
+                
+                btn.addEventListener('click', (e) => { 
+                    e.preventDefault(); 
+                    e.stopPropagation(); 
+                    const clone = block.cloneNode(true);
+                    const btnInClone = clone.querySelector('.util-copy-btn');
+                    if (btnInClone) btnInClone.remove();
+                    copyToClipboard(clone.innerText.trim(), btn, '✅ 已複製'); 
+                });
                 block.appendChild(btn);
             });
         }
@@ -333,7 +426,6 @@
             document.getElementById('errorMessage').classList.remove('hidden');
         }
 
-        // ================= 強化版：連續點擊刪除邏輯 =================
         function getValidTarget(el) {
             if (el === contentArea || el.closest('.util-copy-btn')) return null;
             const readable = el.closest('.readable-item') || el;
@@ -346,6 +438,7 @@
             const toggleText = document.getElementById('toggleDeleteText');
             const toggleBtn = document.getElementById('toggleDeleteBtn');
             const executeBtn = document.getElementById('executeDeleteBtn');
+            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
             
             if (isDeleteMode) {
                 if(toggleText) toggleText.innerText = '✅ 完成清理';
@@ -354,6 +447,10 @@
                 if(executeBtn) {
                     if (selectedElements.size > 0) executeBtn.classList.remove('hidden');
                     else executeBtn.classList.add('hidden');
+                }
+                if(fabExecuteBtn) {
+                    if (selectedElements.size > 0) fabExecuteBtn.classList.remove('hidden');
+                    else fabExecuteBtn.classList.add('hidden');
                 }
                 
                 contentArea.classList.add('delete-mode-active');
@@ -367,6 +464,7 @@
                 if(toggleBtn) toggleBtn.className = 'w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm';
                 
                 if(executeBtn) executeBtn.classList.add('hidden');
+                if(fabExecuteBtn) fabExecuteBtn.classList.add('hidden');
                 
                 contentArea.classList.remove('delete-mode-active');
                 contentArea.removeEventListener('mouseover', highlightElement);
@@ -384,20 +482,18 @@
                 selectedElements.forEach(el => el.remove());
                 selectedElements.clear();
             }
-            // 執行後不再自動退出，讓用家可以繼續刪除
             const executeBtn = document.getElementById('executeDeleteBtn');
             if(executeBtn) executeBtn.classList.add('hidden');
+            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
+            if(fabExecuteBtn) fabExecuteBtn.classList.add('hidden');
             
-            prepareTTS(); 
+            prepareTTS();
+            injectSmartButtons(); 
         }
 
         function toggleSelection(e) {
             if (!isDeleteMode) return;
-            
-            // 防連結跳轉
-            if (e.target.closest('a')) {
-                e.preventDefault();
-            }
+            if (e.target.closest('a')) e.preventDefault();
 
             const target = getValidTarget(e.target);
             if (!target) return;
@@ -414,11 +510,15 @@
                 target.classList.add('selected-for-deletion');
             }
 
-            // 動態顯示或隱藏執行按鈕
             const executeBtn = document.getElementById('executeDeleteBtn');
             if (executeBtn) {
                 if (selectedElements.size > 0) executeBtn.classList.remove('hidden');
                 else executeBtn.classList.add('hidden');
+            }
+            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
+            if (fabExecuteBtn) {
+                if (selectedElements.size > 0) fabExecuteBtn.classList.remove('hidden');
+                else fabExecuteBtn.classList.add('hidden');
             }
         }
 
@@ -434,7 +534,6 @@
             target.classList.remove('delete-target-hover'); 
         }
 
-        // ================= 編輯器預覽用 JS 邏輯 =================
         function toggleReaderControls() {
             const controls = document.getElementById('readerControls');
             controls.classList.toggle('collapsed');
@@ -442,16 +541,44 @@
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
+            const playBtn = document.getElementById('exportTtsBtn');
+            const stopBtn = document.querySelector('.stop-btn');
             const isOn = document.body.dataset.clickRead !== 'off'; 
             
             if(isOn) {
                 document.body.dataset.clickRead = 'off';
-                btn.innerHTML = '🔴 點讀：關';
+                btn.innerHTML = '🔴 朗讀：關閉';
                 btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200';
+                
+                // 最高權限鎖定
+                window.speechSynthesis.cancel();
+                isPlaying = false; 
+                isPaused = false;
+                if(playBtn) {
+                    playBtn.innerHTML = '▶️ 開始朗讀';
+                    playBtn.style.opacity = '0.4';
+                    playBtn.style.pointerEvents = 'none';
+                }
+                if(stopBtn) {
+                    stopBtn.style.opacity = '0.4';
+                    stopBtn.style.pointerEvents = 'none';
+                }
+                document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
+                    e.classList.remove('reading-highlight', 'paused-highlight');
+                });
             } else {
                 document.body.dataset.clickRead = 'on';
-                btn.innerHTML = '🟢 點讀：開';
+                btn.innerHTML = '🟢 朗讀：開啟';
                 btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200';
+                
+                if(playBtn) {
+                    playBtn.style.opacity = '1';
+                    playBtn.style.pointerEvents = 'auto';
+                }
+                if(stopBtn) {
+                    stopBtn.style.opacity = '1';
+                    stopBtn.style.pointerEvents = 'auto';
+                }
             }
         }
 
@@ -533,6 +660,7 @@
         function restartTTSWithNewSettings() {
             if(isPlaying) { let tempIndex = currentIndex; stopExportTts(); prepareTTS(); startReadingFrom(tempIndex); } 
             else { prepareTTS(); }
+            injectSmartButtons();
         }
 
         function prepareTTS() {
@@ -585,6 +713,7 @@
                         if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
                             e.preventDefault();
                         }
+                        if(e.target.closest('.util-copy-btn')) return;
                         
                         let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
                         if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
@@ -625,8 +754,9 @@
         }
 
         function toggleExportTts() {
+            if (document.body.dataset.clickRead === 'off') return; // 最高權限防護
             let btn = document.getElementById('exportTtsBtn');
-            if (utterances.length === 0) prepareTTS();
+            if (utterances.length === 0) { prepareTTS(); injectSmartButtons(); }
             if (utterances.length === 0) return;
             if (isPlaying) {
                 if (isPaused) { 
@@ -653,6 +783,7 @@
         }
 
         function stopExportTts() {
+            if (document.body.dataset.clickRead === 'off') return;
             isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
             document.getElementById('exportTtsBtn').innerHTML = '▶️ 開始朗讀';
             document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
@@ -661,20 +792,53 @@
             setTimeout(() => { isManualJump = false; }, 50);
         }
         
-        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) prepareTTS(); };
+        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); injectSmartButtons(); } };
 
         // ================= 下載實體檔案邏輯 =================
         function downloadHTML() {
             if (isDeleteMode) toggleDeleteMode();
 
             const cloneContent = contentArea.cloneNode(true);
-            cloneContent.querySelectorAll('.util-copy-btn').forEach(btn => btn.remove());
+            
             cloneContent.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote, li').forEach(el => {
                 if (el.innerText.trim() === '' && el.querySelectorAll('img, video, iframe, canvas').length === 0) el.remove();
             });
             
             const finalContent = cloneContent.innerHTML;
             if (!finalContent.trim()) return;
+            
+            const offlineCopyScript = `
+                function copyToClipboard(text, btnElement) {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        const originalText = btnElement.innerHTML;
+                        btnElement.innerHTML = '✅ 已複製';
+                        btnElement.style.backgroundColor = '#d1fae5';
+                        btnElement.style.color = '#047857';
+                        setTimeout(() => { 
+                            btnElement.innerHTML = originalText; 
+                            btnElement.style.backgroundColor = '';
+                            btnElement.style.color = '';
+                        }, 2000);
+                    } catch (err) { }
+                    document.body.removeChild(textArea);
+                }
+                
+                document.querySelectorAll('.util-copy-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault(); 
+                        e.stopPropagation();
+                        const clone = btn.parentNode.cloneNode(true);
+                        const btnInClone = clone.querySelector('.util-copy-btn');
+                        if (btnInClone) btnInClone.remove();
+                        copyToClipboard(clone.innerText.trim(), btn);
+                    });
+                });
+            `;
             
             const downloadContent = `<!DOCTYPE html>
 <html lang="zh-HK">
@@ -684,12 +848,11 @@
     <title>${articleTitle}</title>
     <style>
         :root { --base-font-size: 18px; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px 20px 100px 20px; color: #24292e; background-color: #fff; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px 20px 100px 20px; color: #24292e; background-color: #fff; overflow-x: hidden; }
         h1 { font-size: 2.2em; margin-bottom: 20px; line-height: 1.25; margin-top: 0; }
         h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; }
         h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; }
         
-        /* 刪除模式與互動 CSS */
         .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; font-size: var(--base-font-size); margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
         
         .delete-mode-active * { cursor: crosshair !important; }
@@ -703,17 +866,58 @@
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
         
         img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; }
-        blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #c084fc; margin: 0 0 16px 0; }
-        pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; font-family: monospace; font-size: calc(var(--base-font-size) - 2px); }
+        blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #c084fc; margin: 0 0 16px 0; position: relative; }
+        
+        pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; margin-bottom: 16px; font-family: monospace; font-size: calc(var(--base-font-size) - 2px); white-space: pre-wrap; word-break: break-word; position: relative; }
+        code { white-space: pre-wrap; word-break: break-word; }
+        
         ul, ol { padding-left: 2em; margin-bottom: 16px; font-size: var(--base-font-size); transition: font-size 0.2s ease-out; }
         li { margin-bottom: 0.25em; transition: background-color 0.3s; padding: 2px; border-radius: 4px; }
         a { color: #9333ea; text-decoration: underline; word-break: break-all; }
         
-        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 12px; z-index: 1000; user-select: none; }
-        .fab-toggle { background: rgba(216, 180, 254, 0.9); backdrop-filter: blur(4px); color: #581c87; border: 1px solid rgba(233, 213, 255, 0.5); width: 48px; height: 48px; border-radius: 50%; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(216, 180, 254, 0.4); display: flex; align-items: center; justify-content: center; transition: transform 0.2s, background 0.2s; }
-        .fab-toggle:hover { transform: scale(1.05); background: rgba(216, 180, 254, 1); }
+        .util-copy-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(226, 232, 240, 0.9); color: #334155; font-size: 12px; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; z-index: 50; box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500; transition: background-color 0.2s; user-select: none; }
+        .util-copy-btn:hover { background-color: #cbd5e1; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(216, 180, 254, 0.6); position: absolute; bottom: 60px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); }
+        /* 浮動按鈕 3D 漸變與透明投影樣式 */
+        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 12px; z-index: 1000; user-select: none; }
+        
+        .fab-toggle { 
+            background: linear-gradient(225deg, #e9d5ff 0%, #9333ea 100%); 
+            color: white; 
+            border: 1px solid rgba(255, 255, 255, 0.4); 
+            width: 48px; height: 48px; border-radius: 50%; font-size: 24px; cursor: pointer; 
+            box-shadow: -4px 4px 0px rgba(107, 33, 168, 0.4); 
+            display: flex; align-items: center; justify-content: center; 
+            transition: all 0.15s; z-index: 60;
+        }
+        .fab-toggle:hover { transform: translate(1px, -1px); box-shadow: -5px 5px 0px rgba(107, 33, 168, 0.4); }
+        .fab-toggle:active { transform: translate(-4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+        
+        .scroll-btn { 
+            background: linear-gradient(225deg, #ffffff 0%, #cbd5e1 100%); 
+            color: #334155; 
+            border: 1px solid rgba(255, 255, 255, 0.6); 
+            width: 48px; height: 48px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            box-shadow: -4px 4px 0px rgba(100, 116, 139, 0.4); 
+            transition: all 0.15s; z-index: 40;
+        }
+        .scroll-btn:hover { color: #0f172a; transform: translate(1px, -1px); box-shadow: -5px 5px 0px rgba(100, 116, 139, 0.4); }
+        .scroll-btn:active { transform: translate(-4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+
+        .trash-btn { 
+            background: linear-gradient(225deg, #fca5a5 0%, #dc2626 100%); 
+            color: white; 
+            border: 1px solid rgba(255, 255, 255, 0.3); 
+            width: 48px; height: 48px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; 
+            box-shadow: -4px 4px 0px rgba(153, 27, 27, 0.4); 
+            transition: all 0.15s; z-index: 50; font-size: 20px; 
+        }
+        .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -5px 5px 0px rgba(153, 27, 27, 0.4); }
+        .trash-btn:active { transform: translate(-4px, 4px); box-shadow: 0px 0px 0px transparent !important; }
+        
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(216, 180, 254, 0.6); position: absolute; bottom: 60px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100;}
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         
         .panel-row { display: flex; justify-content: space-between; align-items: center; }
@@ -729,17 +933,31 @@
         .stop-btn { background: #fee2e2; color: #ef4444; width: auto; padding: 0 16px; font-size: 14px; }
         .stop-btn:hover { background: #fecaca; }
         
-        .custom-select { flex: 1; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 6px 24px 6px 10px; color: #6b21a8; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
+        .custom-select { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 6px 24px 6px 10px; color: #6b21a8; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
     </style>
 </head>
 <body data-click-read="on">
 
     <div class="fab-container">
-        <button class="fab-toggle" onclick="toggleReaderControls()" title="設定">⚙️</button>
+        <!-- 主設定選單按鈕 (改為三橫線圖示) -->
+        <button class="fab-toggle" onclick="toggleReaderControls()" title="選單">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+        
+        <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 20 4 5 20 5" /></svg>
+        </button>
+        
+        <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"><polygon points="12 4 4 19 20 19" /></svg>
+        </button>
+        
+        <button id="fabExecuteDeleteBtn" onclick="executeDelete()" class="trash-btn hidden" title="刪除所選">🗑️</button>
+        
         <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
-                <span class="panel-label">操控模式</span>
-                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 點讀：開</button>
+                <span class="panel-label">朗讀功能</span>
+                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
             </div>
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
@@ -785,16 +1003,43 @@
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
+            const playBtn = document.getElementById('exportTtsBtn');
+            const stopBtn = document.querySelector('.stop-btn');
             const isOn = document.body.dataset.clickRead !== 'off';
             
             if(isOn) {
                 document.body.dataset.clickRead = 'off';
-                btn.innerHTML = '🔴 點讀：關';
+                btn.innerHTML = '🔴 朗讀：關閉';
                 btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200';
+                
+                window.speechSynthesis.cancel();
+                isPlaying = false; 
+                isPaused = false;
+                if(playBtn) {
+                    playBtn.innerHTML = '▶️ 開始朗讀';
+                    playBtn.style.opacity = '0.4';
+                    playBtn.style.pointerEvents = 'none';
+                }
+                if(stopBtn) {
+                    stopBtn.style.opacity = '0.4';
+                    stopBtn.style.pointerEvents = 'none';
+                }
+                document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
+                    e.classList.remove('reading-highlight', 'paused-highlight');
+                });
             } else {
                 document.body.dataset.clickRead = 'on';
-                btn.innerHTML = '🟢 點讀：開';
+                btn.innerHTML = '🟢 朗讀：開啟';
                 btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200';
+                
+                if(playBtn) {
+                    playBtn.style.opacity = '1';
+                    playBtn.style.pointerEvents = 'auto';
+                }
+                if(stopBtn) {
+                    stopBtn.style.opacity = '1';
+                    stopBtn.style.pointerEvents = 'auto';
+                }
             }
         }
 
@@ -928,6 +1173,7 @@
                         if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
                             e.preventDefault();
                         }
+                        if(e.target.closest('.util-copy-btn')) return;
                         
                         let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
                         if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
@@ -968,6 +1214,7 @@
         }
 
         function toggleExportTts() {
+            if (document.body.dataset.clickRead === 'off') return;
             let btn = document.getElementById('exportTtsBtn');
             if (utterances.length === 0) prepareTTS();
             if (utterances.length === 0) return;
@@ -996,6 +1243,7 @@
         }
 
         function stopExportTts() {
+            if (document.body.dataset.clickRead === 'off') return;
             isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
             document.getElementById('exportTtsBtn').innerHTML = '▶️ 開始朗讀';
             document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
@@ -1006,14 +1254,14 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) prepareTTS(); };
 
-        // ================= 還原：最原始簡單的點擊選取邏輯 =================
+        // ================= 點擊選取邏輯 =================
         let isDeleteMode = false;
         let selectedElements = new Set();
 
         function getValidTarget(el) {
-            if (el === contentArea || el.closest('.util-copy-btn')) return null;
+            if (el === document.getElementById('content-wrapper') || el.closest('.util-copy-btn')) return null;
             const readable = el.closest('.readable-item') || el;
-            if (contentArea.contains(readable)) return readable;
+            if (document.getElementById('content-wrapper').contains(readable)) return readable;
             return null;
         }
 
@@ -1027,16 +1275,14 @@
                 selectedElements.forEach(el => el.remove());
                 selectedElements.clear();
             }
+            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
+            if(fabExecuteBtn) fabExecuteBtn.classList.add('hidden');
             if (isDeleteMode) toggleDeleteMode();
         }
 
         function toggleSelection(e) {
             if (!isDeleteMode) return;
-            
-            // 防連結跳轉
-            if (e.target.closest('a')) {
-                e.preventDefault();
-            }
+            if (e.target.closest('a')) e.preventDefault();
 
             const target = getValidTarget(e.target);
             if (!target) return;
@@ -1051,6 +1297,12 @@
                 selectedElements.add(target);
                 target.classList.remove('delete-target-hover');
                 target.classList.add('selected-for-deletion');
+            }
+            
+            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
+            if (fabExecuteBtn) {
+                if (selectedElements.size > 0) fabExecuteBtn.classList.remove('hidden');
+                else fabExecuteBtn.classList.add('hidden');
             }
         }
 
@@ -1073,7 +1325,29 @@
             if (currentIndex > 0 && utterances[currentIndex]) {
                 utterances[currentIndex].el.classList.add('reading-highlight');
             }
+            checkScrollButtons();
         });
+        
+        function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+        function scrollToBottom() { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
+        
+        function checkScrollButtons() {
+            const topBtn = document.getElementById('scrollToTopBtn');
+            const bottomBtn = document.getElementById('scrollToBottomBtn');
+            if (!topBtn || !bottomBtn) return;
+            
+            if (window.scrollY > 300) topBtn.classList.remove('hidden');
+            else topBtn.classList.add('hidden');
+            
+            const isAtBottom = (window.innerHeight + window.scrollY) >= document.body.offsetHeight - 50;
+            const isLongPage = document.body.offsetHeight > window.innerHeight * 1.5;
+            
+            if (isLongPage && !isAtBottom) bottomBtn.classList.remove('hidden');
+            else bottomBtn.classList.add('hidden');
+        }
+        window.addEventListener('scroll', checkScrollButtons);
+        
+        ${offlineCopyScript}
     <\/script>
 </body>
 </html>`;
@@ -1091,6 +1365,3 @@
     </script>
 </body>
 </html>
-
-
-
