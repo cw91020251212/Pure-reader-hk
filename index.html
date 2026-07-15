@@ -198,7 +198,6 @@
     </div>
 
     <div class="fab-container">
-        <!-- 主設定選單按鈕 -->
         <button class="fab-toggle" onclick="toggleReaderControls()" title="選單">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -332,6 +331,18 @@
                 articleTitle = file.name.replace(/\.[^/.]+$/, ""); 
                 if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
                     rawContent = marked.parse(text);
+                } else {
+                    // 核心修復：解析 HTML 時精確抽取內文，徹底排除舊按鈕與設定
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const wrapper = doc.querySelector('#content-wrapper');
+                    if (wrapper) {
+                        rawContent = wrapper.innerHTML;
+                    } else {
+                        // 防呆處理：如無 wrapper 則手動拔除所有已知 UI
+                        doc.querySelectorAll('.fab-container, script, style, meta, title, link, .util-copy-btn').forEach(el => el.remove());
+                        rawContent = doc.body ? doc.body.innerHTML : text;
+                    }
                 }
                 renderContent(rawContent);
             };
@@ -371,7 +382,7 @@
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = rawHTML;
             
-            // 核心修復：徹底清洗上傳檔案中殘留的排版樣式，防止走位或無限放大
+            // 保留原有雙重保險清理機制
             const wrapper = tempDiv.querySelector('#content-wrapper');
             const targetDiv = wrapper ? wrapper : tempDiv;
             
@@ -889,6 +900,7 @@
                 });
             `;
             
+            // 修復：已將字體放大變數（--base-font-size）從 body 轉移至 #content-wrapper
             const downloadContent = `<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -897,7 +909,8 @@
     <title>${articleTitle}</title>
     <style>
         :root { --base-font-size: 18px; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px 20px 100px 20px; color: #24292e; background-color: #fff; overflow-x: hidden; font-size: var(--base-font-size); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px 20px 100px 20px; color: #24292e; background-color: #fff; overflow-x: hidden; }
+        #content-wrapper { font-size: var(--base-font-size); }
         h1 { font-size: 2.2em; margin-bottom: 20px; line-height: 1.25; margin-top: 0; }
         h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; }
         h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; }
@@ -991,7 +1004,6 @@
 <body data-click-read="on">
 
     <div class="fab-container">
-        <!-- 主設定選單按鈕 -->
         <button class="fab-toggle" onclick="toggleReaderControls()" title="選單">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
