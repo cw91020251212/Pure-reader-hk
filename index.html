@@ -32,19 +32,21 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
 
     <style>
-        .markdown-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.8; color: #333; }
+        :root { --base-font-size: 18px; }
+        
+        .markdown-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.8; color: #333; font-size: var(--base-font-size); }
         .markdown-body h1 { font-size: 2em; padding-bottom: 0.3em; margin-bottom: 16px; font-weight: bold; margin-top: 0; }
         .markdown-body h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; font-weight: bold; }
         .markdown-body h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; font-weight: bold; }
-        .markdown-body p { margin-top: 0; margin-bottom: 16px; font-size: 1.125rem; }
+        .markdown-body p { margin-top: 0; margin-bottom: 16px; font-size: 1em; }
         .markdown-body img { max-width: 100%; height: auto; object-fit: contain; background-color: #fff; border-radius: 8px; margin: 16px auto; display: block; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .markdown-body blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #6366f1; border-radius: 4px; margin: 0 0 16px 0; position: relative; }
         
-        .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; position: relative; margin-bottom: 16px; white-space: pre-wrap; word-break: break-word; }
+        .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; position: relative; margin-bottom: 16px; white-space: pre-wrap; word-break: break-word; font-size: 0.9em; }
         .markdown-body code { white-space: pre-wrap; word-break: break-word; }
         
-        .markdown-body ul, .markdown-body ol { padding-left: 2em; margin-bottom: 16px; }
-        .markdown-body li { margin-bottom: 0.25em; }
+        .markdown-body ul, .markdown-body ol { padding-left: 2em; margin-bottom: 16px; font-size: 1em; }
+        .markdown-body li { margin-bottom: 0.25em; font-size: 1em; }
         .markdown-body a { color: #4f46e5; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
         
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
@@ -71,7 +73,7 @@
             background: linear-gradient(225deg, rgba(233, 213, 255, 0.7) 0%, rgba(147, 51, 234, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(88, 28, 135, 0.5); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(88, 28, 135, 0.6); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(107, 33, 168, 0.25); 
             display: flex; align-items: center; justify-content: center; 
@@ -84,7 +86,7 @@
             background: linear-gradient(225deg, rgba(255, 255, 255, 0.7) 0%, rgba(203, 213, 225, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: #334155; 
-            border: 1px solid rgba(71, 85, 105, 0.5); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(71, 85, 105, 0.6); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(100, 116, 139, 0.25); 
@@ -97,7 +99,7 @@
             background: linear-gradient(225deg, rgba(252, 165, 165, 0.7) 0%, rgba(220, 38, 38, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(153, 27, 27, 0.5); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(153, 27, 27, 0.6); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(153, 27, 27, 0.25); 
@@ -106,24 +108,24 @@
         .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -3px 3px 0px rgba(153, 27, 27, 0.3); }
         .trash-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(107, 33, 168, 0.5); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; }
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(88, 28, 135, 0.7); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; }
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         .panel-row { display: flex; justify-content: space-between; align-items: center; }
         .panel-label { font-size: 14px; font-weight: bold; color: #581c87; white-space: nowrap; }
         .btn-group { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
         
-        .action-btn { background: #f3e8ff; border: none; border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .action-btn { background: #f3e8ff; border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
         .action-btn:hover { background: #e9d5ff; }
         .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px; }
         
-        .tts-btn { background: #9333ea; color: white; border: none; border-radius: 8px; padding: 0 16px; height: 36px; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px; }
+        .tts-btn { background: #9333ea; color: white; border: 1px solid rgba(88, 28, 135, 0.6); border-radius: 8px; padding: 0 16px; height: 36px; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px; }
         .tts-btn:hover { background: #7e22ce; }
-        .stop-btn { background: #fee2e2; color: #ef4444; width: auto; padding: 0 16px; font-size: 14px; }
+        .stop-btn { background: #fee2e2; color: #ef4444; border: 1px solid rgba(153, 27, 27, 0.6); width: auto; padding: 0 16px; font-size: 14px; }
         .stop-btn:hover { background: #fecaca; }
         
         .custom-select { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 6px 24px 6px 10px; color: #6b21a8; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
         
-        .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; font-size: var(--base-font-size); margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
+        .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
         
         [data-click-read="on"] .readable-item { cursor: pointer; }
         [data-click-read="on"] .readable-item:hover { background-color: #f1f5f9; box-shadow: inset 3px 0 0 #d8b4fe; }
@@ -214,7 +216,7 @@
         <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
-                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
+                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
             </div>
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
@@ -368,12 +370,32 @@
         function renderContent(rawHTML) {
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = rawHTML;
-            tempDiv.querySelectorAll('.fab-container, .util-copy-btn').forEach(el => el.remove());
-            tempDiv.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote, li').forEach(el => {
+            
+            // 核心修復：徹底清洗上傳檔案中殘留的排版樣式，防止走位或無限放大
+            const wrapper = tempDiv.querySelector('#content-wrapper');
+            const targetDiv = wrapper ? wrapper : tempDiv;
+            
+            // 1. 清除所有舊的浮動按鈕
+            targetDiv.querySelectorAll('.fab-container, .util-copy-btn').forEach(el => el.remove());
+            
+            // 2. 清除所有程式專用的標籤 (還原至最原始的 HTML 結構)
+            targetDiv.querySelectorAll('.readable-item, .reading-highlight, .paused-highlight, .delete-target-hover, .selected-for-deletion').forEach(el => {
+                el.classList.remove('readable-item', 'reading-highlight', 'paused-highlight', 'delete-target-hover', 'selected-for-deletion');
+                if (el.getAttribute('class') === '') el.removeAttribute('class');
+            });
+            
+            // 3. 清除之前殘留的 inline style (特別是 position: relative) 避免按鈕飛走
+            targetDiv.querySelectorAll('[style]').forEach(el => {
+                if(el.style.position === 'relative') el.style.position = '';
+                if (el.getAttribute('style') === '') el.removeAttribute('style');
+            });
+
+            // 4. 清理無意義的空白行
+            targetDiv.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote, li').forEach(el => {
                 if (el.innerText.trim() === '' && el.querySelectorAll('img, video, iframe, canvas').length === 0) el.remove();
             });
-            const wrapper = tempDiv.querySelector('#content-wrapper');
-            let contentToSanitize = wrapper ? wrapper.innerHTML : tempDiv.innerHTML;
+            
+            const contentToSanitize = targetDiv.innerHTML;
             const cleanHTML = DOMPurify.sanitize(contentToSanitize);
             contentArea.innerHTML = cleanHTML;
             
@@ -486,7 +508,6 @@
                 selectedElements.clear();
             }
             
-            // 自動退出清理模式，確保點擊朗讀功能恢復正常
             if (isDeleteMode) toggleDeleteMode();
             
             prepareTTS();
@@ -541,7 +562,6 @@
             controls.classList.toggle('collapsed');
         }
 
-        // 點擊畫面其他地方自動收起選單
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             const toggleBtn = document.querySelector('.fab-toggle');
@@ -561,7 +581,7 @@
             if(isOn) {
                 document.body.dataset.clickRead = 'off';
                 btn.innerHTML = '🔴 朗讀：關閉';
-                btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200';
+                btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50';
                 
                 window.speechSynthesis.cancel();
                 isPlaying = false; 
@@ -581,7 +601,7 @@
             } else {
                 document.body.dataset.clickRead = 'on';
                 btn.innerHTML = '🟢 朗讀：開啟';
-                btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200';
+                btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50';
                 
                 if(playBtn) {
                     playBtn.style.opacity = '1';
@@ -739,6 +759,13 @@
                                 document.getElementById('exportTtsBtn').innerHTML = '⏸️ 暫停朗讀';
                                 newEl.classList.remove('paused-highlight');
                                 newEl.classList.add('reading-highlight');
+                                
+                                setTimeout(() => {
+                                    if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+                                        startReadingFrom(uIndex);
+                                    }
+                                }, 150);
+                                
                             } else {
                                 window.speechSynthesis.pause();
                                 isPaused = true;
@@ -766,7 +793,7 @@
         }
 
         function toggleExportTts() {
-            if (document.body.dataset.clickRead === 'off') return; // 最高權限防護
+            if (document.body.dataset.clickRead === 'off') return; 
             let btn = document.getElementById('exportTtsBtn');
             if (utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); }
             if (utterances.length === 0) return;
@@ -775,17 +802,27 @@
                     window.speechSynthesis.resume(); 
                     isPaused = false; 
                     btn.innerHTML = '⏸️ 暫停朗讀'; 
-                    let currentEl = utterances[currentIndex].el;
-                    currentEl.classList.remove('paused-highlight');
-                    currentEl.classList.add('reading-highlight');
+                    if (utterances[currentIndex]) {
+                        let currentEl = utterances[currentIndex].el;
+                        currentEl.classList.remove('paused-highlight');
+                        currentEl.classList.add('reading-highlight');
+                    }
+                    
+                    setTimeout(() => {
+                        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+                            startReadingFrom(currentIndex);
+                        }
+                    }, 150);
                 } 
                 else { 
                     window.speechSynthesis.pause(); 
                     isPaused = true; 
                     btn.innerHTML = '▶️ 繼續朗讀'; 
-                    let currentEl = utterances[currentIndex].el;
-                    currentEl.classList.remove('reading-highlight');
-                    currentEl.classList.add('paused-highlight');
+                    if (utterances[currentIndex]) {
+                        let currentEl = utterances[currentIndex].el;
+                        currentEl.classList.remove('reading-highlight');
+                        currentEl.classList.add('paused-highlight');
+                    }
                 }
             } else {
                 isPlaying = true; isPaused = false; btn.innerHTML = '⏸️ 暫停朗讀';
@@ -860,12 +897,12 @@
     <title>${articleTitle}</title>
     <style>
         :root { --base-font-size: 18px; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px 20px 100px 20px; color: #24292e; background-color: #fff; overflow-x: hidden; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px 20px 100px 20px; color: #24292e; background-color: #fff; overflow-x: hidden; font-size: var(--base-font-size); }
         h1 { font-size: 2.2em; margin-bottom: 20px; line-height: 1.25; margin-top: 0; }
         h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; }
         h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; }
         
-        .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; font-size: var(--base-font-size); margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
+        .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
         
         .delete-mode-active * { cursor: crosshair !important; }
         .delete-target-hover { outline: 2px dashed #ef4444 !important; background-color: rgba(239, 68, 68, 0.05) !important; border-radius: 4px; opacity: 0.8; }
@@ -880,24 +917,24 @@
         img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; }
         blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #c084fc; margin: 0 0 16px 0; position: relative; }
         
-        pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; margin-bottom: 16px; font-family: monospace; font-size: calc(var(--base-font-size) - 2px); white-space: pre-wrap; word-break: break-word; position: relative; }
+        pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; margin-bottom: 16px; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; position: relative; }
         code { white-space: pre-wrap; word-break: break-word; }
         
-        ul, ol { padding-left: 2em; margin-bottom: 16px; font-size: var(--base-font-size); transition: font-size 0.2s ease-out; }
+        ul, ol { padding-left: 2em; margin-bottom: 16px; }
         li { margin-bottom: 0.25em; transition: background-color 0.3s; padding: 2px; border-radius: 4px; }
         a { color: #9333ea; text-decoration: underline; word-break: break-all; }
         
         .util-copy-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(226, 232, 240, 0.9); color: #334155; font-size: 12px; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; z-index: 50; box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500; transition: background-color 0.2s; user-select: none; }
         .util-copy-btn:hover { background-color: #cbd5e1; }
         
-        /* 浮動按鈕 3D 漸變與透明投影樣式 (已加入深色最幼輪廓線) */
+        /* 浮動按鈕 3D 漸變與透明投影樣式 */
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         
         .fab-toggle { 
             background: linear-gradient(225deg, rgba(233, 213, 255, 0.7) 0%, rgba(147, 51, 234, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(88, 28, 135, 0.5); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(88, 28, 135, 0.6); 
             width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(107, 33, 168, 0.25); 
             display: flex; align-items: center; justify-content: center; 
@@ -910,7 +947,7 @@
             background: linear-gradient(225deg, rgba(255, 255, 255, 0.7) 0%, rgba(203, 213, 225, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: #334155; 
-            border: 1px solid rgba(71, 85, 105, 0.5); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(71, 85, 105, 0.6); 
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(100, 116, 139, 0.25); 
@@ -923,7 +960,7 @@
             background: linear-gradient(225deg, rgba(252, 165, 165, 0.7) 0%, rgba(220, 38, 38, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(153, 27, 27, 0.5); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(153, 27, 27, 0.6); 
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(153, 27, 27, 0.25); 
@@ -932,20 +969,20 @@
         .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -3px 3px 0px rgba(153, 27, 27, 0.3); }
         .trash-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(107, 33, 168, 0.5); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100;}
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(88, 28, 135, 0.7); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100;}
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         
         .panel-row { display: flex; justify-content: space-between; align-items: center; }
         .panel-label { font-size: 14px; font-weight: bold; color: #581c87; white-space: nowrap; }
         .btn-group { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
-        .action-btn { background: #f3e8ff; border: none; border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .action-btn { background: #f3e8ff; border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
         .action-btn:hover { background: #e9d5ff; }
         .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px; }
         .hidden { display: none !important; }
         
-        .tts-btn { background: #9333ea; color: white; border: none; border-radius: 8px; padding: 0 16px; height: 36px; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px; }
+        .tts-btn { background: #9333ea; color: white; border: 1px solid rgba(88, 28, 135, 0.6); border-radius: 8px; padding: 0 16px; height: 36px; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px; }
         .tts-btn:hover { background: #7e22ce; }
-        .stop-btn { background: #fee2e2; color: #ef4444; width: auto; padding: 0 16px; font-size: 14px; }
+        .stop-btn { background: #fee2e2; color: #ef4444; border: 1px solid rgba(153, 27, 27, 0.6); width: auto; padding: 0 16px; font-size: 14px; }
         .stop-btn:hover { background: #fecaca; }
         
         .custom-select { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 6px 24px 6px 10px; color: #6b21a8; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
@@ -972,7 +1009,7 @@
         <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
-                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
+                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
             </div>
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
@@ -1016,7 +1053,6 @@
             controls.classList.toggle('collapsed');
         }
 
-        // 點擊畫面其他地方自動收起選單
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             const toggleBtn = document.querySelector('.fab-toggle');
@@ -1036,7 +1072,7 @@
             if(isOn) {
                 document.body.dataset.clickRead = 'off';
                 btn.innerHTML = '🔴 朗讀：關閉';
-                btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200';
+                btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50';
                 
                 window.speechSynthesis.cancel();
                 isPlaying = false; 
@@ -1056,7 +1092,7 @@
             } else {
                 document.body.dataset.clickRead = 'on';
                 btn.innerHTML = '🟢 朗讀：開啟';
-                btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200';
+                btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50';
                 
                 if(playBtn) {
                     playBtn.style.opacity = '1';
@@ -1206,6 +1242,7 @@
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
+                        // ===== 防呆與復原邏輯核心 =====
                         if (uIndex === currentIndex && isPlaying) {
                             if (isPaused) {
                                 window.speechSynthesis.resume();
@@ -1213,6 +1250,13 @@
                                 document.getElementById('exportTtsBtn').innerHTML = '⏸️ 暫停朗讀';
                                 newEl.classList.remove('paused-highlight');
                                 newEl.classList.add('reading-highlight');
+                                
+                                setTimeout(() => {
+                                    if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+                                        startReadingFrom(uIndex);
+                                    }
+                                }, 150);
+                                
                             } else {
                                 window.speechSynthesis.pause();
                                 isPaused = true;
@@ -1240,26 +1284,36 @@
         }
 
         function toggleExportTts() {
-            if (document.body.dataset.clickRead === 'off') return;
+            if (document.body.dataset.clickRead === 'off') return; 
             let btn = document.getElementById('exportTtsBtn');
-            if (utterances.length === 0) prepareTTS();
+            if (utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); }
             if (utterances.length === 0) return;
             if (isPlaying) {
                 if (isPaused) { 
                     window.speechSynthesis.resume(); 
                     isPaused = false; 
                     btn.innerHTML = '⏸️ 暫停朗讀'; 
-                    let currentEl = utterances[currentIndex].el;
-                    currentEl.classList.remove('paused-highlight');
-                    currentEl.classList.add('reading-highlight');
+                    if (utterances[currentIndex]) {
+                        let currentEl = utterances[currentIndex].el;
+                        currentEl.classList.remove('paused-highlight');
+                        currentEl.classList.add('reading-highlight');
+                    }
+                    
+                    setTimeout(() => {
+                        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+                            startReadingFrom(currentIndex);
+                        }
+                    }, 150);
                 } 
                 else { 
                     window.speechSynthesis.pause(); 
                     isPaused = true; 
                     btn.innerHTML = '▶️ 繼續朗讀'; 
-                    let currentEl = utterances[currentIndex].el;
-                    currentEl.classList.remove('reading-highlight');
-                    currentEl.classList.add('paused-highlight');
+                    if (utterances[currentIndex]) {
+                        let currentEl = utterances[currentIndex].el;
+                        currentEl.classList.remove('reading-highlight');
+                        currentEl.classList.add('paused-highlight');
+                    }
                 }
             } else {
                 isPlaying = true; isPaused = false; btn.innerHTML = '⏸️ 暫停朗讀';
@@ -1278,7 +1332,7 @@
             setTimeout(() => { isManualJump = false; }, 50);
         }
         
-        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) prepareTTS(); };
+        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
         // ================= 點擊選取邏輯 =================
         let isDeleteMode = false;
@@ -1302,7 +1356,6 @@
                 selectedElements.clear();
             }
             
-            // 自動退出清理模式，確保點擊朗讀功能恢復正常
             if (isDeleteMode) toggleDeleteMode();
             
             prepareTTS();
@@ -1393,5 +1446,4 @@
     </script>
 </body>
 </html>
-
 
