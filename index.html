@@ -485,13 +485,12 @@
                 selectedElements.forEach(el => el.remove());
                 selectedElements.clear();
             }
-            const executeBtn = document.getElementById('executeDeleteBtn');
-            if(executeBtn) executeBtn.classList.add('hidden');
-            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
-            if(fabExecuteBtn) fabExecuteBtn.classList.add('hidden');
+            
+            // 自動退出清理模式，確保點擊朗讀功能恢復正常
+            if (isDeleteMode) toggleDeleteMode();
             
             prepareTTS();
-            injectSmartButtons(); 
+            if (typeof injectSmartButtons === 'function') injectSmartButtons(); 
         }
 
         function toggleSelection(e) {
@@ -547,7 +546,6 @@
             const controls = document.getElementById('readerControls');
             const toggleBtn = document.querySelector('.fab-toggle');
             if (controls && !controls.classList.contains('collapsed')) {
-                // 如果點擊的位置不在選單內，且不在觸發按鈕上，則收起選單
                 if (!controls.contains(event.target) && !toggleBtn.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
@@ -565,7 +563,6 @@
                 btn.innerHTML = '🔴 朗讀：關閉';
                 btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200';
                 
-                // 最高權限鎖定
                 window.speechSynthesis.cancel();
                 isPlaying = false; 
                 isPaused = false;
@@ -675,7 +672,7 @@
         function restartTTSWithNewSettings() {
             if(isPlaying) { let tempIndex = currentIndex; stopExportTts(); prepareTTS(); startReadingFrom(tempIndex); } 
             else { prepareTTS(); }
-            injectSmartButtons();
+            if (typeof injectSmartButtons === 'function') injectSmartButtons();
         }
 
         function prepareTTS() {
@@ -771,7 +768,7 @@
         function toggleExportTts() {
             if (document.body.dataset.clickRead === 'off') return; // 最高權限防護
             let btn = document.getElementById('exportTtsBtn');
-            if (utterances.length === 0) { prepareTTS(); injectSmartButtons(); }
+            if (utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); }
             if (utterances.length === 0) return;
             if (isPlaying) {
                 if (isPaused) { 
@@ -807,7 +804,7 @@
             setTimeout(() => { isManualJump = false; }, 50);
         }
         
-        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); injectSmartButtons(); } };
+        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
         // ================= 下載實體檔案邏輯 =================
         function downloadHTML() {
@@ -1024,7 +1021,6 @@
             const controls = document.getElementById('readerControls');
             const toggleBtn = document.querySelector('.fab-toggle');
             if (controls && !controls.classList.contains('collapsed')) {
-                // 如果點擊的位置不在選單內，且不在觸發按鈕上，則收起選單
                 if (!controls.contains(event.target) && !toggleBtn.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
@@ -1305,9 +1301,11 @@
                 selectedElements.forEach(el => el.remove());
                 selectedElements.clear();
             }
-            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
-            if(fabExecuteBtn) fabExecuteBtn.classList.add('hidden');
+            
+            // 自動退出清理模式，確保點擊朗讀功能恢復正常
             if (isDeleteMode) toggleDeleteMode();
+            
+            prepareTTS();
         }
 
         function toggleSelection(e) {
