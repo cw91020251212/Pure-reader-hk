@@ -64,14 +64,14 @@
         .introjs-nextbutton { background-color: #4f46e5 !important; color: white !important; border: none !important; }
         .introjs-prevbutton { color: #4f46e5 !important; }
         
-        /* 浮動按鈕 3D 漸變與透明投影樣式 (已縮小並加入半透明透視效果) */
+        /* 浮動按鈕 3D 漸變與透明投影樣式 */
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         
         .fab-toggle { 
             background: linear-gradient(225deg, rgba(233, 213, 255, 0.7) 0%, rgba(147, 51, 234, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(255, 255, 255, 0.4); 
+            border: 1px solid rgba(88, 28, 135, 0.5); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(107, 33, 168, 0.25); 
             display: flex; align-items: center; justify-content: center; 
@@ -84,7 +84,7 @@
             background: linear-gradient(225deg, rgba(255, 255, 255, 0.7) 0%, rgba(203, 213, 225, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: #334155; 
-            border: 1px solid rgba(255, 255, 255, 0.5); 
+            border: 1px solid rgba(71, 85, 105, 0.5); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(100, 116, 139, 0.25); 
@@ -97,7 +97,7 @@
             background: linear-gradient(225deg, rgba(252, 165, 165, 0.7) 0%, rgba(220, 38, 38, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(255, 255, 255, 0.3); 
+            border: 1px solid rgba(153, 27, 27, 0.5); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(153, 27, 27, 0.25); 
@@ -106,7 +106,7 @@
         .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -3px 3px 0px rgba(153, 27, 27, 0.3); }
         .trash-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(216, 180, 254, 0.6); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; }
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(107, 33, 168, 0.5); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; }
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         .panel-row { display: flex; justify-content: space-between; align-items: center; }
         .panel-label { font-size: 14px; font-weight: bold; color: #581c87; white-space: nowrap; }
@@ -196,7 +196,7 @@
     </div>
 
     <div class="fab-container">
-        <!-- 主設定選單按鈕 (改為三橫線圖示) -->
+        <!-- 主設定選單按鈕 -->
         <button class="fab-toggle" onclick="toggleReaderControls()" title="選單">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -542,6 +542,18 @@
             controls.classList.toggle('collapsed');
         }
 
+        // 點擊畫面其他地方自動收起選單
+        document.addEventListener('click', function(event) {
+            const controls = document.getElementById('readerControls');
+            const toggleBtn = document.querySelector('.fab-toggle');
+            if (controls && !controls.classList.contains('collapsed')) {
+                // 如果點擊的位置不在選單內，且不在觸發按鈕上，則收起選單
+                if (!controls.contains(event.target) && !toggleBtn.contains(event.target)) {
+                    controls.classList.add('collapsed');
+                }
+            }
+        });
+
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
             const playBtn = document.getElementById('exportTtsBtn');
@@ -881,14 +893,14 @@
         .util-copy-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(226, 232, 240, 0.9); color: #334155; font-size: 12px; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; z-index: 50; box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500; transition: background-color 0.2s; user-select: none; }
         .util-copy-btn:hover { background-color: #cbd5e1; }
         
-        /* 浮動按鈕 3D 漸變與透明投影樣式 (已縮小並加入半透明透視效果) */
+        /* 浮動按鈕 3D 漸變與透明投影樣式 (已加入深色最幼輪廓線) */
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         
         .fab-toggle { 
             background: linear-gradient(225deg, rgba(233, 213, 255, 0.7) 0%, rgba(147, 51, 234, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(255, 255, 255, 0.4); 
+            border: 1px solid rgba(88, 28, 135, 0.5); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(107, 33, 168, 0.25); 
             display: flex; align-items: center; justify-content: center; 
@@ -901,7 +913,7 @@
             background: linear-gradient(225deg, rgba(255, 255, 255, 0.7) 0%, rgba(203, 213, 225, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: #334155; 
-            border: 1px solid rgba(255, 255, 255, 0.5); 
+            border: 1px solid rgba(71, 85, 105, 0.5); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(100, 116, 139, 0.25); 
@@ -914,7 +926,7 @@
             background: linear-gradient(225deg, rgba(252, 165, 165, 0.7) 0%, rgba(220, 38, 38, 0.7) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(255, 255, 255, 0.3); 
+            border: 1px solid rgba(153, 27, 27, 0.5); /* 深色最幼輪廓線 */
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(153, 27, 27, 0.25); 
@@ -923,7 +935,7 @@
         .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -3px 3px 0px rgba(153, 27, 27, 0.3); }
         .trash-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(216, 180, 254, 0.6); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100;}
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(107, 33, 168, 0.5); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100;}
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         
         .panel-row { display: flex; justify-content: space-between; align-items: center; }
@@ -945,7 +957,7 @@
 <body data-click-read="on">
 
     <div class="fab-container">
-        <!-- 主設定選單按鈕 (改為三橫線圖示) -->
+        <!-- 主設定選單按鈕 -->
         <button class="fab-toggle" onclick="toggleReaderControls()" title="選單">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -1006,6 +1018,18 @@
             const controls = document.getElementById('readerControls');
             controls.classList.toggle('collapsed');
         }
+
+        // 點擊畫面其他地方自動收起選單
+        document.addEventListener('click', function(event) {
+            const controls = document.getElementById('readerControls');
+            const toggleBtn = document.querySelector('.fab-toggle');
+            if (controls && !controls.classList.contains('collapsed')) {
+                // 如果點擊的位置不在選單內，且不在觸發按鈕上，則收起選單
+                if (!controls.contains(event.target) && !toggleBtn.contains(event.target)) {
+                    controls.classList.add('collapsed');
+                }
+            }
+        });
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
