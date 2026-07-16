@@ -74,40 +74,37 @@
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         .fab-container, .fab-container * { box-sizing: border-box; }
         
-        /* 紫色主選單按鈕 - 光源右上、左下深色漸變、極幼深色輪廓、硬邊半透明投影 */
         .fab-toggle { 
             background: linear-gradient(225deg, #f3e8ff 0%, #a855f7 50%, #7e22ce 100%); 
             color: #fff; 
-            border: 1px solid #3b0764; /* 極幼深紫輪廓 */
+            border: 1px solid #3b0764; 
             width: 44px !important; height: 44px !important; border-radius: 50%; font-size: 20px !important; 
             cursor: pointer; 
-            box-shadow: -4px 4px 0px rgba(76, 29, 149, 0.45); /* 左下硬邊投影，帶透明度 */
+            box-shadow: -4px 4px 0px rgba(76, 29, 149, 0.45); 
             display: flex; align-items: center; justify-content: center; transition: all 0.15s; z-index: 60; 
         }
         .fab-toggle:hover { transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(76, 29, 149, 0.35); }
         .fab-toggle:active { transform: translate(-3px, 3px); box-shadow: 0px 0px 0px transparent !important; }
         
-        /* 箭嘴按鈕 - 光源右上、左下深色漸變、極幼深色輪廓、硬邊半透明投影 */
         .scroll-btn { 
             background: linear-gradient(225deg, #ffffff 0%, #e2e8f0 50%, #94a3b8 100%); 
             color: #0f172a; 
-            border: 1px solid #0f172a; /* 極幼深灰輪廓 */
+            border: 1px solid #0f172a; 
             width: 40px !important; height: 40px !important; border-radius: 50%; font-size: 16px !important; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
-            box-shadow: -4px 4px 0px rgba(15, 23, 42, 0.35); /* 左下硬邊投影，帶透明度 */
+            box-shadow: -4px 4px 0px rgba(15, 23, 42, 0.35); 
             transition: all 0.15s; z-index: 40;
         }
         .scroll-btn:hover { color: #000; transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(15, 23, 42, 0.25); }
         .scroll-btn:active { transform: translate(-3px, 3px); box-shadow: 0px 0px 0px transparent !important; }
 
-        /* 垃圾桶按鈕 - 光源右上、左下深色漸變、極幼深色輪廓、硬邊半透明投影 */
         .trash-btn { 
             background: linear-gradient(225deg, #ffffff 0%, #fecaca 50%, #dc2626 100%); 
             color: #7f1d1d; 
-            border: 1px solid #450a0a; /* 極幼深紅輪廓 */
+            border: 1px solid #450a0a; 
             width: 40px !important; height: 40px !important; border-radius: 50%; font-size: 16px !important; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
-            box-shadow: -4px 4px 0px rgba(69, 10, 10, 0.35); /* 左下硬邊投影，帶透明度 */
+            box-shadow: -4px 4px 0px rgba(69, 10, 10, 0.35); 
             transition: all 0.15s; z-index: 50; 
         }
         .trash-btn:hover { color: #450a0a; transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(69, 10, 10, 0.25); }
@@ -279,6 +276,26 @@
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
             checkScrollButtons();
+            
+            // 接收從其他 App 分享過來的網址
+            setTimeout(() => {
+                const urlParams = new URLSearchParams(window.location.search);
+                const sharedUrl = urlParams.get('url') || urlParams.get('text');
+                const urlInput = document.getElementById('urlInput');
+
+                if (sharedUrl && (sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://'))) {
+                    urlInput.value = sharedUrl;
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    fetchWithAI();
+                } else if (sharedUrl) {
+                    const extractedUrls = sharedUrl.match(/https?:\/\/[^\s]+/);
+                    if (extractedUrls && extractedUrls.length > 0) {
+                        urlInput.value = extractedUrls[0];
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        fetchWithAI();
+                    }
+                }
+            }, 800);
         });
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -352,7 +369,10 @@
             const file = event.target.files[0];
             if (!file) return;
             resetUI();
+            // 上傳檔案時，顯示載入轉圈並隱藏文字
             document.getElementById('loadingIcon').classList.remove('hidden');
+            document.getElementById('btnText').classList.add('hidden');
+            
             const reader = new FileReader();
             reader.onload = (e) => {
                 const text = e.target.result;
@@ -364,6 +384,10 @@
                     rawContent = extractNuclear(text);
                 }
                 renderContent(rawContent);
+                
+                // 修正：上傳完成後，關閉載入轉圈並恢復文字
+                document.getElementById('loadingIcon').classList.add('hidden');
+                document.getElementById('btnText').classList.remove('hidden');
             };
             reader.readAsText(file);
             event.target.value = ''; 
@@ -1302,6 +1326,5 @@
     </script>
 </body>
 </html>
-
 
 
