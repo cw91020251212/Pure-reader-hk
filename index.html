@@ -276,7 +276,7 @@
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
             checkScrollButtons();
-            // 處理 Android 分享內容
+            
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
             if (sharedUrl) {
@@ -288,7 +288,6 @@
                 }
             }
             
-            // 接收從其他 App 分享過來的網址
             setTimeout(() => {
                 const urlParams = new URLSearchParams(window.location.search);
                 const sharedUrl = urlParams.get('url') || urlParams.get('text');
@@ -380,7 +379,6 @@
             const file = event.target.files[0];
             if (!file) return;
             resetUI();
-            // 上傳檔案時，顯示載入轉圈並隱藏文字
             document.getElementById('loadingIcon').classList.remove('hidden');
             document.getElementById('btnText').classList.add('hidden');
             
@@ -396,7 +394,6 @@
                 }
                 renderContent(rawContent);
                 
-                // 修正：上傳完成後，關閉載入轉圈並恢復文字
                 document.getElementById('loadingIcon').classList.add('hidden');
                 document.getElementById('btnText').classList.remove('hidden');
             };
@@ -774,7 +771,6 @@
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
-                        // 同一段：第一次朗讀；再點一次停止；再點再朗讀
                         if (uIndex === currentIndex && isPlaying) {
                             stopExportTts();
                             return;
@@ -807,7 +803,8 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
-        function downloadHTML() {
+        // 核心更新：加入自訂檔名及路徑選擇的非同步下載功能
+        async function downloadHTML() {
             if (isDeleteMode) toggleDeleteMode();
 
             const cloneContent = contentArea.cloneNode(true);
@@ -818,39 +815,6 @@
             
             const finalContent = cloneContent.innerHTML;
             if (!finalContent.trim()) return;
-            
-            const offlineCopyScript = `
-                function copyToClipboard(text, btnElement) {
-                    const textArea = document.createElement("textarea");
-                    textArea.value = text;
-                    document.body.appendChild(textArea);
-                    textArea.select();
-                    try {
-                        document.execCommand('copy');
-                        const originalText = btnElement.innerHTML;
-                        btnElement.innerHTML = '✅ 已複製';
-                        btnElement.style.backgroundColor = '#d1fae5';
-                        btnElement.style.color = '#047857';
-                        setTimeout(() => { 
-                            btnElement.innerHTML = originalText; 
-                            btnElement.style.backgroundColor = '';
-                            btnElement.style.color = '';
-                        }, 2000);
-                    } catch (err) { }
-                    document.body.removeChild(textArea);
-                }
-                
-                document.querySelectorAll('.util-copy-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        e.preventDefault(); 
-                        e.stopPropagation();
-                        const clone = btn.parentNode.cloneNode(true);
-                        const btnInClone = clone.querySelector('.util-copy-btn');
-                        if (btnInClone) btnInClone.remove();
-                        copyToClipboard(clone.innerText.trim(), btn);
-                    });
-                });
-            `;
             
             const downloadContent = `<!DOCTYPE html>
 <html lang="zh-HK">
@@ -911,53 +875,19 @@
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         .fab-container, .fab-container * { box-sizing: border-box; }
         
-        /* 匯出檔案：紫色主選單按鈕 */
-        .fab-toggle { 
-            background: linear-gradient(225deg, #f3e8ff 0%, #a855f7 50%, #7e22ce 100%); 
-            color: #fff; 
-            border: 1px solid #3b0764; 
-            width: 44px !important; height: 44px !important; border-radius: 50%; font-size: 20px !important; 
-            cursor: pointer; 
-            box-shadow: -4px 4px 0px rgba(76, 29, 149, 0.45); 
-            display: flex; align-items: center; justify-content: center; transition: all 0.15s; z-index: 60; 
-        }
+        .fab-toggle { background: linear-gradient(225deg, #f3e8ff 0%, #a855f7 50%, #7e22ce 100%); color: #fff; border: 1px solid #3b0764; width: 44px !important; height: 44px !important; border-radius: 50%; font-size: 20px !important; cursor: pointer; box-shadow: -4px 4px 0px rgba(76, 29, 149, 0.45); display: flex; align-items: center; justify-content: center; transition: all 0.15s; z-index: 60; }
         .fab-toggle:hover { transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(76, 29, 149, 0.35); }
         .fab-toggle:active { transform: translate(-3px, 3px); box-shadow: 0px 0px 0px transparent !important; }
         
-        /* 匯出檔案：箭嘴按鈕 */
-        .scroll-btn { 
-            background: linear-gradient(225deg, #ffffff 0%, #e2e8f0 50%, #94a3b8 100%); 
-            color: #0f172a; 
-            border: 1px solid #0f172a; 
-            width: 40px !important; height: 40px !important; border-radius: 50%; font-size: 16px !important; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; 
-            box-shadow: -4px 4px 0px rgba(15, 23, 42, 0.35); 
-            transition: all 0.15s; z-index: 40;
-        }
+        .scroll-btn { background: linear-gradient(225deg, #ffffff 0%, #e2e8f0 50%, #94a3b8 100%); color: #0f172a; border: 1px solid #0f172a; width: 40px !important; height: 40px !important; border-radius: 50%; font-size: 16px !important; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: -4px 4px 0px rgba(15, 23, 42, 0.35); transition: all 0.15s; z-index: 40; }
         .scroll-btn:hover { color: #000; transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(15, 23, 42, 0.25); }
         .scroll-btn:active { transform: translate(-3px, 3px); box-shadow: 0px 0px 0px transparent !important; }
 
-        /* 匯出檔案：垃圾桶按鈕 */
-        .trash-btn { 
-            background: linear-gradient(225deg, #ffffff 0%, #fecaca 50%, #dc2626 100%); 
-            color: #7f1d1d; 
-            border: 1px solid #450a0a; 
-            width: 40px !important; height: 40px !important; border-radius: 50%; font-size: 16px !important; 
-            display: flex; align-items: center; justify-content: center; cursor: pointer; 
-            box-shadow: -4px 4px 0px rgba(69, 10, 10, 0.35); 
-            transition: all 0.15s; z-index: 50; 
-        }
+        .trash-btn { background: linear-gradient(225deg, #ffffff 0%, #fecaca 50%, #dc2626 100%); color: #7f1d1d; border: 1px solid #450a0a; width: 40px !important; height: 40px !important; border-radius: 50%; font-size: 16px !important; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: -4px 4px 0px rgba(69, 10, 10, 0.35); transition: all 0.15s; z-index: 50; }
         .trash-btn:hover { color: #450a0a; transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(69, 10, 10, 0.25); }
         .trash-btn:active { transform: translate(-3px, 3px); box-shadow: 0px 0px 0px transparent !important; }
         
-        .control-panel { 
-            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; 
-            width: 300px !important; max-width: calc(100vw - 40px) !important; 
-            box-shadow: -4px 8px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; 
-            border: 1px solid rgba(88, 28, 135, 0.4); position: absolute; bottom: 56px; right: 0; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100;
-            font-size: 14px !important; 
-        }
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 300px !important; max-width: calc(100vw - 40px) !important; box-shadow: -4px 8px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(88, 28, 135, 0.4); position: absolute; bottom: 56px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; font-size: 14px !important; }
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         
         .panel-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
@@ -1203,7 +1133,6 @@
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
-                        // 同一段：第一次朗讀；再點一次停止；再點再朗讀
                         if (uIndex === currentIndex && isPlaying) {
                             stopExportTts();
                             return;
@@ -1298,7 +1227,7 @@
                 utterances[currentIndex].el.classList.add('reading-highlight');
             }
             checkScrollButtons();
-            // 處理 Android 分享內容
+            
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
             if (sharedUrl) {
@@ -1335,11 +1264,44 @@
 </body>
 </html>`;
 
+            // 嘗試使用現代的 File System Access API (支援 Chrome, Edge 等)
+            const suggestedFileName = `${articleTitle || '純淨文章'}.html`;
+            
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: suggestedFileName,
+                        types: [{
+                            description: 'HTML 網頁檔',
+                            accept: { 'text/html': ['.html'] },
+                        }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(downloadContent);
+                    await writable.close();
+                    return; // 儲存成功後離開
+                }
+            } catch (error) {
+                // 如果是用戶主動取消，則不報錯，直接返回
+                if (error.name !== 'AbortError') {
+                    console.error('儲存檔案時發生錯誤:', error);
+                }
+                return; 
+            }
+
+            // 後備方案：如果瀏覽器不支援 showSaveFilePicker (如 Safari / Firefox)
+            // 彈出視窗讓用戶自訂名稱，但路徑會由瀏覽器決定 (通常是下載區)
+            const customName = prompt("請輸入檔案名稱：", articleTitle || '純淨文章');
+            if (customName === null) return; // 用戶按了取消
+
+            let finalName = customName.trim();
+            if (!finalName.endsWith('.html')) finalName += '.html';
+
             const blob = new Blob([downloadContent], { type: 'text/html;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${articleTitle}.html`;
+            a.download = finalName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -1348,5 +1310,4 @@
     </script>
 </body>
 </html>
-
 
