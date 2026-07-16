@@ -34,7 +34,7 @@
     <style>
         :root { --base-font-size: 18px; }
         
-        .markdown-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.8; color: #333; font-size: var(--base-font-size); }
+        .markdown-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.8; color: #333; font-size: var(--base-font-size); width: 100%; }
         .markdown-body h1 { font-size: 2em; padding-bottom: 0.3em; margin-bottom: 16px; font-weight: bold; margin-top: 0; }
         .markdown-body h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; font-weight: bold; }
         .markdown-body h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; font-weight: bold; }
@@ -66,15 +66,15 @@
         .introjs-nextbutton { background-color: #4f46e5 !important; color: white !important; border: none !important; }
         .introjs-prevbutton { color: #4f46e5 !important; }
         
-        /* 浮動按鈕 3D 漸變與透明投影樣式 */
-        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
+        /* UI 介面嚴格鎖定字體大小，避免被文章放大變數影響 */
+        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; font-size: 16px; }
         
         .fab-toggle { 
-            background: linear-gradient(225deg, rgba(233, 213, 255, 0.7) 0%, rgba(147, 51, 234, 0.7) 100%); 
+            background: linear-gradient(225deg, rgba(233, 213, 255, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(88, 28, 135, 0.6); /* 深色最幼輪廓線 */
-            width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; 
+            border: 1px solid rgba(88, 28, 135, 0.6); 
+            width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(107, 33, 168, 0.25); 
             display: flex; align-items: center; justify-content: center; 
             transition: all 0.15s; z-index: 60; 
@@ -83,10 +83,10 @@
         .fab-toggle:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
         .scroll-btn { 
-            background: linear-gradient(225deg, rgba(255, 255, 255, 0.7) 0%, rgba(203, 213, 225, 0.7) 100%); 
+            background: linear-gradient(225deg, rgba(255, 255, 255, 0.9) 0%, rgba(203, 213, 225, 0.9) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: #334155; 
-            border: 1px solid rgba(71, 85, 105, 0.6); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(71, 85, 105, 0.6); 
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(100, 116, 139, 0.25); 
@@ -96,10 +96,10 @@
         .scroll-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
 
         .trash-btn { 
-            background: linear-gradient(225deg, rgba(252, 165, 165, 0.7) 0%, rgba(220, 38, 38, 0.7) 100%); 
+            background: linear-gradient(225deg, rgba(252, 165, 165, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
-            border: 1px solid rgba(153, 27, 27, 0.6); /* 深色最幼輪廓線 */
+            border: 1px solid rgba(153, 27, 27, 0.6); 
             width: 36px; height: 36px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(153, 27, 27, 0.25); 
@@ -108,13 +108,13 @@
         .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -3px 3px 0px rgba(153, 27, 27, 0.3); }
         .trash-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(88, 28, 135, 0.7); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; }
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 300px; max-width: calc(100vw - 40px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(88, 28, 135, 0.7); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; font-size: 14px; }
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
-        .panel-row { display: flex; justify-content: space-between; align-items: center; }
+        .panel-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .panel-label { font-size: 14px; font-weight: bold; color: #581c87; white-space: nowrap; }
         .btn-group { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
         
-        .action-btn { background: #f3e8ff; border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .action-btn { background: #f3e8ff; border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 14px; }
         .action-btn:hover { background: #e9d5ff; }
         .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px; }
         
@@ -319,6 +319,40 @@
             document.body.removeChild(textArea);
         }
 
+        // ================= 終極強制清洗機制 =================
+        function extractPureContent(htmlString) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlString, 'text/html');
+            
+            // 1. 暴力斬殺所有舊按鈕、設定區及多餘標籤
+            const killList = [
+                '.fab-container', '.control-panel', '.fab-toggle', 
+                '.scroll-btn', '.trash-btn', '.util-copy-btn', 
+                '#readerControls', 'script', 'style', 'meta', 'link', 'title'
+            ];
+            killList.forEach(sel => {
+                doc.querySelectorAll(sel).forEach(el => el.remove());
+            });
+
+            // 2. 找出真正的內文區塊
+            let wrapper = doc.querySelector('#content-wrapper');
+            let targetNode = wrapper ? wrapper : (doc.body || doc);
+
+            // 3. 強制剝離所有排版與顏色干擾，恢復純白紙狀態 (解決走位不置中)
+            targetNode.querySelectorAll('*').forEach(el => {
+                el.removeAttribute('class');
+                el.removeAttribute('style');
+                el.removeAttribute('data-click-read');
+            });
+
+            // 4. 清除無意義的空行
+            targetNode.querySelectorAll('p, div, h1, h2, h3, h4, h5, h6, blockquote, li').forEach(el => {
+                if (el.innerText.trim() === '' && el.querySelectorAll('img, video, iframe, canvas').length === 0) el.remove();
+            });
+
+            return targetNode.innerHTML;
+        }
+
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
@@ -332,17 +366,8 @@
                 if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
                     rawContent = marked.parse(text);
                 } else {
-                    // 核心修復：解析 HTML 時精確抽取內文，徹底排除舊按鈕與設定
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(text, 'text/html');
-                    const wrapper = doc.querySelector('#content-wrapper');
-                    if (wrapper) {
-                        rawContent = wrapper.innerHTML;
-                    } else {
-                        // 防呆處理：如無 wrapper 則手動拔除所有已知 UI
-                        doc.querySelectorAll('.fab-container, script, style, meta, title, link, .util-copy-btn').forEach(el => el.remove());
-                        rawContent = doc.body ? doc.body.innerHTML : text;
-                    }
+                    // 使用終極清洗機制提煉舊檔案
+                    rawContent = extractPureContent(text);
                 }
                 renderContent(rawContent);
             };
@@ -369,7 +394,10 @@
                 tempDiv.innerHTML = DOMPurify.sanitize(rawHTML);
                 const h1 = tempDiv.querySelector('h1');
                 if (h1 && h1.textContent) articleTitle = h1.textContent.substring(0, 30).replace(/[\\/:*?"<>|]/g, '');
-                renderContent(rawHTML);
+                
+                // 網頁提取的內容也經過一次標準清洗以防萬一
+                const pureHTML = extractPureContent(rawHTML);
+                renderContent(pureHTML);
             } catch (error) {
                 showError(`處理失敗: ${error.message}`);
             } finally {
@@ -379,35 +407,7 @@
         }
 
         function renderContent(rawHTML) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = rawHTML;
-            
-            // 保留原有雙重保險清理機制
-            const wrapper = tempDiv.querySelector('#content-wrapper');
-            const targetDiv = wrapper ? wrapper : tempDiv;
-            
-            // 1. 清除所有舊的浮動按鈕
-            targetDiv.querySelectorAll('.fab-container, .util-copy-btn').forEach(el => el.remove());
-            
-            // 2. 清除所有程式專用的標籤 (還原至最原始的 HTML 結構)
-            targetDiv.querySelectorAll('.readable-item, .reading-highlight, .paused-highlight, .delete-target-hover, .selected-for-deletion').forEach(el => {
-                el.classList.remove('readable-item', 'reading-highlight', 'paused-highlight', 'delete-target-hover', 'selected-for-deletion');
-                if (el.getAttribute('class') === '') el.removeAttribute('class');
-            });
-            
-            // 3. 清除之前殘留的 inline style (特別是 position: relative) 避免按鈕飛走
-            targetDiv.querySelectorAll('[style]').forEach(el => {
-                if(el.style.position === 'relative') el.style.position = '';
-                if (el.getAttribute('style') === '') el.removeAttribute('style');
-            });
-
-            // 4. 清理無意義的空白行
-            targetDiv.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote, li').forEach(el => {
-                if (el.innerText.trim() === '' && el.querySelectorAll('img, video, iframe, canvas').length === 0) el.remove();
-            });
-            
-            const contentToSanitize = targetDiv.innerHTML;
-            const cleanHTML = DOMPurify.sanitize(contentToSanitize);
+            const cleanHTML = DOMPurify.sanitize(rawHTML);
             contentArea.innerHTML = cleanHTML;
             
             document.getElementById('articleContainer').classList.remove('hidden');
@@ -631,7 +631,7 @@
         function adjustSize(delta) {
             currentSize += delta;
             if (currentSize < 12) currentSize = 12;
-            if (currentSize > 36) currentSize = 36;
+            if (currentSize > 48) currentSize = 48; // 放寬最大上限，確保僅文章放大
             document.documentElement.style.setProperty('--base-font-size', currentSize + 'px');
             SafeStorage.set('fontSize_' + document.title, currentSize);
         }
@@ -854,7 +854,7 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
-        // ================= 下載實體檔案邏輯 =================
+        // ================= 下載實體檔案邏輯 (確保置中與排版正確) =================
         function downloadHTML() {
             if (isDeleteMode) toggleDeleteMode();
 
@@ -900,7 +900,6 @@
                 });
             `;
             
-            // 修復：已將字體放大變數（--base-font-size）從 body 轉移至 #content-wrapper
             const downloadContent = `<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -908,9 +907,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${articleTitle}</title>
     <style>
+        /* 核心修復：徹底分離字體縮放與 UI 大小，並確保完美置中 */
         :root { --base-font-size: 18px; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; max-width: 800px; margin: 0 auto; padding: 20px 20px 100px 20px; color: #24292e; background-color: #fff; overflow-x: hidden; }
-        #content-wrapper { font-size: var(--base-font-size); }
+        
+        /* 網頁底色與強制置中 */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            line-height: 1.8; 
+            max-width: 800px !important; 
+            margin: 0 auto !important; 
+            padding: 40px 20px 120px 20px !important; 
+            color: #24292e; 
+            background-color: #fafafa; 
+            overflow-x: hidden; 
+            font-size: 16px; /* 鎖定底層字體，避免 UI 膨脹 */
+        }
+        
+        /* 只有此區塊會受字體放大按鈕影響 */
+        #content-wrapper { font-size: var(--base-font-size); width: 100%; }
+        
         h1 { font-size: 2.2em; margin-bottom: 20px; line-height: 1.25; margin-top: 0; }
         h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; }
         h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; }
@@ -940,15 +955,15 @@
         .util-copy-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(226, 232, 240, 0.9); color: #334155; font-size: 12px; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; z-index: 50; box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500; transition: background-color 0.2s; user-select: none; }
         .util-copy-btn:hover { background-color: #cbd5e1; }
         
-        /* 浮動按鈕 3D 漸變與透明投影樣式 */
-        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
+        /* UI 嚴格防膨脹與出界設定 */
+        .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; font-size: 16px; }
         
         .fab-toggle { 
-            background: linear-gradient(225deg, rgba(233, 213, 255, 0.7) 0%, rgba(147, 51, 234, 0.7) 100%); 
+            background: linear-gradient(225deg, rgba(233, 213, 255, 0.9) 0%, rgba(147, 51, 234, 0.9) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
             border: 1px solid rgba(88, 28, 135, 0.6); 
-            width: 36px; height: 36px; border-radius: 50%; font-size: 18px; cursor: pointer; 
+            width: 40px; height: 40px; border-radius: 50%; font-size: 20px; cursor: pointer; 
             box-shadow: -2px 2px 0px rgba(107, 33, 168, 0.25); 
             display: flex; align-items: center; justify-content: center; 
             transition: all 0.15s; z-index: 60;
@@ -957,7 +972,7 @@
         .fab-toggle:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
         .scroll-btn { 
-            background: linear-gradient(225deg, rgba(255, 255, 255, 0.7) 0%, rgba(203, 213, 225, 0.7) 100%); 
+            background: linear-gradient(225deg, rgba(255, 255, 255, 0.9) 0%, rgba(203, 213, 225, 0.9) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: #334155; 
             border: 1px solid rgba(71, 85, 105, 0.6); 
@@ -970,7 +985,7 @@
         .scroll-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
 
         .trash-btn { 
-            background: linear-gradient(225deg, rgba(252, 165, 165, 0.7) 0%, rgba(220, 38, 38, 0.7) 100%); 
+            background: linear-gradient(225deg, rgba(252, 165, 165, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%); 
             backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
             color: white; 
             border: 1px solid rgba(153, 27, 27, 0.6); 
@@ -982,13 +997,13 @@
         .trash-btn:hover { transform: translate(1px, -1px); box-shadow: -3px 3px 0px rgba(153, 27, 27, 0.3); }
         .trash-btn:active { transform: translate(-2px, 2px); box-shadow: 0px 0px 0px transparent !important; }
         
-        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(88, 28, 135, 0.7); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100;}
+        .control-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; width: 300px; max-width: calc(100vw - 40px); box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(88, 28, 135, 0.7); position: absolute; bottom: 50px; right: 0; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; font-size: 14px; }
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
         
-        .panel-row { display: flex; justify-content: space-between; align-items: center; }
+        .panel-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .panel-label { font-size: 14px; font-weight: bold; color: #581c87; white-space: nowrap; }
         .btn-group { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
-        .action-btn { background: #f3e8ff; border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .action-btn { background: #f3e8ff; border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 14px; }
         .action-btn:hover { background: #e9d5ff; }
         .action-btn.wide { width: auto; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px; }
         .hidden { display: none !important; }
@@ -1123,7 +1138,7 @@
         function adjustSize(delta) {
             currentSize += delta;
             if (currentSize < 12) currentSize = 12;
-            if (currentSize > 36) currentSize = 36;
+            if (currentSize > 48) currentSize = 48;
             document.documentElement.style.setProperty('--base-font-size', currentSize + 'px');
             SafeStorage.set('fontSize_' + document.title, currentSize);
         }
@@ -1458,4 +1473,3 @@
     </script>
 </body>
 </html>
-
