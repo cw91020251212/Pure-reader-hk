@@ -126,11 +126,6 @@
         .action-btn:hover { background: #e9d5ff; }
         .action-btn.wide { width: auto !important; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px !important; }
         
-        .tts-btn { background: #9333ea; color: white; border: 1px solid rgba(88, 28, 135, 0.6); border-radius: 8px; padding: 0 16px; height: 36px !important; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px !important; }
-        .tts-btn:hover { background: #7e22ce; }
-        .stop-btn { background: #fee2e2; color: #ef4444; border: 1px solid rgba(153, 27, 27, 0.6); width: auto !important; padding: 0 16px; height: 36px !important; font-size: 14px !important; }
-        .stop-btn:hover { background: #fecaca; }
-        
         .custom-select { flex: 1; min-width: 0; height: 32px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 0 24px 0 10px; color: #6b21a8; font-size: 13px !important; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
         
         .readable-item { transition: font-size 0.2s ease-out, background-color 0.2s, box-shadow 0.2s; border-radius: 6px; padding: 4px; margin-left: -4px; margin-top: 0; margin-bottom: 16px; border: 2px solid transparent; }
@@ -142,7 +137,7 @@
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="on">
+<body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="off">
 
     <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-1 w-full relative">
         <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-300 mb-8">
@@ -225,7 +220,7 @@
         <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
-                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
+                <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
             </div>
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
@@ -246,10 +241,6 @@
                     <option value="1.25">稍快 1.25x</option>
                     <option value="1.5">極快 1.50x</option>
                 </select>
-            </div>
-            <div class="panel-row" style="margin-top: 4px;">
-                <button id="exportTtsBtn" class="tts-btn" onclick="toggleExportTts()">▶️ 開始朗讀</button>
-                <button class="action-btn stop-btn" onclick="stopExportTts()" title="停止朗讀">⏹️ 停止</button>
             </div>
         </div>
     </div>
@@ -585,8 +576,6 @@
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
-            const playBtn = document.getElementById('exportTtsBtn');
-            const stopBtn = document.querySelector('.stop-btn');
             const isOn = document.body.dataset.clickRead !== 'off'; 
             
             if(isOn) {
@@ -597,15 +586,6 @@
                 window.speechSynthesis.cancel();
                 isPlaying = false; 
                 isPaused = false;
-                if(playBtn) {
-                    playBtn.innerHTML = '▶️ 開始朗讀';
-                    playBtn.style.opacity = '0.4';
-                    playBtn.style.pointerEvents = 'none';
-                }
-                if(stopBtn) {
-                    stopBtn.style.opacity = '0.4';
-                    stopBtn.style.pointerEvents = 'none';
-                }
                 document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
                     e.classList.remove('reading-highlight', 'paused-highlight');
                 });
@@ -613,15 +593,6 @@
                 document.body.dataset.clickRead = 'on';
                 btn.innerHTML = '🟢 朗讀：開啟';
                 btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50';
-                
-                if(playBtn) {
-                    playBtn.style.opacity = '1';
-                    playBtn.style.pointerEvents = 'auto';
-                }
-                if(stopBtn) {
-                    stopBtn.style.opacity = '1';
-                    stopBtn.style.pointerEvents = 'auto';
-                }
             }
         }
 
@@ -745,6 +716,7 @@
                     };
                     u.onend = () => {
                         newEl.classList.remove('reading-highlight', 'paused-highlight');
+
                         if (isPlaying && !isPaused && !isManualJump) {
                             if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
                         }
@@ -763,30 +735,13 @@
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
+                        // 同一段：第一次朗讀；再點一次停止；再點再朗讀
                         if (uIndex === currentIndex && isPlaying) {
-                            if (isPaused) {
-                                window.speechSynthesis.resume();
-                                isPaused = false;
-                                document.getElementById('exportTtsBtn').innerHTML = '⏸️ 暫停朗讀';
-                                newEl.classList.remove('paused-highlight');
-                                newEl.classList.add('reading-highlight');
-                                
-                                setTimeout(() => {
-                                    if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-                                        startReadingFrom(uIndex);
-                                    }
-                                }, 150);
-                                
-                            } else {
-                                window.speechSynthesis.pause();
-                                isPaused = true;
-                                document.getElementById('exportTtsBtn').innerHTML = '▶️ 繼續朗讀';
-                                newEl.classList.remove('reading-highlight');
-                                newEl.classList.add('paused-highlight');
-                            }
-                        } else {
-                            startReadingFrom(uIndex);
+                            stopExportTts();
+                            return;
                         }
+
+                        startReadingFrom(uIndex);
                     });
                 }
             });
@@ -795,57 +750,16 @@
         function playUtterance(index) { if (index >= utterances.length) return; currentIndex = index; window.speechSynthesis.speak(utterances[index].u); }
         
         function startReadingFrom(index) {
-            isManualJump = true; window.speechSynthesis.cancel(); 
+            isManualJump = true;
+            window.speechSynthesis.cancel();
             setTimeout(() => {
                 isManualJump = false; isPlaying = true; isPaused = false;
-                document.getElementById('exportTtsBtn').innerHTML = '⏸️ 暫停朗讀';
                 playUtterance(index);
-            }, 50); 
-        }
-
-        function toggleExportTts() {
-            if (document.body.dataset.clickRead === 'off') return; 
-            let btn = document.getElementById('exportTtsBtn');
-            if (utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); }
-            if (utterances.length === 0) return;
-            if (isPlaying) {
-                if (isPaused) { 
-                    window.speechSynthesis.resume(); 
-                    isPaused = false; 
-                    btn.innerHTML = '⏸️ 暫停朗讀'; 
-                    if (utterances[currentIndex]) {
-                        let currentEl = utterances[currentIndex].el;
-                        currentEl.classList.remove('paused-highlight');
-                        currentEl.classList.add('reading-highlight');
-                    }
-                    
-                    setTimeout(() => {
-                        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-                            startReadingFrom(currentIndex);
-                        }
-                    }, 150);
-                } 
-                else { 
-                    window.speechSynthesis.pause(); 
-                    isPaused = true; 
-                    btn.innerHTML = '▶️ 繼續朗讀'; 
-                    if (utterances[currentIndex]) {
-                        let currentEl = utterances[currentIndex].el;
-                        currentEl.classList.remove('reading-highlight');
-                        currentEl.classList.add('paused-highlight');
-                    }
-                }
-            } else {
-                isPlaying = true; isPaused = false; btn.innerHTML = '⏸️ 暫停朗讀';
-                if(currentIndex >= utterances.length) currentIndex = 0;
-                playUtterance(currentIndex);
-            }
+            }, 50);
         }
 
         function stopExportTts() {
-            if (document.body.dataset.clickRead === 'off') return;
             isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
-            document.getElementById('exportTtsBtn').innerHTML = '▶️ 開始朗讀';
             document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
                 e.classList.remove('reading-highlight', 'paused-highlight');
             });
@@ -1009,15 +923,10 @@
         .action-btn.wide { width: auto !important; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px !important; }
         .hidden { display: none !important; }
         
-        .tts-btn { background: #9333ea; color: white; border: 1px solid rgba(88, 28, 135, 0.6); border-radius: 8px; padding: 0 16px; height: 36px !important; font-weight: bold; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background 0.2s; flex: 1; margin-right: 8px; justify-content: center; font-size: 14px !important; }
-        .tts-btn:hover { background: #7e22ce; }
-        .stop-btn { background: #fee2e2; color: #ef4444; border: 1px solid rgba(153, 27, 27, 0.6); width: auto !important; padding: 0 16px; height: 36px !important; font-size: 14px !important; }
-        .stop-btn:hover { background: #fecaca; }
-        
         .custom-select { flex: 1; min-width: 0; height: 32px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 0 24px 0 10px; color: #6b21a8; font-size: 13px !important; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
     </style>
 </head>
-<body data-click-read="on">
+<body data-click-read="off">
 
     <div class="fab-container">
         <button class="fab-toggle" onclick="toggleReaderControls()" title="選單">
@@ -1039,7 +948,7 @@
         <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
-                <button id="clickModeBtn" class="action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50" onclick="toggleClickToRead()">🟢 朗讀：開啟</button>
+                <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
             </div>
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
@@ -1061,15 +970,11 @@
                     <option value="1.5">極快 1.50x</option>
                 </select>
             </div>
-            <div class="panel-row" style="margin-top: 4px;">
-                <button id="exportTtsBtn" class="tts-btn" onclick="toggleExportTts()">▶️ 開始朗讀</button>
-                <button class="action-btn stop-btn" onclick="stopExportTts()" title="停止朗讀">⏹️ 停止</button>
-            </div>
         </div>
     </div>
     
     <div id="content-wrapper">
-        ${finalContent}
+        \${finalContent}
     </div>
 
     <script>
@@ -1095,8 +1000,6 @@
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
-            const playBtn = document.getElementById('exportTtsBtn');
-            const stopBtn = document.querySelector('.stop-btn');
             const isOn = document.body.dataset.clickRead !== 'off';
             
             if(isOn) {
@@ -1107,15 +1010,6 @@
                 window.speechSynthesis.cancel();
                 isPlaying = false; 
                 isPaused = false;
-                if(playBtn) {
-                    playBtn.innerHTML = '▶️ 開始朗讀';
-                    playBtn.style.opacity = '0.4';
-                    playBtn.style.pointerEvents = 'none';
-                }
-                if(stopBtn) {
-                    stopBtn.style.opacity = '0.4';
-                    stopBtn.style.pointerEvents = 'none';
-                }
                 document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
                     e.classList.remove('reading-highlight', 'paused-highlight');
                 });
@@ -1123,15 +1017,6 @@
                 document.body.dataset.clickRead = 'on';
                 btn.innerHTML = '🟢 朗讀：開啟';
                 btn.className = 'action-btn wide bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border border-emerald-700/50';
-                
-                if(playBtn) {
-                    playBtn.style.opacity = '1';
-                    playBtn.style.pointerEvents = 'auto';
-                }
-                if(stopBtn) {
-                    stopBtn.style.opacity = '1';
-                    stopBtn.style.pointerEvents = 'auto';
-                }
             }
         }
 
@@ -1254,6 +1139,7 @@
                     };
                     u.onend = () => {
                         newEl.classList.remove('reading-highlight', 'paused-highlight');
+
                         if (isPlaying && !isPaused && !isManualJump) {
                             if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
                         }
@@ -1272,31 +1158,13 @@
                         
                         e.preventDefault(); e.stopPropagation(); 
                         
-                        // ===== 防呆與復原邏輯核心 =====
+                        // 同一段：第一次朗讀；再點一次停止；再點再朗讀
                         if (uIndex === currentIndex && isPlaying) {
-                            if (isPaused) {
-                                window.speechSynthesis.resume();
-                                isPaused = false;
-                                document.getElementById('exportTtsBtn').innerHTML = '⏸️ 暫停朗讀';
-                                newEl.classList.remove('paused-highlight');
-                                newEl.classList.add('reading-highlight');
-                                
-                                setTimeout(() => {
-                                    if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-                                        startReadingFrom(uIndex);
-                                    }
-                                }, 150);
-                                
-                            } else {
-                                window.speechSynthesis.pause();
-                                isPaused = true;
-                                document.getElementById('exportTtsBtn').innerHTML = '▶️ 繼續朗讀';
-                                newEl.classList.remove('reading-highlight');
-                                newEl.classList.add('paused-highlight');
-                            }
-                        } else {
-                            startReadingFrom(uIndex);
+                            stopExportTts();
+                            return;
                         }
+
+                        startReadingFrom(uIndex);
                     });
                 }
             });
@@ -1305,57 +1173,16 @@
         function playUtterance(index) { if (index >= utterances.length) return; currentIndex = index; window.speechSynthesis.speak(utterances[index].u); }
         
         function startReadingFrom(index) {
-            isManualJump = true; window.speechSynthesis.cancel(); 
+            isManualJump = true;
+            window.speechSynthesis.cancel();
             setTimeout(() => {
                 isManualJump = false; isPlaying = true; isPaused = false;
-                document.getElementById('exportTtsBtn').innerHTML = '⏸️ 暫停朗讀';
                 playUtterance(index);
-            }, 50); 
-        }
-
-        function toggleExportTts() {
-            if (document.body.dataset.clickRead === 'off') return; 
-            let btn = document.getElementById('exportTtsBtn');
-            if (utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); }
-            if (utterances.length === 0) return;
-            if (isPlaying) {
-                if (isPaused) { 
-                    window.speechSynthesis.resume(); 
-                    isPaused = false; 
-                    btn.innerHTML = '⏸️ 暫停朗讀'; 
-                    if (utterances[currentIndex]) {
-                        let currentEl = utterances[currentIndex].el;
-                        currentEl.classList.remove('paused-highlight');
-                        currentEl.classList.add('reading-highlight');
-                    }
-                    
-                    setTimeout(() => {
-                        if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
-                            startReadingFrom(currentIndex);
-                        }
-                    }, 150);
-                } 
-                else { 
-                    window.speechSynthesis.pause(); 
-                    isPaused = true; 
-                    btn.innerHTML = '▶️ 繼續朗讀'; 
-                    if (utterances[currentIndex]) {
-                        let currentEl = utterances[currentIndex].el;
-                        currentEl.classList.remove('reading-highlight');
-                        currentEl.classList.add('paused-highlight');
-                    }
-                }
-            } else {
-                isPlaying = true; isPaused = false; btn.innerHTML = '⏸️ 暫停朗讀';
-                if(currentIndex >= utterances.length) currentIndex = 0;
-                playUtterance(currentIndex);
-            }
+            }, 50);
         }
 
         function stopExportTts() {
-            if (document.body.dataset.clickRead === 'off') return;
             isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
-            document.getElementById('exportTtsBtn').innerHTML = '▶️ 開始朗讀';
             document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
                 e.classList.remove('reading-highlight', 'paused-highlight');
             });
@@ -1447,7 +1274,7 @@
         }
         window.addEventListener('scroll', checkScrollButtons);
         
-        ${offlineCopyScript}
+        \${offlineCopyScript}
     <\/script>
 </body>
 </html>`;
@@ -1465,3 +1292,4 @@
     </script>
 </body>
 </html>
+
