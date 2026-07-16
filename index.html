@@ -276,6 +276,17 @@
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
             checkScrollButtons();
+            // 處理 Android 分享內容
+            const params = new URLSearchParams(window.location.search);
+            const sharedUrl = params.get("url") || params.get("text");
+            if (sharedUrl) {
+                const urlInput = document.getElementById("urlInput");
+                if (urlInput) {
+                    const detectedUrl = sharedUrl.match(/https?:\/\/[^\s]+/);
+                    urlInput.value = detectedUrl ? detectedUrl[0] : sharedUrl;
+                    console.log("已接收分享內容:", urlInput.value);
+                }
+            }
             
             // 接收從其他 App 分享過來的網址
             setTimeout(() => {
@@ -1287,6 +1298,17 @@
                 utterances[currentIndex].el.classList.add('reading-highlight');
             }
             checkScrollButtons();
+            // 處理 Android 分享內容
+            const params = new URLSearchParams(window.location.search);
+            const sharedUrl = params.get("url") || params.get("text");
+            if (sharedUrl) {
+                const urlInput = document.getElementById("urlInput");
+                if (urlInput) {
+                    const detectedUrl = sharedUrl.match(/https?:\/\/[^\s]+/);
+                    urlInput.value = detectedUrl ? detectedUrl[0] : sharedUrl;
+                    console.log("已接收分享內容:", urlInput.value);
+                }
+            }
         });
         
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -1308,7 +1330,7 @@
         }
         window.addEventListener('scroll', checkScrollButtons);
         
-        ${offlineCopyScript}
+        
     <\/script>
 </body>
 </html>`;
