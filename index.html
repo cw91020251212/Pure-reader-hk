@@ -672,15 +672,21 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
-            zhVoices.sort((a, b) => {
+            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
+            let uniqueVoices = [], seenIDs = new Set();
+            zhVoices.forEach(v => {
+                // 若系統未提供 voiceURI，則退回使用 name
+                let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
+                if(!seenIDs.has(id)) { 
+                    seenIDs.add(id); 
+                    uniqueVoices.push(v); 
+                }
+            });
+
+            uniqueVoices.sort((a, b) => {
                 let aIsYue = a.lang.toLowerCase().includes('hk') || a.lang.toLowerCase().includes('yue') || a.name.toLowerCase().includes('cantonese') ? 1 : 0;
                 let bIsYue = b.lang.toLowerCase().includes('hk') || b.lang.toLowerCase().includes('yue') || b.name.toLowerCase().includes('cantonese') ? 1 : 0;
                 return bIsYue - aIsYue;
-            });
-
-            let uniqueVoices = [], seenNames = new Set();
-            zhVoices.forEach(v => {
-                if(!seenNames.has(v.name)) { seenNames.add(v.name); uniqueVoices.push(v); }
             });
 
             if (uniqueVoices.length === 0) {
@@ -706,7 +712,11 @@
                 voiceSelect.appendChild(opt);
             });
             
-            if(selectedVoiceName) voiceSelect.value = selectedVoiceName; else selectedVoiceName = voiceSelect.value;
+            if(selectedVoiceName && uniqueVoices.find(v => v.name === selectedVoiceName)) {
+                voiceSelect.value = selectedVoiceName;
+            } else {
+                selectedVoiceName = voiceSelect.value;
+            }
         }
 
         function changeVoice() { 
@@ -1042,15 +1052,20 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
-            zhVoices.sort((a, b) => {
+            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
+            let uniqueVoices = [], seenIDs = new Set();
+            zhVoices.forEach(v => {
+                let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
+                if(!seenIDs.has(id)) { 
+                    seenIDs.add(id); 
+                    uniqueVoices.push(v); 
+                }
+            });
+
+            uniqueVoices.sort((a, b) => {
                 let aIsYue = a.lang.toLowerCase().includes('hk') || a.lang.toLowerCase().includes('yue') || a.name.toLowerCase().includes('cantonese') ? 1 : 0;
                 let bIsYue = b.lang.toLowerCase().includes('hk') || b.lang.toLowerCase().includes('yue') || b.name.toLowerCase().includes('cantonese') ? 1 : 0;
                 return bIsYue - aIsYue;
-            });
-
-            let uniqueVoices = [], seenNames = new Set();
-            zhVoices.forEach(v => {
-                if(!seenNames.has(v.name)) { seenNames.add(v.name); uniqueVoices.push(v); }
             });
 
             if (uniqueVoices.length === 0) {
@@ -1076,7 +1091,11 @@
                 voiceSelect.appendChild(opt);
             });
             
-            if(selectedVoiceName) voiceSelect.value = selectedVoiceName; else selectedVoiceName = voiceSelect.value;
+            if(selectedVoiceName && uniqueVoices.find(v => v.name === selectedVoiceName)) {
+                voiceSelect.value = selectedVoiceName;
+            } else {
+                selectedVoiceName = voiceSelect.value;
+            }
         }
 
         function changeVoice() { 
