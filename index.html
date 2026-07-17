@@ -546,7 +546,14 @@
                 selectedElements.clear();
             }
             
-            if (isDeleteMode) toggleDeleteMode();
+            // 已經移除這行：讓系統不要自動關閉清理模式
+            // if (isDeleteMode) toggleDeleteMode();
+
+            // 確保選取被清除後，隱藏刪除按鈕
+            const executeBtn = document.getElementById('executeDeleteBtn');
+            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
+            if (executeBtn) executeBtn.classList.add('hidden');
+            if (fabExecuteBtn) fabExecuteBtn.classList.add('hidden');
             
             prepareTTS();
             if (typeof injectSmartButtons === 'function') injectSmartButtons(); 
@@ -805,6 +812,7 @@
 
         // 核心更新：加入自訂檔名及路徑選擇的非同步下載功能
         async function downloadHTML() {
+            // 匯出時如果正在刪除模式，則強制關閉，避免把樣式一同匯出
             if (isDeleteMode) toggleDeleteMode();
 
             const cloneContent = contentArea.cloneNode(true);
@@ -1176,7 +1184,13 @@
                 selectedElements.clear();
             }
             
-            if (isDeleteMode) toggleDeleteMode();
+            // 已經移除這行：讓系統不要自動關閉清理模式
+            // if (isDeleteMode) toggleDeleteMode();
+
+            const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
+            if (fabExecuteBtn) {
+                fabExecuteBtn.classList.add('hidden');
+            }
             
             prepareTTS();
         }
