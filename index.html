@@ -277,8 +277,29 @@
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
             checkScrollButtons();
+
+            // 🌟 創新方案：註冊 File Handling API，支援系統「以...開啟」
+            if ('launchQueue' in window) {
+                window.launchQueue.setConsumer(async (launchParams) => {
+                    if (launchParams.files && launchParams.files.length > 0) {
+                        const fileHandle = launchParams.files[0];
+                        const file = await fileHandle.getFile();
+                        
+                        document.getElementById('loadingIcon').classList.remove('hidden');
+                        document.getElementById('btnText').classList.add('hidden');
+                        
+                        articleTitle = file.name.replace(/\.[^/.]+$/, ""); 
+                        const text = await file.text();
+                        const rawContent = extractNuclear(text);
+                        renderContent(rawContent);
+                        
+                        document.getElementById('loadingIcon').classList.add('hidden');
+                        document.getElementById('btnText').classList.remove('hidden');
+                    }
+                });
+            }
             
-            // --- 新增：接收從分享選單傳入的實體檔案 ---
+            // --- 攔截 Share Target 傳入的暫存檔案 ---
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('shared_file') === 'true') {
                 document.getElementById('loadingIcon').classList.remove('hidden');
@@ -292,7 +313,6 @@
                                 const rawContent = extractNuclear(text);
                                 renderContent(rawContent);
                                 
-                                // 處理完畢後清理網址參數與暫存
                                 window.history.replaceState({}, document.title, window.location.pathname);
                                 cache.delete('/shared-file-temp');
                                 
@@ -317,7 +337,6 @@
             }
             
             setTimeout(() => {
-                const urlParams = new URLSearchParams(window.location.search);
                 const sharedUrl = urlParams.get('url') || urlParams.get('text');
                 const urlInput = document.getElementById('urlInput');
 
@@ -574,7 +593,6 @@
                 selectedElements.clear();
             }
             
-            // 確保選取被清除後，隱藏刪除按鈕
             const executeBtn = document.getElementById('executeDeleteBtn');
             const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
             if (executeBtn) executeBtn.classList.add('hidden');
@@ -629,7 +647,7 @@
 
         function toggleReaderControls(event) {
             if (event) {
-                event.stopPropagation(); // 阻止事件向上冒泡到 document
+                event.stopPropagation();
             }
             const controls = document.getElementById('readerControls');
             if (controls) {
@@ -640,7 +658,6 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
-                // 如果點擊目標不在控制面板內，則將其收合
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
@@ -697,10 +714,8 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
-            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
-                // 若系統未提供 voiceURI，則退回使用 name
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
                 if(!seenIDs.has(id)) { 
                     seenIDs.add(id); 
@@ -950,7 +965,6 @@
 <body data-click-read="off">
 
     <div class="fab-container">
-        <!-- 匯出檔案同樣套用事件攔截 -->
         <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -1005,7 +1019,6 @@
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
 
-        // 匯出檔案的核心修正：套用 event 阻截
         function toggleReaderControls(event) {
             if (event) {
                 event.stopPropagation();
@@ -1075,7 +1088,6 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
-            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
@@ -1255,6 +1267,6 @@
         }
         window.addEventListener('scroll', checkScrollButtons);
         
-    </script>
+    <\/script>
 </body>
 </html>
