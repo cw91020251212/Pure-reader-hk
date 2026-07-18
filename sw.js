@@ -1,7 +1,7 @@
 // PureRead HK service worker
 // 目的：讓網站符合「可安裝」條件，並確保離線時仍可開啟主頁。
 
-const CACHE_NAME = 'pure-reader-hk-v20260713-fixed';
+const CACHE_NAME = 'pure-reader-hk-v20260718-fixed';
 const PRECACHE_URLS = [
   './index.html',
   './manifest.json',
@@ -32,6 +32,34 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
+
+  // 攔截來自 Web Share Target 的 POST 請求 (接收分享檔案)
+  if (req.url.includes('/share-handler') && req.method === 'POST') {
+    event.respondWith((async () => {
+      try {
+        const formData = await req.formData();
+        const file = formData.get('shared_file');
+        const text = formData.get('text') || formData.get('url');
+
+        if (file) {
+          const fileContent = await file.text();
+          const cache = await caches.open('shared-content-cache');
+          await cache.put('/shared-file-temp', new Response(fileContent));
+          return Response.redirect('./index.html?shared_file=true', 303);
+        }
+
+        if (text) {
+          return Response.redirect('./index.html?url=' + encodeURIComponent(text), 303);
+        }
+
+        return Response.redirect('./index.html', 303);
+      } catch (error) {
+        console.error('[Service Worker] 分享處理失敗:', error);
+        return Response.redirect('./index.html?error=share_failed', 303);
+      }
+    })());
+    return;
+  }
 
   // 只處理 GET
   if (req.method !== 'GET') return;

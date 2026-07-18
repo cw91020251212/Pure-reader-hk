@@ -278,9 +278,36 @@
             }
             checkScrollButtons();
             
+            // --- 新增：接收從分享選單傳入的實體檔案 ---
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('shared_file') === 'true') {
+                document.getElementById('loadingIcon').classList.remove('hidden');
+                document.getElementById('btnText').classList.add('hidden');
+                
+                caches.open('shared-content-cache').then(cache => {
+                    cache.match('/shared-file-temp').then(response => {
+                        if (response) {
+                            response.text().then(text => {
+                                articleTitle = "分享的檔案"; 
+                                const rawContent = extractNuclear(text);
+                                renderContent(rawContent);
+                                
+                                // 處理完畢後清理網址參數與暫存
+                                window.history.replaceState({}, document.title, window.location.pathname);
+                                cache.delete('/shared-file-temp');
+                                
+                                document.getElementById('loadingIcon').classList.add('hidden');
+                                document.getElementById('btnText').classList.remove('hidden');
+                            });
+                        }
+                    });
+                });
+            }
+            // ----------------------------------------
+            
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
-            if (sharedUrl) {
+            if (sharedUrl && urlParams.get('shared_file') !== 'true') {
                 const urlInput = document.getElementById("urlInput");
                 if (urlInput) {
                     const detectedUrl = sharedUrl.match(/https?:\/\/[^\s]+/);
@@ -294,11 +321,11 @@
                 const sharedUrl = urlParams.get('url') || urlParams.get('text');
                 const urlInput = document.getElementById('urlInput');
 
-                if (sharedUrl && (sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://'))) {
+                if (sharedUrl && (sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://')) && urlParams.get('shared_file') !== 'true') {
                     urlInput.value = sharedUrl;
                     window.history.replaceState({}, document.title, window.location.pathname);
                     fetchWithAI();
-                } else if (sharedUrl) {
+                } else if (sharedUrl && urlParams.get('shared_file') !== 'true') {
                     const extractedUrls = sharedUrl.match(/https?:\/\/[^\s]+/);
                     if (extractedUrls && extractedUrls.length > 0) {
                         urlInput.value = extractedUrls[0];
@@ -600,7 +627,6 @@
             target.classList.remove('delete-target-hover'); 
         }
 
-        // --- 核心修正：使用 event 阻截冒泡 ---
         function toggleReaderControls(event) {
             if (event) {
                 event.stopPropagation(); // 阻止事件向上冒泡到 document
@@ -620,7 +646,6 @@
                 }
             }
         });
-        // ------------------------------------
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
@@ -825,9 +850,7 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
-        // 核心更新：加入自訂檔名及路徑選擇的非同步下載功能
         async function downloadHTML() {
-            // 匯出時如果正在刪除模式，則強制關閉，避免把樣式一同匯出
             if (isDeleteMode) toggleDeleteMode();
 
             const cloneContent = contentArea.cloneNode(true);
@@ -1234,45 +1257,4 @@
         
     <\/script>
 </body>
-</html>`;
-
-            try {
-                if (window.showSaveFilePicker) {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: `${articleTitle || '純淨文章'}.html`,
-                        types: [{
-                            description: 'HTML 網頁檔',
-                            accept: { 'text/html': ['.html'] },
-                        }],
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(downloadContent);
-                    await writable.close();
-                    return;
-                }
-            } catch (error) {
-                if (error.name !== 'AbortError') console.error('儲存檔案時發生錯誤:', error);
-                return; 
-            }
-
-            const customName = prompt("請輸入檔案名稱：", articleTitle || '純淨文章');
-            if (customName === null) return;
-
-            let finalName = customName.trim();
-            if (!finalName.endsWith('.html')) finalName += '.html';
-
-            const blob = new Blob([downloadContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = finalName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-    </script>
-</body>
 </html>
-
-
