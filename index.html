@@ -13,6 +13,10 @@
     <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png">
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
     <link rel="manifest" href="./manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="PureRead HK">
     
     <script>
       if ('serviceWorker' in navigator) {
@@ -277,6 +281,35 @@
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
             checkScrollButtons();
+
+            // 處理檔案分享 (File Handling)
+            if ('launchQueue' in window) {
+                window.launchQueue.setConsumer(async (launchParams) => {
+                    if (launchParams.files && launchParams.files.length > 0) {
+                        const fileHandle = launchParams.files[0];
+                        const file = await fileHandle.getFile();
+                        
+                        resetUI();
+                        document.getElementById('loadingIcon').classList.remove('hidden');
+                        document.getElementById('btnText').classList.add('hidden');
+
+                        const text = await file.text();
+                        let rawContent = text;
+                        articleTitle = file.name.replace(/\.[^/.]+$/, "");
+                        
+                        if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
+                            rawContent = marked.parse(text);
+                        } else {
+                            rawContent = extractNuclear(text);
+                        }
+                        
+                        renderContent(rawContent);
+                        document.getElementById('loadingIcon').classList.add('hidden');
+                        document.getElementById('btnText').classList.remove('hidden');
+                        console.log("已接收分享檔案:", file.name);
+                    }
+                });
+            }
             
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
