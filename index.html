@@ -277,57 +277,10 @@
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
             }
             checkScrollButtons();
-
-            // 🌟 創新方案：註冊 File Handling API，支援系統「以...開啟」
-            if ('launchQueue' in window) {
-                window.launchQueue.setConsumer(async (launchParams) => {
-                    if (launchParams.files && launchParams.files.length > 0) {
-                        const fileHandle = launchParams.files[0];
-                        const file = await fileHandle.getFile();
-                        
-                        document.getElementById('loadingIcon').classList.remove('hidden');
-                        document.getElementById('btnText').classList.add('hidden');
-                        
-                        articleTitle = file.name.replace(/\.[^/.]+$/, ""); 
-                        const text = await file.text();
-                        const rawContent = extractNuclear(text);
-                        renderContent(rawContent);
-                        
-                        document.getElementById('loadingIcon').classList.add('hidden');
-                        document.getElementById('btnText').classList.remove('hidden');
-                    }
-                });
-            }
-            
-            // --- 攔截 Share Target 傳入的暫存檔案 ---
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('shared_file') === 'true') {
-                document.getElementById('loadingIcon').classList.remove('hidden');
-                document.getElementById('btnText').classList.add('hidden');
-                
-                caches.open('shared-content-cache').then(cache => {
-                    cache.match('/shared-file-temp').then(response => {
-                        if (response) {
-                            response.text().then(text => {
-                                articleTitle = "分享的檔案"; 
-                                const rawContent = extractNuclear(text);
-                                renderContent(rawContent);
-                                
-                                window.history.replaceState({}, document.title, window.location.pathname);
-                                cache.delete('/shared-file-temp');
-                                
-                                document.getElementById('loadingIcon').classList.add('hidden');
-                                document.getElementById('btnText').classList.remove('hidden');
-                            });
-                        }
-                    });
-                });
-            }
-            // ----------------------------------------
             
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
-            if (sharedUrl && urlParams.get('shared_file') !== 'true') {
+            if (sharedUrl) {
                 const urlInput = document.getElementById("urlInput");
                 if (urlInput) {
                     const detectedUrl = sharedUrl.match(/https?:\/\/[^\s]+/);
@@ -337,14 +290,15 @@
             }
             
             setTimeout(() => {
+                const urlParams = new URLSearchParams(window.location.search);
                 const sharedUrl = urlParams.get('url') || urlParams.get('text');
                 const urlInput = document.getElementById('urlInput');
 
-                if (sharedUrl && (sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://')) && urlParams.get('shared_file') !== 'true') {
+                if (sharedUrl && (sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://'))) {
                     urlInput.value = sharedUrl;
                     window.history.replaceState({}, document.title, window.location.pathname);
                     fetchWithAI();
-                } else if (sharedUrl && urlParams.get('shared_file') !== 'true') {
+                } else if (sharedUrl) {
                     const extractedUrls = sharedUrl.match(/https?:\/\/[^\s]+/);
                     if (extractedUrls && extractedUrls.length > 0) {
                         urlInput.value = extractedUrls[0];
@@ -593,6 +547,7 @@
                 selectedElements.clear();
             }
             
+            // 確保選取被清除後，隱藏刪除按鈕
             const executeBtn = document.getElementById('executeDeleteBtn');
             const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
             if (executeBtn) executeBtn.classList.add('hidden');
@@ -645,9 +600,10 @@
             target.classList.remove('delete-target-hover'); 
         }
 
+        // --- 核心修正：使用 event 阻截冒泡 ---
         function toggleReaderControls(event) {
             if (event) {
-                event.stopPropagation();
+                event.stopPropagation(); // 阻止事件向上冒泡到 document
             }
             const controls = document.getElementById('readerControls');
             if (controls) {
@@ -658,11 +614,13 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
+                // 如果點擊目標不在控制面板內，則將其收合
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
             }
         });
+        // ------------------------------------
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
@@ -714,8 +672,10 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
+            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
+                // 若系統未提供 voiceURI，則退回使用 name
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
                 if(!seenIDs.has(id)) { 
                     seenIDs.add(id); 
@@ -865,7 +825,9 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
+        // 核心更新：加入自訂檔名及路徑選擇的非同步下載功能
         async function downloadHTML() {
+            // 匯出時如果正在刪除模式，則強制關閉，避免把樣式一同匯出
             if (isDeleteMode) toggleDeleteMode();
 
             const cloneContent = contentArea.cloneNode(true);
@@ -965,6 +927,7 @@
 <body data-click-read="off">
 
     <div class="fab-container">
+        <!-- 匯出檔案同樣套用事件攔截 -->
         <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -1019,6 +982,7 @@
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
 
+        // 匯出檔案的核心修正：套用 event 阻截
         function toggleReaderControls(event) {
             if (event) {
                 event.stopPropagation();
@@ -1088,6 +1052,7 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
+            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
@@ -1269,4 +1234,45 @@
         
     <\/script>
 </body>
+</html>`;
+
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: `${articleTitle || '純淨文章'}.html`,
+                        types: [{
+                            description: 'HTML 網頁檔',
+                            accept: { 'text/html': ['.html'] },
+                        }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(downloadContent);
+                    await writable.close();
+                    return;
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') console.error('儲存檔案時發生錯誤:', error);
+                return; 
+            }
+
+            const customName = prompt("請輸入檔案名稱：", articleTitle || '純淨文章');
+            if (customName === null) return;
+
+            let finalName = customName.trim();
+            if (!finalName.endsWith('.html')) finalName += '.html';
+
+            const blob = new Blob([downloadContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
 </html>
+
+

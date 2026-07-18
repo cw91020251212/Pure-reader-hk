@@ -1,5 +1,7 @@
 // PureRead HK service worker
-const CACHE_NAME = 'pure-reader-hk-v20260718-pivot';
+// 目的：讓網站符合「可安裝」條件，並確保離線時仍可開啟主頁。
+
+const CACHE_NAME = 'pure-reader-hk-v20260713-fixed';
 const PRECACHE_URLS = [
   './index.html',
   './manifest.json',
@@ -31,36 +33,11 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
 
-  // 雙重保險：攔截分享請求，採用明確參數 ?share=1
-  if (req.method === 'POST' && req.url.includes('share=1')) {
-    event.respondWith((async () => {
-      try {
-        const formData = await req.formData();
-        const file = formData.get('shared_file');
-        const text = formData.get('text') || formData.get('url');
-
-        if (file) {
-          const fileContent = await file.text();
-          const cache = await caches.open('shared-content-cache');
-          await cache.put('/shared-file-temp', new Response(fileContent));
-          return Response.redirect('./index.html?shared_file=true', 303);
-        }
-
-        if (text) {
-          return Response.redirect('./index.html?url=' + encodeURIComponent(text), 303);
-        }
-
-        return Response.redirect('./index.html', 303);
-      } catch (error) {
-        console.error('[Service Worker] 分享處理失敗:', error);
-        return Response.redirect('./index.html?error=share_failed', 303);
-      }
-    })());
-    return;
-  }
-
+  // 只處理 GET
   if (req.method !== 'GET') return;
 
+  // 導覽請求：離線時回退到 index.html
+  // 特別處理帶有分享參數的 URL，忽略 search params 進行匹配
   if (req.mode === 'navigate') {
     event.respondWith(
       (async () => {
@@ -69,6 +46,7 @@ self.addEventListener('fetch', (event) => {
           return fresh;
         } catch {
           const cache = await caches.open(CACHE_NAME);
+          // 關鍵：使用 ignoreSearch 確保帶參數的分享 URL 也能匹配到緩存的 index.html
           const cached = await cache.match('./index.html', { ignoreSearch: true });
           return cached || Response.error();
         }
@@ -77,6 +55,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // 其他資源：cache-first，再回到 network
   event.respondWith(
     (async () => {
       const cached = await caches.match(req);

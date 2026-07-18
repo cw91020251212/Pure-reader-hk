@@ -32,27 +32,12 @@
     }
   ],
   "share_target": {
-    "action": "./?share=1",
-    "method": "POST",
-    "enctype": "multipart/form-data",
+    "action": "./index.html",
+    "method": "GET",
     "params": {
       "title": "title",
       "text": "text",
-      "url": "url",
-      "files": [
-        {
-          "name": "shared_file",
-          "accept": [".html", ".htm", "text/html"]
-        }
-      ]
+      "url": "url"
     }
-  },
-  "file_handlers": [
-    {
-      "action": "./index.html",
-      "accept": {
-        "text/html": [".html", ".htm"]
-      }
-    }
-  ]
+  }
 }
