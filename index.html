@@ -327,15 +327,14 @@
                 const sharedUrl = urlParams.get('url') || urlParams.get('text');
                 const urlInput = document.getElementById('urlInput');
 
-                if (sharedUrl && (sharedUrl.startsWith('http://') || sharedUrl.startsWith('https://'))) {
-                    urlInput.value = sharedUrl;
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    fetchWithAI();
-                } else if (sharedUrl) {
-                    const extractedUrls = sharedUrl.match(/https?:\/\/[^\s]+/);
-                    if (extractedUrls && extractedUrls.length > 0) {
-                        urlInput.value = extractedUrls[0];
-                        window.history.replaceState({}, document.title, window.location.pathname);
+                if (sharedUrl) {
+                    const detectedUrl = sharedUrl.match(/(https?|file):\/\/[^\s]+/);
+                    if (detectedUrl) {
+                        urlInput.value = detectedUrl[0];
+                        // 只有當不是本地檔案協議時才清理 URL 參數
+                        if (!window.location.protocol.startsWith('file')) {
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
                         fetchWithAI();
                     }
                 }
@@ -437,7 +436,7 @@
 
         async function fetchWithAI() {
             const urlInput = document.getElementById('urlInput').value.trim();
-            if (!urlInput || !urlInput.startsWith('http')) {
+            if (!urlInput || (!urlInput.startsWith('http') && !urlInput.startsWith('file'))) {
                 showError('⚠️ 請輸入有效的完整網址');
                 return;
             }
@@ -1244,6 +1243,19 @@
                 utterances[currentIndex].el.classList.add('reading-highlight');
             }
             checkScrollButtons();
+
+            // 匯出檔案自動處理 URL 參數邏輯：若偵測到網址參數，自動導向主程式處理
+            const params = new URLSearchParams(window.location.search);
+            const sharedUrl = params.get("url") || params.get("text");
+            if (sharedUrl) {
+                const detectedUrl = sharedUrl.match(/(https?|file):\/\/[^\s]+/);
+                if (detectedUrl) {
+                    const mainAppUrl = "https://pureread.hk/index.html"; // 假設的主程式網址
+                    if (confirm("偵測到網址參數，是否前往 PureRead HK 主程式進行提取？")) {
+                        window.location.href = mainAppUrl + window.location.search;
+                    }
+                }
+            }
         });
         
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
