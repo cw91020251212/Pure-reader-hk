@@ -316,7 +316,7 @@
             if (sharedUrl) {
                 const urlInput = document.getElementById("urlInput");
                 if (urlInput) {
-                    const detectedUrl = sharedUrl.match(/https?:\/\/[^\s]+/);
+                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
                     urlInput.value = detectedUrl ? detectedUrl[0] : sharedUrl;
                     console.log("已接收分享內容:", urlInput.value);
                 }
@@ -328,7 +328,7 @@
                 const urlInput = document.getElementById('urlInput');
 
                 if (sharedUrl) {
-                    const detectedUrl = sharedUrl.match(/(https?|file):\/\/[^\s]+/);
+                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
                     if (detectedUrl) {
                         urlInput.value = detectedUrl[0];
                         // 只有當不是本地檔案協議時才清理 URL 參數
@@ -436,7 +436,7 @@
 
         async function fetchWithAI() {
             const urlInput = document.getElementById('urlInput').value.trim();
-            if (!urlInput || (!urlInput.startsWith('http') && !urlInput.startsWith('file'))) {
+            if (!urlInput || (!urlInput.startsWith('http') && !urlInput.startsWith('file') && !urlInput.startsWith('hdml') && !urlInput.startsWith('content'))) {
                 showError('⚠️ 請輸入有效的完整網址');
                 return;
             }
@@ -444,7 +444,16 @@
             document.getElementById('btnText').classList.add('hidden');
             document.getElementById('loadingIcon').classList.remove('hidden');
             try {
-                const response = await fetch(`https://r.jina.ai/${urlInput}`, { headers: { 'Accept': 'text/plain' } });
+                let finalUrl = urlInput;
+                if (urlInput.startsWith('hdml://')) {
+                    finalUrl = urlInput.replace('hdml://', 'https://');
+                } else if (urlInput.startsWith('content://')) {
+                    showError('⚠️ 檢測到 Android Content URI。由於瀏覽器安全限制，請改為直接點擊「上傳檔案」按鈕並選擇該檔案。');
+                    document.getElementById('loadingIcon').classList.add('hidden');
+                    document.getElementById('btnText').classList.remove('hidden');
+                    return;
+                }
+                const response = await fetch(`https://r.jina.ai/${finalUrl}`, { headers: { 'Accept': 'text/plain' } });
                 if (!response.ok) throw new Error('無法讀取該網站。');
                 const markdownText = await response.text();
                 if (!markdownText || markdownText.length < 50) throw new Error('無法提取有效內容。');
@@ -1248,7 +1257,7 @@
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
             if (sharedUrl) {
-                const detectedUrl = sharedUrl.match(/(https?|file):\/\/[^\s]+/);
+                const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
                 if (detectedUrl) {
                     const mainAppUrl = "https://pureread.hk/index.html"; // 假設的主程式網址
                     if (confirm("偵測到網址參數，是否前往 PureRead HK 主程式進行提取？")) {
