@@ -207,7 +207,7 @@
 
     <div class="fab-container">
         <!-- 套用事件攔截，防止瞬間觸發全域點擊事件而關閉選單 -->
-        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
+        <button class="fab-toggle" onclick="return toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         
@@ -316,7 +316,7 @@
             if (sharedUrl) {
                 const urlInput = document.getElementById("urlInput");
                 if (urlInput) {
-                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
+                const detectedUrl = (sharedUrl.startsWith("http://") || sharedUrl.startsWith("https://") || sharedUrl.startsWith("file://") || sharedUrl.startsWith("content://") || sharedUrl.startsWith("hdml://")) ? [sharedUrl] : null;
                     urlInput.value = detectedUrl ? detectedUrl[0] : sharedUrl;
                     console.log("已接收分享內容:", urlInput.value);
                 }
@@ -328,7 +328,7 @@
                 const urlInput = document.getElementById('urlInput');
 
                 if (sharedUrl) {
-                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
+                const detectedUrl = (sharedUrl.startsWith("http://") || sharedUrl.startsWith("https://") || sharedUrl.startsWith("file://") || sharedUrl.startsWith("content://") || sharedUrl.startsWith("hdml://")) ? [sharedUrl] : null;
                     if (detectedUrl) {
                         urlInput.value = detectedUrl[0];
                         // 只有當不是本地檔案協議時才清理 URL 參數
@@ -643,9 +643,14 @@
 
         // --- 核心修正：使用 event 阻截冒泡 ---
         function toggleReaderControls(event) {
-            if (event) event.stopPropagation();
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
             const controls = document.getElementById('readerControls');
-            if (controls) controls.classList.toggle('collapsed');
+            if (!controls) return false;
+            controls.classList.toggle('collapsed');
+            return false;
         }
 
         document.addEventListener('click', function(event) {
@@ -957,7 +962,7 @@
 
     <div class="fab-container">
         <!-- 匯出檔案同樣套用事件攔截 -->
-        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
+        <button class="fab-toggle" onclick="return toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         
@@ -1011,21 +1016,20 @@
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
 
-        // 匯出檔案的核心修正：套用 event 阻截
         function toggleReaderControls(event) {
             if (event) event.stopPropagation();
             const controls = document.getElementById('readerControls');
-            if (controls) controls.classList.toggle('collapsed');
+            if (!controls) return;
+            controls.classList.toggle('collapsed');
         }
 
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
-            const fab = event.target.closest('.fab-container');
-            if (controls && !controls.classList.contains('collapsed') && !fab) {
+            const fab = document.querySelector('.fab-container');
+            if (controls && !controls.classList.contains('collapsed') && fab && !fab.contains(event.target)) {
                 controls.classList.add('collapsed');
             }
         });
-
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
             const isOn = document.body.dataset.clickRead !== 'off';
@@ -1240,7 +1244,7 @@
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
             if (sharedUrl) {
-                const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
+                const detectedUrl = (sharedUrl.startsWith("http://") || sharedUrl.startsWith("https://") || sharedUrl.startsWith("file://") || sharedUrl.startsWith("content://") || sharedUrl.startsWith("hdml://")) ? [sharedUrl] : null;
                 if (detectedUrl) {
                     const mainAppUrl = "https://pureread.hk/index.html"; // 假設的主程式網址
                     if (confirm("偵測到網址參數，是否前往 PureRead HK 主程式進行提取？")) {
@@ -1269,9 +1273,47 @@
         }
         window.addEventListener('scroll', checkScrollButtons);
         
+    <${"/"}script>
+</body>
+</html>`;
+
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: `${articleTitle || '純淨文章'}.html`,
+                        types: [{
+                            description: 'HTML 網頁檔',
+                            accept: { 'text/html': ['.html'] },
+                        }],
+                    });
+                    const writable = await handle.createWritable();
+                    await writable.write(downloadContent);
+                    await writable.close();
+                    return;
+                }
+            } catch (error) {
+                if (error.name !== 'AbortError') console.error('儲存檔案時發生錯誤:', error);
+                return; 
+            }
+
+            const customName = prompt("請輸入檔案名稱：", articleTitle || '純淨文章');
+            if (customName === null) return;
+
+            let finalName = customName.trim();
+            if (!finalName.endsWith('.html')) finalName += '.html';
+
+            const blob = new Blob([downloadContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = finalName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
     </script>
 </body>
 </html>
 
 
-           
