@@ -1271,45 +1271,7 @@
         
     </script>
 </body>
-</html>`;
-
-            try {
-                if (window.showSaveFilePicker) {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: `${articleTitle || '純淨文章'}.html`,
-                        types: [{
-                            description: 'HTML 網頁檔',
-                            accept: { 'text/html': ['.html'] },
-                        }],
-                    });
-                    const writable = await handle.createWritable();
-                    await writable.write(downloadContent);
-                    await writable.close();
-                    return;
-                }
-            } catch (error) {
-                if (error.name !== 'AbortError') console.error('儲存檔案時發生錯誤:', error);
-                return; 
-            }
-
-            const customName = prompt("請輸入檔案名稱：", articleTitle || '純淨文章');
-            if (customName === null) return;
-
-            let finalName = customName.trim();
-            if (!finalName.endsWith('.html')) finalName += '.html';
-
-            const blob = new Blob([downloadContent], { type: 'text/html;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = finalName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-    </script>
-</body>
 </html>
 
 
+           
