@@ -59,6 +59,27 @@
         .markdown-body li { margin-bottom: 0.25em; font-size: 1em; }
         .markdown-body a { color: #4f46e5; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
         
+        /* 新增：長網址縮短樣式 */
+        .markdown-body a.shortened-url {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e0e7ff;
+            color: #3730a3 !important;
+            padding: 2px 10px;
+            border-radius: 9999px;
+            text-decoration: none;
+            font-size: 0.85em;
+            font-weight: 500;
+            border: 1px solid #c7d2fe;
+            transition: all 0.2s;
+            margin: 0 4px;
+        }
+        .markdown-body a.shortened-url:hover {
+            background: #c7d2fe;
+            transform: translateY(-1px);
+        }
+        
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -207,7 +228,7 @@
 
     <div class="fab-container">
         <!-- 套用事件攔截，防止瞬間觸發全域點擊事件而關閉選單 -->
-        <button class="fab-toggle" onclick="return toggleReaderControls(event)" title="選單">
+        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         
@@ -316,7 +337,7 @@
             if (sharedUrl) {
                 const urlInput = document.getElementById("urlInput");
                 if (urlInput) {
-                const detectedUrl = (sharedUrl.startsWith("http://") || sharedUrl.startsWith("https://") || sharedUrl.startsWith("file://") || sharedUrl.startsWith("content://") || sharedUrl.startsWith("hdml://")) ? [sharedUrl] : null;
+                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
                     urlInput.value = detectedUrl ? detectedUrl[0] : sharedUrl;
                     console.log("已接收分享內容:", urlInput.value);
                 }
@@ -328,7 +349,7 @@
                 const urlInput = document.getElementById('urlInput');
 
                 if (sharedUrl) {
-                const detectedUrl = (sharedUrl.startsWith("http://") || sharedUrl.startsWith("https://") || sharedUrl.startsWith("file://") || sharedUrl.startsWith("content://") || sharedUrl.startsWith("hdml://")) ? [sharedUrl] : null;
+                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
                     if (detectedUrl) {
                         urlInput.value = detectedUrl[0];
                         // 只有當不是本地檔案協議時才清理 URL 參數
@@ -390,8 +411,18 @@
             let wrapper = doc.querySelector('#content-wrapper');
             let targetNode = wrapper ? wrapper : doc.body;
             
-            targetNode.querySelectorAll('button, script, style, iframe, .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls').forEach(el => el.remove());
+            // 升級 1：擴大底層黑名單，強制移除 SVG 向量圖、導覽列、頁尾、表單等雜訊佔位元素
+            targetNode.querySelectorAll('button, script, style, iframe, svg, nav, footer, aside, form, input, textarea, select, .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls').forEach(el => el.remove());
             
+            // 升級 2：在移除屬性前，先檢查並刪除帶有社交分享或廣告特徵的隱藏元素
+            targetNode.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href') || '';
+                const classes = a.getAttribute('class') || '';
+                if (href.includes('share') || href.includes('facebook.com/sharer') || href.includes('twitter.com/intent') || classes.includes('share') || classes.includes('social')) {
+                    a.remove();
+                }
+            });
+
             targetNode.querySelectorAll('*').forEach(el => {
                 el.removeAttribute('style');
                 el.removeAttribute('class');
@@ -406,6 +437,19 @@
             });
             
             return targetNode.innerHTML;
+        }
+
+        // 升級 3：智慧處理過長網址
+        function processLongURLs(container) {
+            container.querySelectorAll('a').forEach(a => {
+                const text = a.innerText.trim();
+                // 如果顯示文字是網址，且長度超過 30 個字元，則自動縮短並加入樣式
+                if ((text.startsWith('http://') || text.startsWith('https://')) && text.length > 30) {
+                    a.innerHTML = `🔗 外部連結`;
+                    a.classList.add('shortened-url');
+                    a.title = text; // 保留原始網址於標題，滑鼠懸停可見
+                }
+            });
         }
 
         function handleFileUpload(event) {
@@ -477,6 +521,9 @@
         function renderContent(rawHTML) {
             const cleanHTML = DOMPurify.sanitize(rawHTML);
             contentArea.innerHTML = cleanHTML;
+            
+            // 套用網址縮短優化
+            processLongURLs(contentArea);
             
             document.getElementById('articleContainer').classList.remove('hidden');
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -644,20 +691,21 @@
         // --- 核心修正：使用 event 阻截冒泡 ---
         function toggleReaderControls(event) {
             if (event) {
-                event.preventDefault();
-                event.stopPropagation();
+                event.stopPropagation(); // 阻止事件向上冒泡到 document
             }
             const controls = document.getElementById('readerControls');
-            if (!controls) return false;
-            controls.classList.toggle('collapsed');
-            return false;
+            if (controls) {
+                controls.classList.toggle('collapsed');
+            }
         }
 
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
-            const fab = event.target.closest('.fab-container');
-            if (controls && !controls.classList.contains('collapsed') && !fab) {
-                controls.classList.add('collapsed');
+            if (controls && !controls.classList.contains('collapsed')) {
+                // 如果點擊目標不在控制面板內，則將其收合
+                if (!controls.contains(event.target)) {
+                    controls.classList.add('collapsed');
+                }
             }
         });
         // ------------------------------------
@@ -879,7 +927,13 @@
             const finalContent = cloneContent.innerHTML;
             if (!finalContent.trim()) return;
             
-            const downloadContent = `<!DOCTYPE html>\n<html lang="zh-HK">\n<head>\n    <meta charset="UTF-8">\n    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n    <title>${articleTitle}</title>\n    <style>
+            const downloadContent = `<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${articleTitle}</title>
+    <style>
         :root { --base-font-size: 18px; }
         
         body { 
@@ -926,6 +980,10 @@
         li { margin-bottom: 0.25em; transition: background-color 0.3s; padding: 2px; border-radius: 4px; }
         a { color: #9333ea; text-decoration: underline; word-break: break-all; }
         
+        /* 匯出頁面的縮短網址樣式 */
+        a.shortened-url { display: inline-flex; align-items: center; gap: 6px; background: #e0e7ff; color: #3730a3 !important; padding: 2px 10px; border-radius: 9999px; text-decoration: none; font-size: 0.85em; font-weight: 500; border: 1px solid #c7d2fe; transition: all 0.2s; margin: 0 4px; }
+        a.shortened-url:hover { background: #c7d2fe; transform: translateY(-1px); }
+        
         .util-copy-btn { position: absolute; top: 8px; right: 8px; background-color: rgba(226, 232, 240, 0.9); color: #334155; font-size: 12px !important; padding: 4px 8px; border: none; border-radius: 4px; cursor: pointer; z-index: 50; box-shadow: 0 1px 2px rgba(0,0,0,0.1); font-weight: 500; transition: background-color 0.2s; user-select: none; }
         .util-copy-btn:hover { background-color: #cbd5e1; }
         
@@ -962,7 +1020,7 @@
 
     <div class="fab-container">
         <!-- 匯出檔案同樣套用事件攔截 -->
-        <button class="fab-toggle" onclick="return toggleReaderControls(event)" title="選單">
+        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         
@@ -1016,20 +1074,26 @@
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
 
+        // 匯出檔案的核心修正：套用 event 阻截
         function toggleReaderControls(event) {
-            if (event) event.stopPropagation();
+            if (event) {
+                event.stopPropagation();
+            }
             const controls = document.getElementById('readerControls');
-            if (!controls) return;
-            controls.classList.toggle('collapsed');
+            if (controls) {
+                controls.classList.toggle('collapsed');
+            }
         }
 
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
-            const fab = document.querySelector('.fab-container');
-            if (controls && !controls.classList.contains('collapsed') && fab && !fab.contains(event.target)) {
-                controls.classList.add('collapsed');
+            if (controls && !controls.classList.contains('collapsed')) {
+                if (!controls.contains(event.target)) {
+                    controls.classList.add('collapsed');
+                }
             }
         });
+
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
             const isOn = document.body.dataset.clickRead !== 'off';
@@ -1244,7 +1308,7 @@
             const params = new URLSearchParams(window.location.search);
             const sharedUrl = params.get("url") || params.get("text");
             if (sharedUrl) {
-                const detectedUrl = (sharedUrl.startsWith("http://") || sharedUrl.startsWith("https://") || sharedUrl.startsWith("file://") || sharedUrl.startsWith("content://") || sharedUrl.startsWith("hdml://")) ? [sharedUrl] : null;
+                const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
                 if (detectedUrl) {
                     const mainAppUrl = "https://pureread.hk/index.html"; // 假設的主程式網址
                     if (confirm("偵測到網址參數，是否前往 PureRead HK 主程式進行提取？")) {
@@ -1273,7 +1337,7 @@
         }
         window.addEventListener('scroll', checkScrollButtons);
         
-    <${"/"}script>
+    <\/script>
 </body>
 </html>`;
 
