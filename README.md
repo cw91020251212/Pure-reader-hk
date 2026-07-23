@@ -9,4 +9,4 @@
 3. Source 選擇 **Deploy from a branch**，再選擇包含呢啲檔案嘅 branch 及 `/ (root)`。
 4. 等 GitHub Pages 發佈後，用 HTTPS 網址開啟 `index.html`。
 
-`manifest.json`、`sw.js` 同 `assets/icon.png` 必須按原本資料夾結構放置，否則 Android 分享功能唔會註冊。
+`manifest.json`、`sw.js` 同 `assets/icon.jpeg` 必須按原本資料夾結構放置，否則 Android 分享功能唔會註冊。
