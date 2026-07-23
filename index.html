@@ -22,8 +22,12 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js')
-            .then((reg) => console.log('[PureRead HK] SW registered:', reg.scope))
+          navigator.serviceWorker.register('./sw.js', { scope: './' })
+            .then((reg) => {
+              console.log('[PureRead HK] SW registered:', reg.scope);
+              reg.update?.();
+              if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+            })
             .catch((err) => console.warn('[PureRead HK] SW registration failed:', err));
         });
       }
@@ -535,6 +539,9 @@
             }
             
             const params = new URLSearchParams(window.location.search);
+            if (params.get('share-error')) {
+                showError('分享內容未能自動載入。請確認已用 HTTPS 部署、已安裝成 PWA，並重新開啟一次 app 等待更新完成。');
+            }
             const sharedUrl = params.get("url") || params.get("text");
             if (!loadedSharedFile && sharedUrl) {
                 const urlInput = document.getElementById("urlInput");

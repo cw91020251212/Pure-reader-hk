@@ -1,7 +1,16 @@
 const SHARE_CACHE = 'pureread-share-target-v1';
+const APP_SHELL = './index.html';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  event.waitUntil((async () => {
+    await self.skipWaiting();
+    try {
+      const cache = await caches.open(SHARE_CACHE);
+      await cache.add(APP_SHELL);
+    } catch (error) {
+      console.warn('[PureRead HK] app shell cache skipped:', error);
+    }
+  })());
 });
 
 self.addEventListener('activate', (event) => {
@@ -10,8 +19,16 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (event.request.method === 'POST' && url.pathname.endsWith('/share-target')) {
+  if (event.request.method === 'POST' && (url.pathname.endsWith('/share-target') || url.searchParams.has('share-target'))) {
     event.respondWith(handleShareTarget(event.request));
+    return;
+  }
+
+  if (event.request.method === 'GET' && url.pathname.endsWith('/index.html')) {
+    event.respondWith(fetch(event.request).catch(async () => {
+      const cache = await caches.open(SHARE_CACHE);
+      return cache.match(APP_SHELL);
+    }));
   }
 });
 
@@ -61,7 +78,7 @@ async function handleShareTarget(request) {
     console.error('[PureRead HK] share target failed:', error);
   }
 
-  return Response.redirect(new URL('./index.html', self.registration.scope).toString(), 303);
+  return Response.redirect(new URL('./index.html?share-error=1', self.registration.scope).toString(), 303);
 }
 
 function pickSharedFile(formData) {
@@ -83,3 +100,7 @@ function guessType(name = '') {
   if (lowerName.endsWith('.txt')) return 'text/plain';
   return 'text/html';
 }
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
