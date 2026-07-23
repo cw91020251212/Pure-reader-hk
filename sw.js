@@ -1,5 +1,5 @@
 const CACHE_NAME = 'pureread-hk-v4';
-const APP_SHELL = ['./', './index.html', './manifest.json', './icon.png'];
+const APP_SHELL = ['./', './index.html', './manifest.json', './assets/icon.png'];
 const DB_NAME = 'pureread-hk-share';
 const STORE_NAME = 'files';
 
