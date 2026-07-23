@@ -1,71 +1,78 @@
-// PureRead HK service worker
-// 目的：讓網站符合「可安裝」條件，並確保離線時仍可開啟主頁。
+const CACHE_NAME = 'pureread-hk-v4';
+const APP_SHELL = ['./', './index.html', './manifest.json', './assets/icon.jpeg'];
+const DB_NAME = 'pureread-hk-share';
+const STORE_NAME = 'files';
 
-const CACHE_NAME = 'pure-reader-hk-v20260723-share-fix';
-const PRECACHE_URLS = [
-  './index.html',
-  './manifest.json',
-  './favicon.ico',
-  './assets/icon-192.png',
-  './assets/icon-512.png',
-  './assets/favicon-32.png',
-  './assets/favicon-16.png',
-  './assets/apple-touch-icon.png'
-];
+function openShareDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
 
-self.addEventListener('install', (event) => {
+async function saveSharedFile(file) {
+  const db = await openShareDatabase();
+  await new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    transaction.objectStore(STORE_NAME).put({
+      id: 'latest',
+      name: file.name || 'shared.html',
+      type: file.type || 'text/html',
+      blob: file
+    });
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
   self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    (async () => {
-      const keys = await caches.keys();
-      await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)));
-      await self.clients.claim();
-    })()
-  );
+self.addEventListener('message', event => {
+  if (event.data?.type !== 'read-latest-shared-file') return;
+  event.waitUntil((async () => {
+    const db = await openShareDatabase();
+    const file = await new Promise((resolve, reject) => {
+      const request = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get('latest');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    if (!file) return;
+    event.source?.postMessage({ type: 'shared-file-ready', file: file.blob, name: file.name, mime: file.type });
+  })());
 });
 
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-
-  // 只處理 GET
-  if (req.method !== 'GET') return;
-
-  // 導覽請求：離線時回退到 index.html
-  // 特別處理帶有分享參數的 URL，忽略 search params 進行匹配
-  if (req.mode === 'navigate') {
-    event.respondWith(
-      (async () => {
-        try {
-          const fresh = await fetch(req);
-          return fresh;
-        } catch {
-          const cache = await caches.open(CACHE_NAME);
-          // 關鍵：使用 ignoreSearch 確保帶參數的分享 URL 也能匹配到緩存的 index.html
-          const cached = await cache.match('./index.html', { ignoreSearch: true });
-          return cached || Response.error();
+self.addEventListener('fetch', event => {
+  if (event.request.method === 'POST' && new URL(event.request.url).pathname.endsWith('/index.html')) {
+    event.respondWith((async () => {
+      const formData = await event.request.formData();
+      let file = formData.get('file');
+      if (!(file instanceof File)) {
+        for (const value of formData.values()) {
+          if (value instanceof File) {
+            file = value;
+            break;
+          }
         }
-      })()
-    );
+      }
+      if (file instanceof File) await saveSharedFile(file);
+      return Response.redirect(new URL('./index.html?shared_file=1', event.request.url), 303);
+    })());
     return;
   }
-
-  // 其他資源：cache-first，再回到 network
-  event.respondWith(
-    (async () => {
-      const cached = await caches.match(req);
-      if (cached) return cached;
-      try {
-        const fresh = await fetch(req);
-        return fresh;
-      } catch {
-        return Response.error();
-      }
-    })()
-  );
+  if (event.request.method !== 'GET') return;
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
