@@ -422,6 +422,21 @@
             saveUrlHistory([]);
         }
 
+        async function fillUrlFromClipboard() {
+            const input = document.getElementById('urlInput');
+            if (!input || input.value.trim() || !navigator.clipboard?.readText) return;
+            try {
+                const clipboardText = await navigator.clipboard.readText();
+                const detectedUrl = clipboardText.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
+                if (detectedUrl) {
+                    input.value = detectedUrl[0];
+                    updateClearUrlButton();
+                }
+            } catch (error) {
+                console.info('無法讀取剪貼簿內容，已略過自動填入。');
+            }
+        }
+
         function startTutorial() {
             introJs().setOptions({
                 nextLabel: '下一步', prevLabel: '上一步', doneLabel: '明白晒', showStepNumbers: true,
@@ -444,6 +459,7 @@
             updateClearUrlButton();
             document.getElementById('urlInput')?.addEventListener('input', updateClearUrlButton);
             checkScrollButtons();
+            fillUrlFromClipboard();
 
             // 處理檔案分享 (File Handling)
             if ('launchQueue' in window) {
@@ -1329,6 +1345,16 @@
             
             const finalContent = cloneContent.innerHTML;
             if (!finalContent.trim()) return;
+            const previewImage = cloneContent.querySelector('img');
+            const previewImageSrc = previewImage?.getAttribute('src') || previewImage?.getAttribute('data-src') || '';
+            const previewImageAlt = previewImage?.getAttribute('alt') || articleTitle || '文章預覽圖';
+            const escapeExportValue = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+            const safePreviewSrc = escapeExportValue(previewImageSrc);
+            const safePreviewAlt = escapeExportValue(previewImageAlt);
+            const safePreviewTitle = escapeExportValue(articleTitle || '純淨文章');
+            const previewMarkup = previewImageSrc
+                ? `<img class="preview-image" src="${safePreviewSrc}" alt="${safePreviewAlt}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"><div class="preview-placeholder hidden" role="img" aria-label="${safePreviewTitle} 預覽圖"><span>文章預覽</span><strong>${safePreviewTitle}</strong></div>`
+                : `<div class="preview-placeholder" role="img" aria-label="${safePreviewTitle} 預覽圖"><span>文章預覽</span><strong>${safePreviewTitle}</strong></div>`;
             
             const downloadContent = `<!DOCTYPE html>
 <html lang="zh-HK">
@@ -1377,6 +1403,10 @@
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
         
         img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; }
+        .preview-image { width: 100%; max-height: 320px; object-fit: cover; margin: 0 0 28px; border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16); }
+        .preview-placeholder { min-height: 180px; margin: 0 0 28px; padding: 32px; border-radius: 14px; display: flex; flex-direction: column; justify-content: center; gap: 8px; background: linear-gradient(135deg, #eef2ff, #dbeafe); color: #1e3a8a; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12); }
+        .preview-placeholder span { font-size: 0.85em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+        .preview-placeholder strong { font-size: 1.8em; line-height: 1.25; }
         blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #c084fc; margin: 0 0 16px 0; position: relative; }
         
         pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; margin-bottom: 16px; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; position: relative; max-width: 100%; }
@@ -1471,6 +1501,7 @@
     </div>
     
     <div id="content-wrapper">
+        ${previewMarkup}
         ${finalContent}
     </div>
 
@@ -1710,18 +1741,6 @@
             }
             checkScrollButtons();
 
-            // 匯出檔案自動處理 URL 參數邏輯：若偵測到網址參數，自動導向主程式處理
-            const params = new URLSearchParams(window.location.search);
-            const sharedUrl = params.get("url") || params.get("text");
-            if (sharedUrl) {
-                const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
-                if (detectedUrl) {
-                    const mainAppUrl = "https://pureread.hk/index.html"; // 假設的主程式網址
-                    if (confirm("偵測到網址參數，是否前往 PureRead HK 主程式進行提取？")) {
-                        window.location.href = mainAppUrl + window.location.search;
-                    }
-                }
-            }
         });
         
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -1779,6 +1798,6 @@
         }
     </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7"}' crossorigin="anonymous"></script>
 </body>
 </html>
