@@ -450,6 +450,28 @@
             }).start();
         }
 
+        function getSharedUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const sharedValue = params.get('url') || params.get('text');
+            if (!sharedValue) return '';
+            const detectedUrl = sharedValue.match(/(?:https?|hdml|file|content):\/\/[^\s]+/i);
+            return (detectedUrl ? detectedUrl[0] : sharedValue).replace(/[),.;!?]+$/, '');
+        }
+
+        function applySharedUrl() {
+            const sharedUrl = getSharedUrl();
+            const urlInput = document.getElementById('urlInput');
+            if (!sharedUrl || !urlInput) return false;
+            urlInput.value = sharedUrl;
+            updateClearUrlButton();
+            urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log('已接收分享網址:', sharedUrl);
+            if (!window.location.protocol.startsWith('file')) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            return true;
+        }
+
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
             if(!SafeStorage.get('tutorialSeen_v6')) {
@@ -459,9 +481,7 @@
             updateClearUrlButton();
             document.getElementById('urlInput')?.addEventListener('input', updateClearUrlButton);
             checkScrollButtons();
-            fillUrlFromClipboard();
 
-            // 處理檔案分享 (File Handling)
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.addEventListener('message', event => {
                     if (event.data?.type !== 'shared-file-ready' || !event.data.file) return;
@@ -481,43 +501,15 @@
                     if (launchParams.files && launchParams.files.length > 0) {
                         const fileHandle = launchParams.files[0];
                         const file = await fileHandle.getFile();
-                        
                         handleSharedFile(file);
-                        console.log("已接收分享檔案:", file.name);
+                        console.log('已接收分享檔案:', file.name);
                     }
                 });
             }
 
-            const params = new URLSearchParams(window.location.search);
-            const sharedUrl = params.get("url") || params.get("text");
-            if (sharedUrl) {
-                const urlInput = document.getElementById("urlInput");
-                if (urlInput) {
-                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
-                    urlInput.value = detectedUrl ? detectedUrl[0] : sharedUrl;
-                    updateClearUrlButton();
-                    console.log("已接收分享內容:", urlInput.value);
-                }
-            }
-            
-            setTimeout(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const sharedUrl = urlParams.get('url') || urlParams.get('text');
-                const urlInput = document.getElementById('urlInput');
-
-                if (sharedUrl) {
-                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
-                    if (detectedUrl) {
-                        urlInput.value = detectedUrl[0];
-                        updateClearUrlButton();
-                        // 只有當不是本地檔案協議時才清理 URL 參數
-                        if (!window.location.protocol.startsWith('file')) {
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                        fetchWithAI();
-                    }
-                }
-            }, 800);
+            const hasSharedUrl = applySharedUrl();
+            fillUrlFromClipboard();
+            if (hasSharedUrl) fetchWithAI();
         });
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pureread-hk-v4';
+const CACHE_NAME = 'pureread-hk-v5-share-url';
 const APP_SHELL = ['./', './index.html', './manifest.json', './assets/icon.jpeg'];
 const DB_NAME = 'pureread-hk-share';
 const STORE_NAME = 'files';
@@ -68,9 +68,18 @@ self.addEventListener('fetch', event => {
           }
         }
       }
-      if (file instanceof File) await saveSharedFile(file);
-      return Response.redirect(new URL('./index.html?shared_file=1', event.request.url), 303);
-    })());
+      if (file instanceof File) {
+        await saveSharedFile(file);
+        return Response.redirect(new URL('./index.html?shared_file=1', event.request.url), 303);
+      }
+
+      const sharedUrl = typeof formData.get('url') === 'string' ? formData.get('url').trim() : '';
+      const sharedText = typeof formData.get('text') === 'string' ? formData.get('text').trim() : '';
+      const redirectUrl = new URL('./index.html', event.request.url);
+      if (sharedUrl) redirectUrl.searchParams.set('url', sharedUrl);
+      else if (sharedText) redirectUrl.searchParams.set('text', sharedText);
+      return Response.redirect(redirectUrl, 303);
+    })().catch(() => Response.redirect(new URL('./index.html', event.request.url), 303)));
     return;
   }
   if (event.request.method !== 'GET') return;
