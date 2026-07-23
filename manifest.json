@@ -3,22 +3,53 @@
   "short_name": "PureRead HK",
   "description": "純淨閱讀、文章整理與文字朗讀工具。支援分享 HTML、Markdown 及文字檔後自動載入。",
   "lang": "zh-HK",
-  "start_url": "./index.html",
+  "start_url": "./index.html?v=share-v3",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
   "icons": [
-    { "src": "./assets/favicon-16.png", "sizes": "16x16", "type": "image/png" },
-    { "src": "./assets/favicon-32.png", "sizes": "32x32", "type": "image/png" },
-    { "src": "./assets/favicon-64.png", "sizes": "64x64", "type": "image/png" },
-    { "src": "./assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
-    { "src": "./assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
-    { "src": "./assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
-    { "src": "./assets/pure-reader-hk-icon-1024.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
+    {
+      "src": "./assets/favicon-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/favicon-64.png",
+      "sizes": "64x64",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "./assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./assets/pure-reader-hk-icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ],
   "share_target": {
-    "action": "./index.html?share-target=1",
+    "action": "./share-target/",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
@@ -28,7 +59,15 @@
       "files": [
         {
           "name": "file",
-          "accept": ["text/html", "text/plain", "text/markdown", ".html", ".htm", ".txt", ".md"]
+          "accept": [
+            "text/html",
+            "text/plain",
+            "text/markdown",
+            ".html",
+            ".htm",
+            ".txt",
+            ".md"
+          ]
         }
       ]
     }
@@ -37,13 +76,21 @@
     {
       "action": "./index.html",
       "accept": {
-        "text/html": [".html", ".htm"],
-        "text/plain": [".txt"],
-        "text/markdown": [".md"]
+        "text/html": [
+          ".html",
+          ".htm"
+        ],
+        "text/plain": [
+          ".txt"
+        ],
+        "text/markdown": [
+          ".md"
+        ]
       }
     }
   ],
   "launch_handler": {
     "client_mode": "navigate-existing"
-  }
+  },
+  "id": "./pureread-hk-share-v3"
 }

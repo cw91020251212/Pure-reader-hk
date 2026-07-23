@@ -13,7 +13,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png">
     <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
-    <link rel="manifest" href="./manifest.json">
+    <link rel="manifest" href="./manifest.json?v=share-v3">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -22,11 +22,18 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js', { scope: './' })
+          navigator.serviceWorker.register('./sw.js?v=share-v3', { scope: './' })
             .then((reg) => {
               console.log('[PureRead HK] SW registered:', reg.scope);
               reg.update?.();
               if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
+              return navigator.serviceWorker.ready;
+            })
+            .then(() => {
+              if (!navigator.serviceWorker.controller && !sessionStorage.getItem('pureread_sw_reloaded_v3')) {
+                sessionStorage.setItem('pureread_sw_reloaded_v3', '1');
+                window.location.reload();
+              }
             })
             .catch((err) => console.warn('[PureRead HK] SW registration failed:', err));
         });
