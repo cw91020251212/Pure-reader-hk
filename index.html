@@ -9,11 +9,10 @@
     <meta property="og:description" content="純淨閱讀、文章整理與文字朗讀工具。">
     <meta property="og:type" content="website">
     <link rel="icon" href="./favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="64x64" href="./assets/favicon-64.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png">
-    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png">
-    <link rel="manifest" href="./manifest.json?v=share-v3">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon.jpeg">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/icon.jpeg">
+    <link rel="apple-touch-icon" href="./assets/icon.jpeg">
+    <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -22,19 +21,8 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js?v=share-v3', { scope: './' })
-            .then((reg) => {
-              console.log('[PureRead HK] SW registered:', reg.scope);
-              reg.update?.();
-              if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
-              return navigator.serviceWorker.ready;
-            })
-            .then(() => {
-              if (!navigator.serviceWorker.controller && !sessionStorage.getItem('pureread_sw_reloaded_v3')) {
-                sessionStorage.setItem('pureread_sw_reloaded_v3', '1');
-                window.location.reload();
-              }
-            })
+          navigator.serviceWorker.register('./sw.js')
+            .then((reg) => console.log('[PureRead HK] SW registered:', reg.scope))
             .catch((err) => console.warn('[PureRead HK] SW registration failed:', err));
         });
       }
@@ -189,7 +177,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器</h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.0</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -216,12 +204,15 @@
             </div>
             <div id="errorMessage" class="mt-4 p-4 bg-red-50 text-red-700 font-bold rounded-xl text-sm hidden border border-red-300"></div>
             <div class="mt-4">
-                <button id="historyToggleBtn" onclick="toggleUrlHistory()" class="w-full sm:w-auto rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">🕘 瀏覽記錄（0/60）</button>
+                <button id="historyToggleBtn" onclick="toggleUrlHistory()" class="w-full sm:w-auto rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">🕘 瀏覽記錄（0/100）</button>
                 <div id="urlHistoryPanel" class="hidden mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
                     <div class="mb-2 flex items-center justify-between gap-2">
                         <span class="text-sm font-bold text-slate-700">最近瀏覽網址</span>
                         <button onclick="clearUrlHistory()" class="rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50">清除全部</button>
+                        <button onclick="exportEditRecords()" class="rounded-lg border border-indigo-200 bg-white px-3 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-50">匯出編輯記錄</button>
+                        <label class="cursor-pointer rounded-lg border border-indigo-200 bg-white px-3 py-1 text-xs font-bold text-indigo-700 hover:bg-indigo-50">匯入編輯記錄<input type="file" accept="application/json,.json" onchange="importEditRecords(event)" class="hidden"></label>
                     </div>
+                    <p class="mb-2 text-xs text-slate-500">編輯會自動保存在本機；如要防止瀏覽器清除資料，請按「匯出編輯記錄」另存 JSON 檔。</p>
                     <div id="urlHistoryList" class="space-y-2"></div>
                 </div>
             </div>
@@ -340,8 +331,13 @@
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
         const URL_HISTORY_KEY = 'pureReadUrlHistory_v1';
-        const URL_HISTORY_LIMIT = 60;
+        const URL_HISTORY_LIMIT = 100;
+        const EDIT_RECORDS_KEY = 'pureReadEditRecords_v1';
+        const EDIT_RECORD_BACKUP_NAME = 'pureread-edit-records.json';
         const contentArea = document.getElementById('content-wrapper');
+        let currentArticleUrl = '';
+        let currentEditRecord = null;
+        let isApplyingEditRecord = false;
 
         function readUrlHistory() {
             try {
@@ -353,13 +349,180 @@
         }
 
         function saveUrlHistory(items) {
-            SafeStorage.set(URL_HISTORY_KEY, JSON.stringify(items.slice(0, URL_HISTORY_LIMIT)));
+            const normalized = items.slice(0, URL_HISTORY_LIMIT).map(item => ({
+                ...item,
+                hasEditRecord: Boolean(readEditRecords()[item.url])
+            }));
+            SafeStorage.set(URL_HISTORY_KEY, JSON.stringify(normalized));
             renderUrlHistory();
+        }
+
+        function readEditRecords() {
+            try {
+                const parsed = JSON.parse(SafeStorage.get(EDIT_RECORDS_KEY) || '{}');
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveEditRecords(records) {
+            SafeStorage.set(EDIT_RECORDS_KEY, JSON.stringify(records));
+        }
+
+        function normalizeRecordText(value) {
+            return String(value || '').replace(/\s+/g, ' ').trim().slice(0, 500);
+        }
+
+        function getElementRecordKey(el) {
+            const text = normalizeRecordText(el.innerText || el.textContent);
+            const media = Array.from(el.querySelectorAll('img')).map(img => img.getAttribute('src') || img.getAttribute('alt') || '').filter(Boolean).join('|').slice(0, 240);
+            return `${el.tagName.toLowerCase()}|${text}|${media}`.slice(0, 900);
+        }
+
+        function createEditRecord() {
+            return {
+                version: 1,
+                url: currentArticleUrl,
+                title: articleTitle || '未命名文章',
+                updatedAt: new Date().toISOString(),
+                cleanupLevel,
+                cleanupApplied: false,
+                baseHTML: '',
+                currentHTML: '',
+                removed: []
+            };
+        }
+
+        function ensureCurrentEditRecord() {
+            if (!currentArticleUrl) return null;
+            if (!currentEditRecord || currentEditRecord.url !== currentArticleUrl) currentEditRecord = createEditRecord();
+            return currentEditRecord;
+        }
+
+        function captureVisibleEditState() {
+            const record = ensureCurrentEditRecord();
+            if (!record || isApplyingEditRecord) return;
+            record.title = articleTitle || record.title;
+            record.updatedAt = new Date().toISOString();
+            record.cleanupLevel = cleanupLevel;
+            record.currentHTML = sanitizeContentHTML(contentArea.innerHTML);
+            if (!record.baseHTML && contentArea.innerHTML.trim()) record.baseHTML = record.currentHTML;
+            const records = readEditRecords();
+            records[currentArticleUrl] = record;
+            saveEditRecords(records);
+        }
+
+        function recordRemovedElements(elements, action) {
+            const record = ensureCurrentEditRecord();
+            if (!record || isApplyingEditRecord) return;
+            const candidates = Array.from(contentArea.children);
+            const removed = Array.isArray(record.removed) ? record.removed : [];
+            elements.forEach(el => {
+                const index = candidates.indexOf(el);
+                removed.push({
+                    action,
+                    key: getElementRecordKey(el),
+                    text: normalizeRecordText(el.innerText || el.textContent),
+                    index,
+                    previousKey: index > 0 ? getElementRecordKey(candidates[index - 1]) : '',
+                    nextKey: index >= 0 && index < candidates.length - 1 ? getElementRecordKey(candidates[index + 1]) : ''
+                });
+            });
+            record.removed = removed;
+        }
+
+        function setCurrentArticleUrl(url) {
+            currentArticleUrl = (url || '').trim();
+            const stored = currentArticleUrl ? readEditRecords()[currentArticleUrl] : null;
+            currentEditRecord = stored && stored.version === 1 ? stored : (currentArticleUrl ? createEditRecord() : null);
+        }
+
+        function findRecordElement(root, item) {
+            const candidates = Array.from(root.children);
+            const text = normalizeRecordText(item.text);
+            const exact = candidates.filter(el => item.key && getElementRecordKey(el) === item.key);
+            const matches = exact.length ? exact : candidates.filter(el => text && normalizeRecordText(el.innerText || el.textContent) === text);
+            if (!matches.length) return null;
+            const score = el => {
+                const index = candidates.indexOf(el);
+                let value = 0;
+                if (Number.isInteger(item.index)) value -= Math.min(20, Math.abs(index - item.index));
+                if (item.previousKey && index > 0 && getElementRecordKey(candidates[index - 1]) === item.previousKey) value += 8;
+                if (item.nextKey && index < candidates.length - 1 && getElementRecordKey(candidates[index + 1]) === item.nextKey) value += 8;
+                return value;
+            };
+            return matches.sort((a, b) => score(b) - score(a))[0];
+        }
+
+        function applySavedEditRecord() {
+            const record = currentEditRecord;
+            if (!record || !contentArea || isApplyingEditRecord) return;
+            const hasSavedHTML = typeof record.currentHTML === 'string' && record.currentHTML.trim();
+            if (hasSavedHTML && record.baseHTML) {
+                isApplyingEditRecord = true;
+                contentArea.innerHTML = sanitizeContentHTML(record.currentHTML);
+                normalizeMediaSources(contentArea, document.baseURI);
+                processLongURLs(contentArea);
+                isApplyingEditRecord = false;
+                prepareTTS();
+                injectSmartButtons();
+                updateCleanupPanels();
+                return;
+            }
+            isApplyingEditRecord = true;
+            if (record.cleanupApplied) {
+                const select = document.getElementById('cleanupLevel');
+                if (select) select.value = String(record.cleanupLevel || cleanupLevel);
+                applyCleanupLevel(false);
+            }
+            const removed = Array.isArray(record.removed) ? record.removed : [];
+            removed.forEach(item => {
+                const el = findRecordElement(contentArea, item);
+                if (el) el.remove();
+            });
+            isApplyingEditRecord = false;
+            prepareTTS();
+            injectSmartButtons();
+            updateCleanupPanels();
+            captureVisibleEditState();
+        }
+
+        function saveCurrentEditRecord() {
+            captureVisibleEditState();
+        }
+
+        function exportEditRecords() {
+            const records = readEditRecords();
+            const payload = { format: 'PureRead HK edit records', version: 1, exportedAt: new Date().toISOString(), records };
+            const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = EDIT_RECORD_BACKUP_NAME;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        function importEditRecords(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            file.text().then(text => {
+                const payload = JSON.parse(text);
+                const incoming = payload?.records || payload;
+                if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('格式不正確');
+                const merged = { ...readEditRecords(), ...incoming };
+                saveEditRecords(merged);
+                if (currentArticleUrl) currentEditRecord = merged[currentArticleUrl] || currentEditRecord;
+                showError('✅ 已匯入編輯記錄。重新開啟瀏覽記錄即可套用。');
+            }).catch(() => showError('⚠️ 匯入失敗：請選擇 PureRead HK 編輯記錄 JSON 檔案。')).finally(() => { event.target.value = ''; });
         }
 
         function addUrlHistory(url, title) {
             const items = readUrlHistory().filter(item => item.url !== url);
-            items.unshift({ url, title: title || '未命名文章', visitedAt: new Date().toISOString() });
+            items.unshift({ url, title: title || '未命名文章', visitedAt: new Date().toISOString(), hasEditRecord: Boolean(readEditRecords()[url]) });
             saveUrlHistory(items);
         }
 
@@ -372,7 +535,7 @@
             const items = readUrlHistory();
             const toggle = document.getElementById('historyToggleBtn');
             const list = document.getElementById('urlHistoryList');
-            if (toggle) toggle.textContent = `🕘 瀏覽記錄（${items.length}/60）`;
+            if (toggle) toggle.textContent = `🕘 瀏覽記錄（${items.length}/${URL_HISTORY_LIMIT}）`;
             if (!list) return;
             list.innerHTML = '';
             if (!items.length) {
@@ -392,9 +555,9 @@
                 url.textContent = item.url;
                 const time = document.createElement('div');
                 time.className = 'text-[11px] text-slate-400';
-                time.textContent = formatHistoryTime(item.visitedAt);
+                time.textContent = `${formatHistoryTime(item.visitedAt)}${readEditRecords()[item.url] ? ' · 已儲存編輯' : ''}`;
                 load.append(title, url, time);
-                load.title = '重新提取這個網址';
+                load.title = readEditRecords()[item.url] ? '重新提取並套用之前編輯' : '重新提取這個網址';
                 load.onclick = () => {
                     document.getElementById('urlInput').value = item.url;
                     updateClearUrlButton();
@@ -462,123 +625,66 @@
             }).start();
         }
 
-        async function loadFileIntoReader(file) {
-            if (!file) return false;
-            resetUI();
-            document.getElementById('loadingIcon').classList.remove('hidden');
-            document.getElementById('btnText').classList.add('hidden');
-
-            try {
-                const text = await file.text();
-                let rawContent = text;
-                const fileName = file.name || '分享檔案.html';
-                const lowerName = fileName.toLowerCase();
-                articleTitle = fileName.replace(/\.[^/.]+$/, "");
-
-                if (lowerName.endsWith('.md') || lowerName.endsWith('.txt') || file.type === 'text/markdown' || file.type === 'text/plain') {
-                    rawContent = marked.parse(text);
-                } else {
-                    rawContent = extractNuclear(text);
-                }
-
-                renderContent(rawContent);
-                console.log('已自動載入分享檔案:', fileName);
-                return true;
-            } catch (error) {
-                showError(`處理檔案失敗: ${error.message}`);
-                return false;
-            } finally {
-                document.getElementById('loadingIcon').classList.add('hidden');
-                document.getElementById('btnText').classList.remove('hidden');
-            }
+        function getSharedUrl() {
+            const params = new URLSearchParams(window.location.search);
+            const sharedValue = params.get('url') || params.get('text');
+            if (!sharedValue) return '';
+            const detectedUrl = sharedValue.match(/(?:https?|hdml|file|content):\/\/[^\s]+/i);
+            return (detectedUrl ? detectedUrl[0] : sharedValue).replace(/[),.;!?]+$/, '');
         }
 
-        async function loadSharedFileFromServiceWorker() {
-            if (!('caches' in window)) return false;
-            try {
-                const cache = await caches.open('pureread-share-target-v1');
-                const sharedFileUrl = new URL('./shared-file.json', window.location.href).toString();
-                const response = await cache.match(sharedFileUrl);
-                if (!response) return false;
-
-                await cache.delete(sharedFileUrl);
-                const payload = await response.json();
-                if (!payload || !payload.content) return false;
-
-                const file = new File([payload.content], payload.name || '分享檔案.html', {
-                    type: payload.type || 'text/html'
-                });
-                const loaded = await loadFileIntoReader(file);
-
-                if (loaded && window.location.search.includes('shared-file')) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-                return loaded;
-            } catch (error) {
-                console.warn('未能讀取分享檔案:', error);
-                return false;
+        function applySharedUrl() {
+            const sharedUrl = getSharedUrl();
+            const urlInput = document.getElementById('urlInput');
+            if (!sharedUrl || !urlInput) return false;
+            urlInput.value = sharedUrl;
+            updateClearUrlButton();
+            urlInput.dispatchEvent(new Event('input', { bubbles: true }));
+            console.log('已接收分享網址:', sharedUrl);
+            if (!window.location.protocol.startsWith('file')) {
+                window.history.replaceState({}, document.title, window.location.pathname);
             }
+            return true;
         }
 
-        window.addEventListener('DOMContentLoaded', async () => {
+        window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
+            if(!SafeStorage.get('tutorialSeen_v6')) {
+                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
+            }
             renderUrlHistory();
             updateClearUrlButton();
             document.getElementById('urlInput')?.addEventListener('input', updateClearUrlButton);
             checkScrollButtons();
 
-            // 處理「分享檔案到已安裝 PWA」及瀏覽器 File Handling。
-            const loadedSharedFile = await loadSharedFileFromServiceWorker();
-
-            if(!loadedSharedFile && !SafeStorage.get('tutorialSeen_v6')) {
-                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', event => {
+                    if (event.data?.type !== 'shared-file-ready' || !event.data.file) return;
+                    const file = new File([event.data.file], event.data.name || 'shared.html', { type: event.data.mime || 'text/html' });
+                    handleSharedFile(file);
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                });
+                if (new URLSearchParams(window.location.search).get('shared_file') === '1') {
+                    navigator.serviceWorker.ready.then(registration => {
+                        registration.active?.postMessage({ type: 'read-latest-shared-file' });
+                    });
+                }
             }
-            if (!loadedSharedFile) fillUrlFromClipboard();
 
             if ('launchQueue' in window) {
                 window.launchQueue.setConsumer(async (launchParams) => {
                     if (launchParams.files && launchParams.files.length > 0) {
                         const fileHandle = launchParams.files[0];
                         const file = await fileHandle.getFile();
-                        await loadFileIntoReader(file);
+                        handleSharedFile(file);
+                        console.log('已接收分享檔案:', file.name);
                     }
                 });
             }
-            
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('share-error')) {
-                showError('分享內容未能自動載入。請確認已用 HTTPS 部署、已安裝成 PWA，並重新開啟一次 app 等待更新完成。');
-            }
-            const sharedUrl = params.get("url") || params.get("text");
-            if (!loadedSharedFile && sharedUrl) {
-                const urlInput = document.getElementById("urlInput");
-                if (urlInput) {
-                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
-                    urlInput.value = detectedUrl ? detectedUrl[0] : sharedUrl;
-                    updateClearUrlButton();
-                    console.log("已接收分享內容:", urlInput.value);
-                }
-            }
-            
-            setTimeout(() => {
-                if (loadedSharedFile) return;
-                const urlParams = new URLSearchParams(window.location.search);
-                const sharedUrl = urlParams.get('url') || urlParams.get('text');
-                const urlInput = document.getElementById('urlInput');
 
-                if (sharedUrl) {
-                    const detectedUrl = sharedUrl.match(/(https?|hdml|file|content):\/\/[^\s]+/i);
-                    if (detectedUrl) {
-                        urlInput.value = detectedUrl[0];
-                        updateClearUrlButton();
-                        // 只有當不是本地檔案協議時才清理 URL 參數
-                        if (!window.location.protocol.startsWith('file')) {
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                        fetchWithAI();
-                    }
-                }
-            }, 800);
+            const hasSharedUrl = applySharedUrl();
+            fillUrlFromClipboard();
+            if (hasSharedUrl) fetchWithAI();
         });
 
         function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -737,10 +843,48 @@
             });
         }
 
+        function handleSharedFile(file) {
+            resetUI();
+            document.getElementById('loadingIcon').classList.remove('hidden');
+            document.getElementById('btnText').classList.add('hidden');
+            file.text().then(text => {
+                let rawContent = text;
+                articleTitle = file.name.replace(/\.[^/.]+$/, '');
+                if (/\.(md|txt)$/i.test(file.name)) rawContent = marked.parse(text);
+                else rawContent = extractNuclear(text);
+                renderContent(rawContent);
+            }).catch(error => {
+                console.error('讀取分享檔案失敗:', error);
+                showError('⚠️ 無法讀取分享檔案。');
+            }).finally(() => {
+                document.getElementById('loadingIcon').classList.add('hidden');
+                document.getElementById('btnText').classList.remove('hidden');
+            });
+        }
+
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
-            loadFileIntoReader(file);
+            resetUI();
+            document.getElementById('loadingIcon').classList.remove('hidden');
+            document.getElementById('btnText').classList.add('hidden');
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                let rawContent = text;
+                articleTitle = file.name.replace(/\.[^/.]+$/, ""); 
+                if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
+                    rawContent = marked.parse(text);
+                } else {
+                    rawContent = extractNuclear(text);
+                }
+                renderContent(rawContent);
+                
+                document.getElementById('loadingIcon').classList.add('hidden');
+                document.getElementById('btnText').classList.remove('hidden');
+            };
+            reader.readAsText(file);
             event.target.value = ''; 
         }
 
@@ -785,7 +929,11 @@
                 }
                 
                 const pureHTML = extractNuclear(rawHTML, finalUrl, coverUrl);
+                setCurrentArticleUrl(finalUrl);
                 renderContent(pureHTML);
+                const record = ensureCurrentEditRecord();
+                if (record && !record.baseHTML) record.baseHTML = sanitizeContentHTML(contentArea.innerHTML);
+                applySavedEditRecord();
                 addUrlHistory(finalUrl, articleTitle);
             } catch (error) {
                 showError(`處理失敗: ${error.message}`);
@@ -872,7 +1020,7 @@
             });
         }
 
-        function applyCleanupLevel() {
+        function applyCleanupLevel(persist = true) {
             if (!cleanupPreviewHTML) return;
             cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
             cleanupLevel = Number(document.getElementById('cleanupLevel')?.value || cleanupLevel);
@@ -892,12 +1040,15 @@
             }
             contentArea.innerHTML = sanitizeContentHTML(root.innerHTML);
             normalizeMediaSources(contentArea, document.baseURI);
+            const record = ensureCurrentEditRecord();
+            if (record) record.cleanupApplied = true;
             processLongURLs(contentArea);
             prepareTTS();
             injectSmartButtons();
             const note = document.getElementById('cleanupLevelNote');
             if (note) note.textContent = `已套用第 ${cleanupLevel} 級；保留主文章圖片，移除符合特徵嘅廣告／推薦內容。`;
             updateCleanupPanels();
+            if (persist) saveCurrentEditRecord();
         }
 
         function restoreCleanupPreview() {
@@ -905,12 +1056,15 @@
             cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
             contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
             normalizeMediaSources(contentArea, document.baseURI);
+            const record = ensureCurrentEditRecord();
+            if (record) record.cleanupApplied = false;
             processLongURLs(contentArea);
             prepareTTS();
             injectSmartButtons();
             const note = document.getElementById('cleanupLevelNote');
             if (note) note.textContent = '已復原到提取後內容，尚未套用額外清理級別。';
             updateCleanupPanels();
+            saveCurrentEditRecord();
         }
 
         function updateCleanupPanels() {
@@ -986,6 +1140,7 @@
                 showError('⚠️ 請先撳「選擇全部」，再點選想保留嘅內容。');
                 return;
             }
+            recordRemovedElements(Array.from(keptElements), 'keep-delete');
             Array.from(keptElements).forEach(el => el.remove());
             keptElements.clear();
             keepSelectionInverted = false;
@@ -998,6 +1153,7 @@
             prepareTTS();
             injectSmartButtons();
             updateCleanupPanels();
+            saveCurrentEditRecord();
         }
 
         function injectSmartButtons() {
@@ -1098,19 +1254,22 @@
 
         function executeDelete() {
             if (isKeepMode && keptElements.size > 0) {
+                recordRemovedElements(Array.from(keptElements), 'keep-delete');
                 keptElements.forEach(el => el.remove());
                 keptElements.clear();
                 isKeepMode = false;
                 contentArea.classList.remove('keep-mode-active');
                 contentArea.removeEventListener('click', toggleKeepElement);
             } else if (selectedElements.size > 0) {
+                recordRemovedElements(Array.from(selectedElements), 'delete');
                 selectedElements.forEach(el => el.remove());
                 selectedElements.clear();
             }
             
             syncDeleteButtons();
             prepareTTS();
-            if (typeof injectSmartButtons === 'function') injectSmartButtons(); 
+            if (typeof injectSmartButtons === 'function') injectSmartButtons();
+            saveCurrentEditRecord();
         }
 
         function toggleSelection(e) {
@@ -1385,16 +1544,6 @@
             
             const finalContent = cloneContent.innerHTML;
             if (!finalContent.trim()) return;
-            const previewImage = cloneContent.querySelector('img');
-            const previewImageSrc = previewImage?.getAttribute('src') || previewImage?.getAttribute('data-src') || '';
-            const previewImageAlt = previewImage?.getAttribute('alt') || articleTitle || '文章預覽圖';
-            const escapeExportValue = value => String(value || '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
-            const safePreviewSrc = escapeExportValue(previewImageSrc);
-            const safePreviewAlt = escapeExportValue(previewImageAlt);
-            const safePreviewTitle = escapeExportValue(articleTitle || '純淨文章');
-            const previewMarkup = previewImageSrc
-                ? `<img class="preview-image" src="${safePreviewSrc}" alt="${safePreviewAlt}" onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');"><div class="preview-placeholder hidden" role="img" aria-label="${safePreviewTitle} 預覽圖"><span>文章預覽</span><strong>${safePreviewTitle}</strong></div>`
-                : `<div class="preview-placeholder" role="img" aria-label="${safePreviewTitle} 預覽圖"><span>文章預覽</span><strong>${safePreviewTitle}</strong></div>`;
             
             const downloadContent = `<!DOCTYPE html>
 <html lang="zh-HK">
@@ -1443,10 +1592,6 @@
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
         
         img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; }
-        .preview-image { width: 100%; max-height: 320px; object-fit: cover; margin: 0 0 28px; border-radius: 14px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16); }
-        .preview-placeholder { min-height: 180px; margin: 0 0 28px; padding: 32px; border-radius: 14px; display: flex; flex-direction: column; justify-content: center; gap: 8px; background: linear-gradient(135deg, #eef2ff, #dbeafe); color: #1e3a8a; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12); }
-        .preview-placeholder span { font-size: 0.85em; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
-        .preview-placeholder strong { font-size: 1.8em; line-height: 1.25; }
         blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #c084fc; margin: 0 0 16px 0; position: relative; }
         
         pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; margin-bottom: 16px; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; position: relative; max-width: 100%; }
@@ -1541,7 +1686,6 @@
     </div>
     
     <div id="content-wrapper">
-        ${previewMarkup}
         ${finalContent}
     </div>
 
@@ -1838,6 +1982,5 @@
         }
     </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7"}' crossorigin="anonymous"></script>
 </body>
 </html>

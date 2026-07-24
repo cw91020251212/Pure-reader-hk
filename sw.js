@@ -1,118 +1,87 @@
-const SHARE_CACHE = 'pureread-share-target-v3';
-const APP_SHELL = './index.html';
+const CACHE_NAME = 'pureread-hk-v5-share-url';
+const APP_SHELL = ['./', './index.html', './manifest.json', './assets/icon.jpeg'];
+const DB_NAME = 'pureread-hk-share';
+const STORE_NAME = 'files';
 
-self.addEventListener('install', (event) => {
+function openShareDatabase() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function saveSharedFile(file) {
+  const db = await openShareDatabase();
+  await new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    transaction.objectStore(STORE_NAME).put({
+      id: 'latest',
+      name: file.name || 'shared.html',
+      type: file.type || 'text/html',
+      blob: file
+    });
+    transaction.oncomplete = resolve;
+    transaction.onerror = () => reject(transaction.error);
+  });
+  db.close();
+}
+
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type !== 'read-latest-shared-file') return;
   event.waitUntil((async () => {
-    await self.skipWaiting();
-    try {
-      const cache = await caches.open(SHARE_CACHE);
-      await cache.add(APP_SHELL);
-    } catch (error) {
-      console.warn('[PureRead HK] app shell cache skipped:', error);
-    }
+    const db = await openShareDatabase();
+    const file = await new Promise((resolve, reject) => {
+      const request = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get('latest');
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    db.close();
+    if (!file) return;
+    event.source?.postMessage({ type: 'shared-file-ready', file: file.blob, name: file.name, mime: file.type });
   })());
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
+self.addEventListener('fetch', event => {
+  if (event.request.method === 'POST' && new URL(event.request.url).pathname.endsWith('/index.html')) {
+    event.respondWith((async () => {
+      const formData = await event.request.formData();
+      let file = formData.get('file');
+      if (!(file instanceof File)) {
+        for (const value of formData.values()) {
+          if (value instanceof File) {
+            file = value;
+            break;
+          }
+        }
+      }
+      if (file instanceof File) {
+        await saveSharedFile(file);
+        return Response.redirect(new URL('./index.html?shared_file=1', event.request.url), 303);
+      }
 
-self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url);
-  if (event.request.method === 'POST' && isShareTargetUrl(url)) {
-    event.respondWith(handleShareTarget(event.request));
+      const sharedUrl = typeof formData.get('url') === 'string' ? formData.get('url').trim() : '';
+      const sharedText = typeof formData.get('text') === 'string' ? formData.get('text').trim() : '';
+      const redirectUrl = new URL('./index.html', event.request.url);
+      if (sharedUrl) redirectUrl.searchParams.set('url', sharedUrl);
+      else if (sharedText) redirectUrl.searchParams.set('text', sharedText);
+      return Response.redirect(redirectUrl, 303);
+    })().catch(() => Response.redirect(new URL('./index.html', event.request.url), 303)));
     return;
   }
-
-  if (event.request.method === 'GET' && isShareTargetUrl(url)) {
-    event.respondWith(Response.redirect(new URL('./index.html', self.registration.scope).toString(), 303));
-    return;
-  }
-
-  if (event.request.method === 'GET' && (url.pathname.endsWith('/index.html') || url.pathname.endsWith('/'))) {
-    event.respondWith(fetch(event.request).catch(async () => {
-      const cache = await caches.open(SHARE_CACHE);
-      return cache.match(APP_SHELL);
-    }));
-  }
-});
-
-function isShareTargetUrl(url) {
-  return url.pathname.endsWith('/share-target') ||
-    url.pathname.endsWith('/share-target/') ||
-    url.pathname.endsWith('/share-target/index.html') ||
-    url.searchParams.has('share-target');
-}
-
-async function handleShareTarget(request) {
-  try {
-    const formData = await request.formData();
-    const sharedFile = pickSharedFile(formData);
-
-    if (sharedFile) {
-      const content = await sharedFile.text();
-      const payload = {
-        name: sharedFile.name || '分享檔案.html',
-        type: sharedFile.type || guessType(sharedFile.name),
-        content
-      };
-
-      const cache = await caches.open(SHARE_CACHE);
-      const sharedFileUrl = new URL('./shared-file.json', self.registration.scope).toString();
-      await cache.put(sharedFileUrl, new Response(JSON.stringify(payload), {
-        headers: { 'Content-Type': 'application/json; charset=utf-8' }
-      }));
-
-      return Response.redirect(new URL('./index.html?shared-file=1', self.registration.scope).toString(), 303);
-    }
-
-    const title = formData.get('title') || '';
-    const text = formData.get('text') || '';
-    const url = formData.get('url') || '';
-    const detectedUrl = String(url || text).match(/(https?|hdml|file|content):\/\/[^\s]+/i);
-
-    if (detectedUrl) {
-      return Response.redirect(new URL(`./index.html?url=${encodeURIComponent(detectedUrl[0])}`, self.registration.scope).toString(), 303);
-    }
-
-    const content = [title, text].filter(Boolean).join('\n\n');
-    if (content) {
-      const cache = await caches.open(SHARE_CACHE);
-      const sharedFileUrl = new URL('./shared-file.json', self.registration.scope).toString();
-      await cache.put(sharedFileUrl, new Response(JSON.stringify({
-        name: '分享文字.txt',
-        type: 'text/plain',
-        content
-      }), { headers: { 'Content-Type': 'application/json; charset=utf-8' } }));
-      return Response.redirect(new URL('./index.html?shared-file=1', self.registration.scope).toString(), 303);
-    }
-  } catch (error) {
-    console.error('[PureRead HK] share target failed:', error);
-  }
-
-  return Response.redirect(new URL('./index.html?share-error=1', self.registration.scope).toString(), 303);
-}
-
-function pickSharedFile(formData) {
-  const direct = formData.get('file') || formData.get('files');
-  if (isFileLike(direct)) return direct;
-  for (const value of formData.values()) {
-    if (isFileLike(value)) return value;
-  }
-  return null;
-}
-
-function isFileLike(value) {
-  return value && typeof value === 'object' && typeof value.text === 'function' && typeof value.name === 'string' && value.size > 0;
-}
-
-function guessType(name = '') {
-  const lowerName = name.toLowerCase();
-  if (lowerName.endsWith('.md')) return 'text/markdown';
-  if (lowerName.endsWith('.txt')) return 'text/plain';
-  return 'text/html';
-}
-
-self.addEventListener('message', (event) => {
-  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  if (event.request.method !== 'GET') return;
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
