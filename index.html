@@ -824,19 +824,41 @@
 
         function normalizeMediaSources(root, baseUrl = '') {
             root.querySelectorAll('picture source, img, video, audio').forEach(el => {
-                const lazySrc = firstUsableMediaValue(el, ['data-src', 'data-lazy-src', 'data-original', 'data-url', 'data-image']);
-                const lazySrcset = firstUsableMediaValue(el, ['data-srcset', 'data-lazy-srcset', 'data-original-srcset']);
-                const srcset = firstUsableMediaValue(el, ['srcset']);
-                const currentSrc = firstUsableMediaValue(el, ['src']);
-                const bestSrcset = firstSrcsetUrl(lazySrcset || srcset);
-                const bestSrc = lazySrc && (!currentSrc || isPlaceholderImageUrl(currentSrc)) ? lazySrc : currentSrc || bestSrcset;
+                // 擴充常見的 lazy load 屬性，特別是針對新假期等網站常用的 data-actualsrc
+                const lazySrc = firstUsableMediaValue(el, [
+                    'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original', 
+                    'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src'
+                ]);
+                const lazySrcset = firstUsableMediaValue(el, [
+                    'data-srcset', 'data-lazy-srcset', 'data-original-srcset', 'data-actual-srcset'
+                ]);
+                const srcset = el.getAttribute('srcset');
+                const currentSrc = el.getAttribute('src');
+                
+                const bestSrcset = lazySrcset || srcset || '';
+                const bestSrc = lazySrc && (!currentSrc || isPlaceholderImageUrl(currentSrc)) ? lazySrc : currentSrc;
 
-                if (bestSrc) el.setAttribute('src', resolveMediaUrl(bestSrc, baseUrl));
+                if (bestSrc) {
+                    const resolved = resolveMediaUrl(bestSrc, baseUrl);
+                    el.setAttribute('src', resolved);
+                    // 移除 loading="lazy" 以免在編輯器內延遲載入
+                    el.removeAttribute('loading');
+                }
+                
                 if (bestSrcset) {
-                    el.setAttribute('srcset', bestSrcset.split(',').map(part => {
+                    const resolvedSet = bestSrcset.split(',').map(part => {
                         const bits = part.trim().split(/\s+/);
+                        if (!bits[0]) return '';
                         return `${resolveMediaUrl(bits[0], baseUrl)}${bits.slice(1).length ? ` ${bits.slice(1).join(' ')}` : ''}`;
-                    }).join(', '));
+                    }).filter(Boolean).join(', ');
+                    if (resolvedSet) el.setAttribute('srcset', resolvedSet);
+                }
+                
+                // 針對某些網站，可能需要強制顯示
+                if (el.tagName === 'IMG') {
+                    el.style.display = 'block';
+                    el.style.opacity = '1';
+                    el.style.visibility = 'visible';
                 }
             });
         }
