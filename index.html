@@ -613,16 +613,87 @@
         }
 
         function startTutorial() {
-            introJs().setOptions({
-                nextLabel: '下一步', prevLabel: '上一步', doneLabel: '明白晒', showStepNumbers: true,
+            const intro = introJs();
+            intro.setOptions({
+                nextLabel: '下一步',
+                prevLabel: '上一步',
+                doneLabel: '明白晒',
+                showStepNumbers: true,
+                disableInteraction: true,
                 steps: [
-                    { element: document.querySelector('#urlInput'), intro: '第一步：喺度貼上你想淨化嘅文章連結。' },
-                    { element: document.querySelector('#fetchBtn'), intro: '第二步：撳呢度過濾廣告。' },
-                    { element: document.querySelector('#toggleDeleteBtn'), intro: '第三步：需要刪除多餘內容時，撳呢度開啟連續清理模式。' },
-                    { element: document.querySelector('.fab-container'), intro: '第四步：打開右下角設定，可以調整朗讀與文字大小。' },
-                    { element: document.querySelector('#downloadBtn'), intro: '最後一步：儲存獨立檔案！' }
+                    {
+                        element: document.querySelector('#urlInput'),
+                        intro: '<b>第一步：輸入網址</b><br>喺度貼上你想淨化或朗讀嘅文章連結。'
+                    },
+                    {
+                        element: document.querySelector('#fetchBtn'),
+                        intro: '<b>第二步：提取內容</b><br>撳呢度過濾廣告同廢話，剩低最純淨嘅文章。'
+                    },
+                    {
+                        element: document.querySelector('#uploadBtn'),
+                        intro: '<b>或者：上傳檔案</b><br>如果你已經有 .html 或 .md 檔案，可以直接上傳重整排版。'
+                    },
+                    {
+                        element: document.querySelector('#articleContainer'),
+                        intro: '<b>第三步：清理級別 (新功能)</b><br>提取後可以喺度揀「清理級別」，自動幫你掃走側欄同推薦內容。',
+                        onbeforechange: function() {
+                            // 確保容器可見以進行演示
+                            document.getElementById('articleContainer').classList.remove('hidden');
+                        }
+                    },
+                    {
+                        element: document.querySelector('#keepSelectionPanel'),
+                        intro: '<b>進階功能：精準保留 (新功能)</b><br>「選擇全部」後點選你想保留嘅段落，其他會自動刪除，最啱整理長篇報導。'
+                    },
+                    {
+                        element: document.querySelector('#toggleDeleteBtn'),
+                        intro: '<b>手動清理</b><br>開啟「開始清理」後，可以逐個點選你想刪除嘅雜質。'
+                    },
+                    {
+                        element: document.querySelector('.fab-toggle'),
+                        intro: '<b>第四步：閱讀設定</b><br>撳呢個紫色掣，可以打開朗讀選單同調整字體。'
+                    },
+                    {
+                        element: document.querySelector('#readerControls'),
+                        intro: '<b>新功能：真聲朗讀與語速</b><br>喺度可以開啟「點擊朗讀」，仲可以揀唔同嘅人聲同調整快慢。',
+                        position: 'left'
+                    },
+                    {
+                        element: document.querySelector('#downloadBtn'),
+                        intro: '<b>最後一步：儲存檔案</b><br>將整理好嘅文章儲存成獨立 HTML 檔，方便永久收藏或離線閱讀。'
+                    }
                 ]
-            }).start();
+            });
+
+            // 處理步驟切換時的自動操作
+            intro.onbeforechange(function(targetElement) {
+                const controls = document.getElementById('readerControls');
+                const articleContainer = document.getElementById('articleContainer');
+                
+                // 當教學指到控制面板或選單掣時，自動打開面板
+                if (targetElement.id === 'readerControls' || targetElement.classList.contains('fab-toggle')) {
+                    controls.classList.remove('collapsed');
+                } else {
+                    // 其他步驟時自動收合，避免遮擋
+                    controls.classList.add('collapsed');
+                }
+
+                // 為了教學演示，確保文章容器在相關步驟是顯示的
+                const stepIndex = this._currentStep;
+                if (stepIndex >= 3 && stepIndex <= 5) {
+                    articleContainer.classList.remove('hidden');
+                }
+            });
+
+            intro.oncomplete(function() {
+                document.getElementById('readerControls').classList.add('collapsed');
+            });
+
+            intro.onexit(function() {
+                document.getElementById('readerControls').classList.add('collapsed');
+            });
+
+            intro.start();
         }
 
         function getSharedUrl() {
@@ -649,8 +720,8 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
-            if(!SafeStorage.get('tutorialSeen_v6')) {
-                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v6', 'true'); }, 500);
+            if(!SafeStorage.get('tutorialSeen_v7')) {
+                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v7', 'true'); }, 500);
             }
             renderUrlHistory();
             updateClearUrlButton();
