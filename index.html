@@ -771,23 +771,8 @@
         }
 
         function addCoverImage(html, coverUrl, altText = '') {
-            if (!coverUrl) return html;
-            const doc = new DOMParser().parseFromString(`<div id="article-root">${html}</div>`, 'text/html');
-            const root = doc.getElementById('article-root');
-            if (!root) return html;
-            normalizeMediaSources(root, coverUrl);
-            const normalizedCover = resolveMediaUrl(coverUrl, coverUrl);
-            const alreadyPresent = Array.from(root.querySelectorAll('img')).some(img => resolveMediaUrl(img.getAttribute('src') || '', coverUrl) === normalizedCover);
-            if (!alreadyPresent) {
-                const figure = doc.createElement('figure');
-                const image = doc.createElement('img');
-                image.src = normalizedCover;
-                image.alt = altText;
-                image.loading = 'lazy';
-                figure.appendChild(image);
-                root.insertBefore(figure, root.firstChild);
-            }
-            return root.innerHTML;
+            // 已移除自動插入版頭圖片功能，直接返回原始內容
+            return html;
         }
 
         function extractNuclear(htmlText, baseUrl = '', coverOverride = '') {
@@ -827,7 +812,7 @@
                 if (!hasMedia && !hasText) el.remove();
             });
 
-            return addCoverImage(targetNode.innerHTML, coverUrl, articleTitle);
+            return targetNode.innerHTML;
         }
 
         // 升級 3：智慧處理過長網址
