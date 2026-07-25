@@ -827,7 +827,8 @@
                 // 擴充常見的 lazy load 屬性，特別是針對新假期等網站常用的 data-actualsrc
                 const lazySrc = firstUsableMediaValue(el, [
                     'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original', 
-                    'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src'
+                    'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src',
+                    'data-src-small', 'data-src-medium', 'data-src-large'
                 ]);
                 const lazySrcset = firstUsableMediaValue(el, [
                     'data-srcset', 'data-lazy-srcset', 'data-original-srcset', 'data-actual-srcset'
@@ -836,13 +837,15 @@
                 const currentSrc = el.getAttribute('src');
                 
                 const bestSrcset = lazySrcset || srcset || '';
-                const bestSrc = lazySrc && (!currentSrc || isPlaceholderImageUrl(currentSrc)) ? lazySrc : currentSrc;
+                // 即使 currentSrc 唔係 placeholder，如果有 lazySrc 都優先考慮，因為 lazySrc 通常係原圖
+                const bestSrc = (lazySrc && (isPlaceholderImageUrl(currentSrc) || !currentSrc)) ? lazySrc : (lazySrc || currentSrc);
 
                 if (bestSrc) {
                     const resolved = resolveMediaUrl(bestSrc, baseUrl);
                     el.setAttribute('src', resolved);
-                    // 移除 loading="lazy" 以免在編輯器內延遲載入
+                    // 移除所有可能阻礙顯示的屬性
                     el.removeAttribute('loading');
+                    el.removeAttribute('decoding');
                 }
                 
                 if (bestSrcset) {
@@ -854,11 +857,13 @@
                     if (resolvedSet) el.setAttribute('srcset', resolvedSet);
                 }
                 
-                // 針對某些網站，可能需要強制顯示
+                // 強制顯示圖片，防止被 CSS 隱藏
                 if (el.tagName === 'IMG') {
-                    el.style.display = 'block';
-                    el.style.opacity = '1';
-                    el.style.visibility = 'visible';
+                    el.style.setProperty('display', 'block', 'important');
+                    el.style.setProperty('opacity', '1', 'important');
+                    el.style.setProperty('visibility', 'visible', 'important');
+                    el.style.setProperty('min-width', '50px', 'important');
+                    el.style.setProperty('min-height', '50px', 'important');
                 }
             });
         }
@@ -891,10 +896,10 @@
                     // 唔好完全清除圖片嘅 style，保留基本顯示
                     el.style.maxWidth = '100%';
                     el.style.height = 'auto';
-                    el.removeAttribute('class');
+                    // el.removeAttribute('class'); // 有時 class 會影響顯示，但 normalizeMediaSources 會處理
                     return;
                 }
-                el.removeAttribute('style');
+                // el.removeAttribute('style'); // 唔好一刀切移除所有 style，因為有啲圖片顯示需要 style
                 el.removeAttribute('class');
                 el.removeAttribute('width');
                 el.removeAttribute('height');
@@ -914,24 +919,27 @@
         function processLongURLs(container) {
             container.querySelectorAll('a').forEach(a => {
                 const text = a.innerText.trim();
-                // 如果顯示文字是網址，且長度超過 30 個字元，則自動縮短並加入樣式
-                // 修正：如果裡面有圖片，就唔好將佢變成連結文字，否則會睇唔到相
+                
+                // 核心修正：如果 A 標籤本身就是一個圖片連結（例如 Jina 提取時會將圖片包在 A 標籤裡）
+                // 且內部沒有 IMG 標籤，則自動將其還原為圖片
+                const isImageLink = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(text) || 
+                                    /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(a.getAttribute('href') || '');
+                
+                if (isImageLink && a.querySelectorAll('img, picture, svg, canvas, video').length === 0) {
+                    const imgSrc = a.getAttribute('href') || text;
+                    if (imgSrc.startsWith('http')) {
+                        a.innerHTML = `<img src="${imgSrc}" alt="圖片" style="max-width:100%; height:auto; display:block; margin:10px auto;">`;
+                        return;
+                    }
+                }
+
+                // 如果裡面已經有圖片，絕對唔好將佢變成「外部連結」文字
                 if (a.querySelector('img, picture, svg, canvas, video')) return;
                 
                 if ((text.startsWith('http://') || text.startsWith('https://')) && text.length > 30) {
-                    // 檢查係咪圖片連結，如果是圖片連結就唔好隱藏，或者提供預覽
-                    const isImageLink = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(text);
-                    if (isImageLink) {
-                        // 如果係圖片連結但冇 img 標籤，可以考慮自動補返一個 img 標籤
-                        if (a.querySelectorAll('*').length === 0) {
-                            a.innerHTML = `<img src="${text}" alt="圖片預覽" style="max-width:100%; height:auto; display:block; margin:10px 0;">`;
-                            return;
-                        }
-                    }
-                    
                     a.innerHTML = `🔗 外部連結`;
                     a.classList.add('shortened-url');
-                    a.title = text; // 保留原始網址於標題，滑鼠懸停可見
+                    a.title = text;
                 }
             });
         }
