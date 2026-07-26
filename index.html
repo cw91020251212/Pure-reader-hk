@@ -1042,17 +1042,22 @@
                 const markdownText = articleData.content || articleData.markdown || '';
                 const coverUrl = articleData.metadata?.['og:image'] || articleData.metadata?.['twitter:image'] || articleData.metadata?.['twitter:image:src'] || '';
                 if (!markdownText || markdownText.length < 50) throw new Error('無法提取有效內容。');
-                
-                const rawHTML = marked.parse(markdownText);
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = DOMPurify.sanitize(rawHTML);
-                const h1 = tempDiv.querySelector('h1');
-                if (h1 && h1.textContent) {
-                    articleTitle = h1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
+
+                // 優先使用 API 返回的標題，若無則從內容提取
+                if (articleData.title) {
+                    articleTitle = articleData.title.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
                 } else {
-                    const firstText = tempDiv.querySelector('h2, h3, p');
-                    if (firstText && firstText.textContent) {
-                        articleTitle = firstText.textContent.trim().substring(0, 30).replace(/[\\/:*?"<>|]/g, '');
+                    const rawHTML = marked.parse(markdownText);
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = DOMPurify.sanitize(rawHTML);
+                    const h1 = tempDiv.querySelector('h1');
+                    if (h1 && h1.textContent) {
+                        articleTitle = h1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
+                    } else {
+                        const firstText = tempDiv.querySelector('h2, h3, p');
+                        if (firstText && firstText.textContent) {
+                            articleTitle = firstText.textContent.trim().substring(0, 30).replace(/[\\/:*?"<>|]/g, '');
+                        }
                     }
                 }
                 
@@ -1688,6 +1693,12 @@
         async function downloadHTML() {
             // 匯出時如果正在刪除模式，則強制關閉，避免把樣式一同匯出
             if (isDeleteMode) toggleDeleteMode();
+
+            // 動態從內容區域提取最新標題作為檔名
+            const currentH1 = contentArea.querySelector('h1');
+            if (currentH1 && currentH1.textContent.trim()) {
+                articleTitle = currentH1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
+            }
 
             const cloneContent = contentArea.cloneNode(true);
             normalizeMediaSources(cloneContent, document.baseURI);
