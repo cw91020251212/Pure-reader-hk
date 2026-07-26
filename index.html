@@ -1043,11 +1043,12 @@
                 const coverUrl = articleData.metadata?.['og:image'] || articleData.metadata?.['twitter:image'] || articleData.metadata?.['twitter:image:src'] || '';
                 if (!markdownText || markdownText.length < 50) throw new Error('無法提取有效內容。');
 
+                const rawHTML = marked.parse(markdownText);
+
                 // 優先使用 API 返回的標題，若無則從內容提取
                 if (articleData.title) {
                     articleTitle = articleData.title.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
                 } else {
-                    const rawHTML = marked.parse(markdownText);
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = DOMPurify.sanitize(rawHTML);
                     const h1 = tempDiv.querySelector('h1');
