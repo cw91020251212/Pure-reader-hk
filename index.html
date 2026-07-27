@@ -544,7 +544,7 @@
             }
             items.forEach((item, index) => {
                 const row = document.createElement('div');
-                row.className = 'flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2';
+                row.className = 'history-item-row flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 transition-all duration-200';
                 const load = document.createElement('button');
                 load.className = 'min-w-0 flex-1 rounded p-1 text-left hover:bg-slate-50';
                 const title = document.createElement('div');
@@ -559,6 +559,15 @@
                 load.append(title, url, time);
                 load.title = readEditRecords()[item.url] ? '重新提取並套用之前編輯' : '重新提取這個網址';
                 load.onclick = () => {
+                    // 移除所有項目的選中狀態
+                    list.querySelectorAll('.history-item-row').forEach(el => {
+                        el.classList.remove('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
+                        el.classList.add('bg-white', 'border-slate-200');
+                    });
+                    // 為當前點擊的項目加上高亮狀態
+                    row.classList.remove('bg-white', 'border-slate-200');
+                    row.classList.add('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
+
                     document.getElementById('urlInput').value = item.url;
                     updateClearUrlButton();
                     fetchWithAI();
