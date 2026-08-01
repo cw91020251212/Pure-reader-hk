@@ -254,10 +254,10 @@
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <button onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
                     <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 點選保留項目</div>
-                    <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除已選內容</button>
+                    <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除非保留內容</button>
                 </div>
                 <button onclick="clearKeepSelection()" class="rounded-lg border border-emerald-300 bg-white px-3 py-2 font-bold text-emerald-800 hover:bg-emerald-100">取消所有選擇</button>
-                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">先撳第 1 步「選擇全部」，再點擊文章中想保留嘅內容，最後撳第 3 步。</p>
+                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">先撳第 1 步「選擇全部」，再點擊文章中想保留嘅內容（綠色高亮），最後撳第 3 步刪除未選取內容。</p>
             </div>
             <div id="content-wrapper" class="markdown-body"></div>
         </div>
@@ -548,23 +548,21 @@
                 const load = document.createElement('button');
                 load.className = 'min-w-0 flex-1 rounded p-1 text-left hover:bg-slate-50';
                 const title = document.createElement('div');
-                title.className = 'truncate text-sm font-bold text-slate-800';
+                title.className = 'truncate text-sm font-bold text-slate-800 min-w-0';
                 title.textContent = item.title;
                 const url = document.createElement('div');
-                url.className = 'truncate text-xs text-slate-500';
+                url.className = 'truncate text-xs text-slate-500 min-w-0';
                 url.textContent = item.url;
                 const time = document.createElement('div');
-                time.className = 'text-[11px] text-slate-400';
+                time.className = 'text-[11px] text-slate-400 min-w-0';
                 time.textContent = `${formatHistoryTime(item.visitedAt)}${readEditRecords()[item.url] ? ' · 已儲存編輯' : ''}`;
                 load.append(title, url, time);
                 load.title = readEditRecords()[item.url] ? '重新提取並套用之前編輯' : '重新提取這個網址';
                 load.onclick = () => {
-                    // 移除所有項目的選中狀態
                     list.querySelectorAll('.history-item-row').forEach(el => {
                         el.classList.remove('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
                         el.classList.add('bg-white', 'border-slate-200');
                     });
-                    // 為當前點擊的項目加上高亮狀態
                     row.classList.remove('bg-white', 'border-slate-200');
                     row.classList.add('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
 
@@ -646,13 +644,12 @@
                         element: document.querySelector('#articleContainer'),
                         intro: '<b>第三步：清理級別 (新功能)</b><br>提取後可以喺度揀「清理級別」，自動幫你掃走側欄同推薦內容。',
                         onbeforechange: function() {
-                            // 確保容器可見以進行演示
                             document.getElementById('articleContainer').classList.remove('hidden');
                         }
                     },
                     {
                         element: document.querySelector('#keepSelectionPanel'),
-                        intro: '<b>進階功能：精準保留 (新功能)</b><br>「選擇全部」後點選你想保留嘅段落，其他會自動刪除，最啱整理長篇報導。'
+                        intro: '<b>進階功能：精準保留 (新功能)</b><br>「選擇全部」後點選保留段落（綠色高亮），最後按「刪除非保留內容」即可清除其他內容。'
                     },
                     {
                         element: document.querySelector('#toggleDeleteBtn'),
@@ -674,20 +671,16 @@
                 ]
             });
 
-            // 處理步驟切換時的自動操作
             intro.onbeforechange(function(targetElement) {
                 const controls = document.getElementById('readerControls');
                 const articleContainer = document.getElementById('articleContainer');
                 
-                // 當教學指到控制面板或選單掣時，自動打開面板
                 if (targetElement.id === 'readerControls' || targetElement.classList.contains('fab-toggle')) {
                     controls.classList.remove('collapsed');
                 } else {
-                    // 其他步驟時自動收合，避免遮擋
                     controls.classList.add('collapsed');
                 }
 
-                // 為了教學演示，確保文章容器在相關步驟是顯示的
                 const stepIndex = this._currentStep;
                 if (stepIndex >= 3 && stepIndex <= 5) {
                     articleContainer.classList.remove('hidden');
@@ -840,8 +833,6 @@
                 imgs.forEach(img => {
                     const currentSrc = img.getAttribute('src') || '';
                     const currentSrcset = img.getAttribute('srcset') || '';
-                    // 新假期 / WeekendHK 類文章常見：A 連結先係真圖，IMG src 只係 default.jpg 灰圖。
-                    // 自動等同「撳一下」：直接用外層連結嘅真圖取代灰圖。
                     if (!currentSrc || isPlaceholderImageUrl(currentSrc) || isPlaceholderImageUrl(currentSrcset)) {
                         img.setAttribute('src', resolvedHref);
                         img.removeAttribute('srcset');
@@ -859,7 +850,6 @@
 
         function normalizeMediaSources(root, baseUrl = '') {
             root.querySelectorAll('picture source, img, video, audio').forEach(el => {
-                // 擴充常見的 lazy load 屬性，特別是針對新假期等網站常用的 data-actualsrc
                 const lazySrc = firstUsableMediaValue(el, [
                     'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original', 
                     'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src',
@@ -872,13 +862,11 @@
                 const currentSrc = el.getAttribute('src');
                 
                 const bestSrcset = lazySrcset || srcset || '';
-                // 即使 currentSrc 唔係 placeholder，如果有 lazySrc 都優先考慮，因為 lazySrc 通常係原圖
                 const bestSrc = (lazySrc && (isPlaceholderImageUrl(currentSrc) || !currentSrc)) ? lazySrc : (lazySrc || currentSrc);
 
                 if (bestSrc) {
                     const resolved = resolveMediaUrl(bestSrc, baseUrl);
                     el.setAttribute('src', resolved);
-                    // 移除所有可能阻礙顯示的屬性
                     el.removeAttribute('loading');
                     el.removeAttribute('decoding');
                 }
@@ -892,7 +880,6 @@
                     if (resolvedSet) el.setAttribute('srcset', resolvedSet);
                 }
                 
-                // 強制顯示圖片，防止被 CSS 隱藏
                 if (el.tagName === 'IMG') {
                     el.style.setProperty('display', 'block', 'important');
                     el.style.setProperty('opacity', '1', 'important');
@@ -904,7 +891,6 @@
         }
 
         function addCoverImage(html, coverUrl, altText = '') {
-            // 已移除自動插入版頭圖片功能，直接返回原始內容
             return html;
         }
 
@@ -929,13 +915,10 @@
             targetNode.querySelectorAll('*').forEach(el => {
                 const tagName = el.tagName.toLowerCase();
                 if (['img', 'source', 'picture', 'svg'].includes(tagName)) {
-                    // 唔好完全清除圖片嘅 style，保留基本顯示
                     el.style.maxWidth = '100%';
                     el.style.height = 'auto';
-                    // el.removeAttribute('class'); // 有時 class 會影響顯示，但 normalizeMediaSources 會處理
                     return;
                 }
-                // el.removeAttribute('style'); // 唔好一刀切移除所有 style，因為有啲圖片顯示需要 style
                 el.removeAttribute('class');
                 el.removeAttribute('width');
                 el.removeAttribute('height');
@@ -951,13 +934,9 @@
             return targetNode.innerHTML;
         }
 
-        // 升級 3：智慧處理過長網址
         function processLongURLs(container) {
             container.querySelectorAll('a').forEach(a => {
                 const text = a.innerText.trim();
-                
-                // 核心修正：如果 A 標籤本身就是一個圖片連結（例如 Jina 提取時會將圖片包在 A 標籤裡）
-                // 且內部沒有 IMG 標籤，則自動將其還原為圖片
                 const isImageLink = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(text) || 
                                     /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(a.getAttribute('href') || '');
                 
@@ -969,7 +948,6 @@
                     }
                 }
 
-                // 如果裡面已經有圖片，絕對唔好將佢變成「外部連結」文字
                 if (a.querySelector('img, picture, svg, canvas, video')) return;
                 
                 if ((text.startsWith('http://') || text.startsWith('https://')) && text.length > 30) {
@@ -1054,7 +1032,6 @@
 
                 const rawHTML = marked.parse(markdownText);
 
-                // 優先使用 API 返回的標題，若無則從內容提取
                 if (articleData.title) {
                     articleTitle = articleData.title.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
                 } else {
@@ -1097,7 +1074,6 @@
             normalizeMediaSources(contentArea, document.baseURI);
             promoteLinkedImageTargets(contentArea, document.baseURI);
             
-            // 套用網址縮短優化
             processLongURLs(contentArea);
             updateCleanupPanels();
             
@@ -1179,22 +1155,18 @@
             });
             const allImages = Array.from(root.querySelectorAll('img'));
             if (cleanupLevel === 2) {
-                // 第二級：圖片少啲（移除一半圖片，保留單數索引的）
                 allImages.forEach((img, index) => {
                     if (index % 2 === 1) (img.closest('figure') || img).remove();
                 });
             } else if (cleanupLevel === 3) {
-                // 第三級：圖片再少啲（保留 1/4 圖片）
                 allImages.forEach((img, index) => {
                     if (index % 4 !== 0) (img.closest('figure') || img).remove();
                 });
             } else if (cleanupLevel === 4) {
-                // 第四級：極少圖片（只保留第一張）
                 allImages.forEach((img, index) => {
                     if (index > 0) (img.closest('figure') || img).remove();
                 });
             } else if (cleanupLevel === 5) {
-                // 第五級：純文字（移除所有圖片）
                 allImages.forEach(img => (img.closest('figure') || img).remove());
             }
             contentArea.innerHTML = sanitizeContentHTML(root.innerHTML);
@@ -1248,7 +1220,8 @@
         }
 
         function syncDeleteButtons() {
-            const hasDeleteSelection = (isDeleteMode && selectedElements.size > 0) || (isKeepMode && keptElements.size > 0);
+            const selectable = getSelectableElements();
+            const hasDeleteSelection = (isDeleteMode && selectedElements.size > 0) || (isKeepMode && (selectable.length - keptElements.size > 0));
             const executeBtn = document.getElementById('executeDeleteBtn');
             const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
             if (executeBtn) executeBtn.classList.toggle('hidden', !hasDeleteSelection);
@@ -1266,7 +1239,7 @@
             keptElements = new Set(selectable);
             selectable.forEach(el => el.classList.add('selected-for-keep'));
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已選擇全部 ${keptElements.size} 個區塊；再點選想保留嘅內容，最後撳「刪除已選內容」。`;
+            if (note) note.textContent = `已全選 ${keptElements.size} 個區塊（綠色高亮）；點擊可取消不想保留的段落，最後按第 3 步刪除非綠色內容。`;
             syncDeleteButtons();
             updateCleanupPanels();
         }
@@ -1285,10 +1258,9 @@
                 target.classList.add('selected-for-keep');
             }
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `目前有 ${keptElements.size} 個區塊會被刪除；綠色部分係將會刪除嘅內容。`;
+            if (note) note.textContent = `目前已選取保留 ${keptElements.size} 個區塊（綠色高亮）；未標示綠色的區塊將在按第 3 步時被刪除。`;
             syncDeleteButtons();
         }
-
 
         function clearKeepSelection() {
             keptElements.clear();
@@ -1304,20 +1276,17 @@
         }
 
         function executeKeepSelection() {
-            if (!keptElements.size) {
-                showError('⚠️ 請先撳「選擇全部」，再點選想保留嘅內容。');
+            const selectable = getSelectableElements();
+            const toRemove = selectable.filter(el => !keptElements.has(el));
+            if (toRemove.length === 0 && keptElements.size === selectable.length) {
+                showError('⚠️ 目前所有區塊皆已被選取保留，沒有需要刪除的內容。');
                 return;
             }
-            recordRemovedElements(Array.from(keptElements), 'keep-delete');
-            Array.from(keptElements).forEach(el => el.remove());
-            keptElements.clear();
-            keepSelectionInverted = false;
-            isKeepMode = false;
-            contentArea.classList.remove('keep-mode-active');
-            contentArea.removeEventListener('click', toggleKeepElement);
+            recordRemovedElements(toRemove, 'keep-delete');
+            toRemove.forEach(el => el.remove());
+            clearKeepSelection();
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = '已刪除所選內容；如需再整理，可重新撳「選擇全部」。';
-            syncDeleteButtons();
+            if (note) note.textContent = '已成功清理非保留內容，僅留存綠色選取項目。';
             prepareTTS();
             injectSmartButtons();
             updateCleanupPanels();
@@ -1422,12 +1391,11 @@
 
         function executeDelete() {
             if (isKeepMode && keptElements.size > 0) {
-                recordRemovedElements(Array.from(keptElements), 'keep-delete');
-                keptElements.forEach(el => el.remove());
-                keptElements.clear();
-                isKeepMode = false;
-                contentArea.classList.remove('keep-mode-active');
-                contentArea.removeEventListener('click', toggleKeepElement);
+                const selectable = getSelectableElements();
+                const toRemove = selectable.filter(el => !keptElements.has(el));
+                recordRemovedElements(toRemove, 'keep-delete');
+                toRemove.forEach(el => el.remove());
+                clearKeepSelection();
             } else if (selectedElements.size > 0) {
                 recordRemovedElements(Array.from(selectedElements), 'delete');
                 selectedElements.forEach(el => el.remove());
@@ -1474,10 +1442,9 @@
             target.classList.remove('delete-target-hover'); 
         }
 
-        // --- 核心修正：使用 event 阻截冒泡 ---
         function toggleReaderControls(event) {
             if (event) {
-                event.stopPropagation(); // 阻止事件向上冒泡到 document
+                event.stopPropagation();
             }
             const controls = document.getElementById('readerControls');
             if (controls) {
@@ -1488,13 +1455,11 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
-                // 如果點擊目標不在控制面板內，則將其收合
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
             }
         });
-        // ------------------------------------
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
@@ -1546,10 +1511,8 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
-            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
-                // 若系統未提供 voiceURI，則退回使用 name
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
                 if(!seenIDs.has(id)) { 
                     seenIDs.add(id); 
@@ -1699,12 +1662,9 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
-        // 核心更新：加入自訂檔名及路徑選擇的非同步下載功能
         async function downloadHTML() {
-            // 匯出時如果正在刪除模式，則強制關閉，避免把樣式一同匯出
             if (isDeleteMode) toggleDeleteMode();
 
-            // 動態從內容區域提取最新標題作為檔名
             const currentH1 = contentArea.querySelector('h1');
             if (currentH1 && currentH1.textContent.trim()) {
                 articleTitle = currentH1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
@@ -1777,7 +1737,6 @@
         li { margin-bottom: 0.25em; transition: background-color 0.3s; padding: 2px; border-radius: 4px; }
         a { color: #9333ea; text-decoration: underline; word-break: break-all; }
         
-        /* 匯出頁面的縮短網址樣式 */
         a.shortened-url { display: inline-flex; align-items: center; gap: 6px; background: #e0e7ff; color: #3730a3 !important; padding: 2px 10px; border-radius: 9999px; text-decoration: none; font-size: 0.85em; font-weight: 500; border: 1px solid #c7d2fe; transition: all 0.2s; margin: 0 4px; }
         a.shortened-url:hover { background: #c7d2fe; transform: translateY(-1px); }
         
@@ -1816,7 +1775,6 @@
 <body data-click-read="off">
 
     <div class="fab-container">
-        <!-- 匯出檔案同樣套用事件攔截 -->
         <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -1827,10 +1785,6 @@
         
         <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-        </button>
-        
-        <button id="fabExecuteDeleteBtn" onclick="executeDelete()" class="trash-btn hidden" title="刪除所選">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
         
         <div class="control-panel collapsed" id="readerControls">
@@ -1871,7 +1825,6 @@
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
 
-        // 匯出檔案的核心修正：套用 event 阻截
         function toggleReaderControls(event) {
             if (event) {
                 event.stopPropagation();
@@ -1941,7 +1894,6 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
-            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
@@ -2122,7 +2074,7 @@
         }
         window.addEventListener('scroll', checkScrollButtons);
         
-    <${"/"}script>
+    <${'/'}script>
 </body>
 </html>`;
 
