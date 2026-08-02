@@ -34,6 +34,7 @@
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/full.js"></script>
 
     <style>
         :root { --base-font-size: 18px; }
@@ -227,6 +228,9 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                         <span>刪除所選</span>
                     </button>
+                    <button id="convertToTraditionalBtn" onclick="convertToTraditional()" class="w-full sm:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold px-4 py-3 rounded-xl border border-indigo-200 transition-colors flex items-center justify-center gap-2 shadow-sm" title="將簡體中文轉換為繁體中文">
+                        <span>🇭🇰 簡轉繁</span>
+                    </button>
                     <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <span id="toggleDeleteText">🧹 開始清理</span>
                     </button>
@@ -240,6 +244,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                     <label for="cleanupLevel" class="font-bold text-indigo-900 whitespace-nowrap">清理級別</label>
                     <select id="cleanupLevel" onchange="applyCleanupLevel()" class="flex-1 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-indigo-900">
+                        <option value="0">第 0 級・完全不攔截（全手動）</option>
                         <option value="1">第 1 級・保守</option>
                         <option value="2">第 2 級・輕度</option>
                         <option value="3" selected>第 3 級・中度</option>
@@ -1140,10 +1145,61 @@
             });
         }
 
+        let openccConverter = null;
+
+        function convertToTraditional() {
+            if (!contentArea || !contentArea.children.length) {
+                showError('⚠️ 請先提取文章內容。');
+                return;
+            }
+            try {
+                if (!openccConverter && window.OpenCC) {
+                    openccConverter = window.OpenCC.Converter({ from: 'cn', to: 'hk' });
+                }
+                if (!openccConverter) {
+                    showError('⚠️ 簡轉繁模組載入中，請稍後再試。');
+                    return;
+                }
+                
+                if (articleTitle) articleTitle = openccConverter(articleTitle);
+                
+                const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    if (node.nodeValue && node.nodeValue.trim()) {
+                        node.nodeValue = openccConverter(node.nodeValue);
+                    }
+                }
+                
+                prepareTTS();
+                injectSmartButtons();
+                saveCurrentEditRecord();
+                showError('✅ 已成功將文章內容轉為繁體中文！');
+            } catch (err) {
+                console.error('簡轉繁失敗:', err);
+                showError('⚠️ 簡繁轉換失敗，請重新嘗試。');
+            }
+        }
+
         function applyCleanupLevel(persist = true) {
             if (!cleanupPreviewHTML) return;
             cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
             cleanupLevel = Number(document.getElementById('cleanupLevel')?.value || cleanupLevel);
+            
+            if (cleanupLevel === 0) {
+                contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
+                normalizeMediaSources(contentArea, document.baseURI);
+                promoteLinkedImageTargets(contentArea, document.baseURI);
+                processLongURLs(contentArea);
+                prepareTTS();
+                injectSmartButtons();
+                const note = document.getElementById('cleanupLevelNote');
+                if (note) note.textContent = '已套用第 0 級：完全不進行自動過濾，100% 保留原文內容，可搭配手動清理或精準保留。';
+                updateCleanupPanels();
+                if (persist) saveCurrentEditRecord();
+                return;
+            }
+
             const doc = new DOMParser().parseFromString(`<div id="cleanup-root">${cleanupPreviewHTML}</div>`, 'text/html');
             const root = doc.getElementById('cleanup-root');
             if (!root) return;
@@ -1180,7 +1236,8 @@
             const note = document.getElementById('cleanupLevelNote');
             if (note) {
                 let noteText = `已套用第 ${cleanupLevel} 級；`;
-                if (cleanupLevel === 1) noteText += "盡量保留所有圖片。";
+                if (cleanupLevel === 0) noteText += "完全不進行自動過濾，保留原文所有內容。";
+                else if (cleanupLevel === 1) noteText += "盡量保留所有圖片。";
                 else if (cleanupLevel === 2) noteText += "圖片減少約 50%。";
                 else if (cleanupLevel === 3) noteText += "圖片減少約 75%。";
                 else if (cleanupLevel === 4) noteText += "只保留首張主要圖片。";
