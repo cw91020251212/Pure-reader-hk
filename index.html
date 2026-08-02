@@ -28,17 +28,12 @@
       }
     </script>
     <title>PureRead HK｜純淨閱讀器</title>
-    
-    <!-- 引入必要的第三方庫 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
-    <!-- 新增：PDF.js 用於讀取 PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-    <!-- 新增：OpenCC 用於簡繁轉換 -->
-    <script src="https://cdn.jsdelivr.net/npm/opencc-js@1.0.5/dist/umd/cn2hk.js"></script>
 
     <style>
         :root { --base-font-size: 18px; }
@@ -64,6 +59,7 @@
         .markdown-body li { margin-bottom: 0.25em; font-size: 1em; }
         .markdown-body a { color: #4f46e5; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
         
+        /* 新增：長網址縮短樣式 */
         .markdown-body a.shortened-url {
             display: inline-flex;
             align-items: center;
@@ -181,7 +177,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.2</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.1</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -200,11 +196,10 @@
                     <span id="btnText">提取網址</span>
                     <div id="loadingIcon" class="loader hidden"></div>
                 </button>
-                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="支援上傳 .pdf, .txt, .md 及 .html 檔案，自動重整排版並提供朗讀。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
+                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="直接上傳舊有檔案，系統會自動重整排版。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     上傳檔案
-                    <!-- 支援檔案類型擴充 PDF 和 TXT -->
-                    <input type="file" id="fileInput" accept=".html,.htm,.md,.txt,.pdf" class="hidden" onchange="handleFileUpload(event)">
+                    <input type="file" id="fileInput" accept=".html,.htm,.md,.txt" class="hidden" onchange="handleFileUpload(event)">
                 </label>
             </div>
             <div id="errorMessage" class="mt-4 p-4 bg-red-50 text-red-700 font-bold rounded-xl text-sm hidden border border-red-300"></div>
@@ -245,31 +240,31 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                     <label for="cleanupLevel" class="font-bold text-indigo-900 whitespace-nowrap">清理級別</label>
                     <select id="cleanupLevel" onchange="applyCleanupLevel()" class="flex-1 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-indigo-900">
-                        <option value="0">第 0 級・原汁原味 (顯示完整提取內容)</option>
                         <option value="1">第 1 級・保守</option>
                         <option value="2">第 2 級・輕度</option>
-                        <option value="3" selected>第 3 級・中度 (預設)</option>
+                        <option value="3" selected>第 3 級・中度</option>
                         <option value="4">第 4 級・高度</option>
                         <option value="5">第 5 級・純文字</option>
                     </select>
+                    <button onclick="restoreCleanupPreview()" class="rounded-lg border border-indigo-300 bg-white px-3 py-2 font-bold text-indigo-800 hover:bg-indigo-100">復原</button>
                 </div>
-                <p id="cleanupLevelNote" class="mt-2 text-xs text-indigo-700">如果提取後發現缺少了部分段落，可以切換至「第 0 級」，找回原汁原味的排版，然後手動「開始清理」。</p>
+                <p id="cleanupLevelNote" class="mt-2 text-xs text-indigo-700">先提取文章，再選擇清理級別；不同級別會按比例過濾圖片。</p>
             </div>
             <div id="keepSelectionPanel" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <button onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
                     <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 點選保留項目</div>
-                    <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除非保留內容</button>
+                    <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除已選內容</button>
                 </div>
                 <button onclick="clearKeepSelection()" class="rounded-lg border border-emerald-300 bg-white px-3 py-2 font-bold text-emerald-800 hover:bg-emerald-100">取消所有選擇</button>
-                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">先撳第 1 步「選擇全部」，再點擊文章中想保留嘅內容（綠色高亮），最後撳第 3 步刪除未選取內容。</p>
+                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">先撳第 1 步「選擇全部」，再點擊文章中想保留嘅內容，最後撳第 3 步。</p>
             </div>
             <div id="content-wrapper" class="markdown-body"></div>
         </div>
         
         <footer class="mt-8 mb-4 text-center px-4">
             <p class="text-slate-500 font-medium text-xs leading-relaxed">
-                ⚠️ 免責聲明：本工具僅供個人閱讀排版優化，系統不會擷取或儲存任何使用者資料。<br class="hidden sm:block">所有經提取之內容版權歸原作者所有。支援自動簡繁轉換功能。
+                ⚠️ 免責聲明：本工具僅供個人閱讀排版優化，系統不會擷取或儲存任何使用者資料。<br class="hidden sm:block">所有經提取之內容版權歸原作者所有。
             </p>
         </footer>
     </div>
@@ -334,7 +329,7 @@
         let keepSelectionInverted = false;
         let cleanupLevel = 3;
         let cleanupPreviewHTML = '';
-        let cleanupBaselineHTML = ''; // 保存第 0 級的最原始擷取內容
+        let cleanupBaselineHTML = '';
         const URL_HISTORY_KEY = 'pureReadUrlHistory_v1';
         const URL_HISTORY_LIMIT = 100;
         const EDIT_RECORDS_KEY = 'pureReadEditRecords_v1';
@@ -343,40 +338,6 @@
         let currentArticleUrl = '';
         let currentEditRecord = null;
         let isApplyingEditRecord = false;
-
-        // --- 新增：簡繁轉換功能 ---
-        let chineseConverter = null;
-        function getChineseConverter() {
-            if (!chineseConverter && typeof OpenCC !== 'undefined') {
-                chineseConverter = OpenCC.Converter({ from: 'cn', to: 'hk' });
-            }
-            return chineseConverter;
-        }
-
-        // 轉換一般純文字
-        function convertToHK(text) {
-            const conv = getChineseConverter();
-            return conv ? conv(text) : text;
-        }
-
-        // 轉換 HTML 結構中的所有文字節點（不影響標籤）
-        function convertHtmlToHK(htmlString) {
-            const conv = getChineseConverter();
-            if (!conv) return htmlString;
-            
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlString;
-            // 使用 TreeWalker 只走訪文字節點
-            const walker = document.createTreeWalker(tempDiv, NodeFilter.SHOW_TEXT, null, false);
-            let node;
-            while ((node = walker.nextNode())) {
-                if (node.nodeValue.trim()) {
-                    node.nodeValue = conv(node.nodeValue);
-                }
-            }
-            return tempDiv.innerHTML;
-        }
-        // --- 結束：簡繁轉換功能 ---
 
         function readUrlHistory() {
             try {
@@ -446,7 +407,7 @@
             record.updatedAt = new Date().toISOString();
             record.cleanupLevel = cleanupLevel;
             record.currentHTML = sanitizeContentHTML(contentArea.innerHTML);
-            if (!record.baseHTML && cleanupBaselineHTML) record.baseHTML = cleanupBaselineHTML;
+            if (!record.baseHTML && contentArea.innerHTML.trim()) record.baseHTML = record.currentHTML;
             const records = readEditRecords();
             records[currentArticleUrl] = record;
             saveEditRecords(records);
@@ -497,24 +458,18 @@
         function applySavedEditRecord() {
             const record = currentEditRecord;
             if (!record || !contentArea || isApplyingEditRecord) return;
-            
-            // 優先還原直接編輯過後的最終 HTML (如果有)
             const hasSavedHTML = typeof record.currentHTML === 'string' && record.currentHTML.trim();
             if (hasSavedHTML && record.baseHTML) {
                 isApplyingEditRecord = true;
-                cleanupBaselineHTML = record.baseHTML;
                 contentArea.innerHTML = sanitizeContentHTML(record.currentHTML);
                 normalizeMediaSources(contentArea, document.baseURI);
                 processLongURLs(contentArea);
-                document.getElementById('cleanupLevel').value = String(record.cleanupLevel || cleanupLevel);
-                cleanupLevel = record.cleanupLevel || cleanupLevel;
                 isApplyingEditRecord = false;
                 prepareTTS();
                 injectSmartButtons();
                 updateCleanupPanels();
                 return;
             }
-            
             isApplyingEditRecord = true;
             if (record.cleanupApplied) {
                 const select = document.getElementById('cleanupLevel');
@@ -593,21 +548,23 @@
                 const load = document.createElement('button');
                 load.className = 'min-w-0 flex-1 rounded p-1 text-left hover:bg-slate-50';
                 const title = document.createElement('div');
-                title.className = 'truncate text-sm font-bold text-slate-800 min-w-0';
+                title.className = 'truncate text-sm font-bold text-slate-800';
                 title.textContent = item.title;
                 const url = document.createElement('div');
-                url.className = 'truncate text-xs text-slate-500 min-w-0';
+                url.className = 'truncate text-xs text-slate-500';
                 url.textContent = item.url;
                 const time = document.createElement('div');
-                time.className = 'text-[11px] text-slate-400 min-w-0';
+                time.className = 'text-[11px] text-slate-400';
                 time.textContent = `${formatHistoryTime(item.visitedAt)}${readEditRecords()[item.url] ? ' · 已儲存編輯' : ''}`;
                 load.append(title, url, time);
                 load.title = readEditRecords()[item.url] ? '重新提取並套用之前編輯' : '重新提取這個網址';
                 load.onclick = () => {
+                    // 移除所有項目的選中狀態
                     list.querySelectorAll('.history-item-row').forEach(el => {
                         el.classList.remove('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
                         el.classList.add('bg-white', 'border-slate-200');
                     });
+                    // 為當前點擊的項目加上高亮狀態
                     row.classList.remove('bg-white', 'border-slate-200');
                     row.classList.add('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
 
@@ -683,14 +640,19 @@
                     },
                     {
                         element: document.querySelector('#uploadBtn'),
-                        intro: '<b>或者：上傳檔案</b><br>支援上傳 .pdf, .txt, .md 或 .html 檔案，自動轉繁體重排版。'
+                        intro: '<b>或者：上傳檔案</b><br>如果你已經有 .html 或 .md 檔案，可以直接上傳重整排版。'
                     },
                     {
                         element: document.querySelector('#articleContainer'),
-                        intro: '<b>第三步：清理級別</b><br>提取後可以揀「清理級別」。如果覺得預設刪太多嘢，可以選<b>「第 0 級」</b>找回所有被隱藏嘅圖片同側欄。',
+                        intro: '<b>第三步：清理級別 (新功能)</b><br>提取後可以喺度揀「清理級別」，自動幫你掃走側欄同推薦內容。',
                         onbeforechange: function() {
+                            // 確保容器可見以進行演示
                             document.getElementById('articleContainer').classList.remove('hidden');
                         }
+                    },
+                    {
+                        element: document.querySelector('#keepSelectionPanel'),
+                        intro: '<b>進階功能：精準保留 (新功能)</b><br>「選擇全部」後點選你想保留嘅段落，其他會自動刪除，最啱整理長篇報導。'
                     },
                     {
                         element: document.querySelector('#toggleDeleteBtn'),
@@ -699,20 +661,33 @@
                     {
                         element: document.querySelector('.fab-toggle'),
                         intro: '<b>第四步：閱讀設定</b><br>撳呢個紫色掣，可以打開朗讀選單同調整字體。'
+                    },
+                    {
+                        element: document.querySelector('#readerControls'),
+                        intro: '<b>新功能：真聲朗讀與語速</b><br>喺度可以開啟「點擊朗讀」，仲可以揀唔同嘅人聲同調整快慢。',
+                        position: 'left'
+                    },
+                    {
+                        element: document.querySelector('#downloadBtn'),
+                        intro: '<b>最後一步：儲存檔案</b><br>將整理好嘅文章儲存成獨立 HTML 檔，方便永久收藏或離線閱讀。'
                     }
                 ]
             });
 
+            // 處理步驟切換時的自動操作
             intro.onbeforechange(function(targetElement) {
                 const controls = document.getElementById('readerControls');
                 const articleContainer = document.getElementById('articleContainer');
                 
+                // 當教學指到控制面板或選單掣時，自動打開面板
                 if (targetElement.id === 'readerControls' || targetElement.classList.contains('fab-toggle')) {
                     controls.classList.remove('collapsed');
                 } else {
+                    // 其他步驟時自動收合，避免遮擋
                     controls.classList.add('collapsed');
                 }
 
+                // 為了教學演示，確保文章容器在相關步驟是顯示的
                 const stepIndex = this._currentStep;
                 if (stepIndex >= 3 && stepIndex <= 5) {
                     articleContainer.classList.remove('hidden');
@@ -722,9 +697,11 @@
             intro.oncomplete(function() {
                 document.getElementById('readerControls').classList.add('collapsed');
             });
+
             intro.onexit(function() {
                 document.getElementById('readerControls').classList.add('collapsed');
             });
+
             intro.start();
         }
 
@@ -752,8 +729,8 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
-            if(!SafeStorage.get('tutorialSeen_v8')) {
-                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v8', 'true'); }, 500);
+            if(!SafeStorage.get('tutorialSeen_v7')) {
+                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v7', 'true'); }, 500);
             }
             renderUrlHistory();
             updateClearUrlButton();
@@ -764,10 +741,7 @@
                 navigator.serviceWorker.addEventListener('message', event => {
                     if (event.data?.type !== 'shared-file-ready' || !event.data.file) return;
                     const file = new File([event.data.file], event.data.name || 'shared.html', { type: event.data.mime || 'text/html' });
-                    // 使用相同的檔案處理邏輯
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(file);
-                    handleFileUpload({ target: { files: dataTransfer.files } });
+                    handleSharedFile(file);
                     window.history.replaceState({}, document.title, window.location.pathname);
                 });
                 if (new URLSearchParams(window.location.search).get('shared_file') === '1') {
@@ -775,6 +749,17 @@
                         registration.active?.postMessage({ type: 'read-latest-shared-file' });
                     });
                 }
+            }
+
+            if ('launchQueue' in window) {
+                window.launchQueue.setConsumer(async (launchParams) => {
+                    if (launchParams.files && launchParams.files.length > 0) {
+                        const fileHandle = launchParams.files[0];
+                        const file = await fileHandle.getFile();
+                        handleSharedFile(file);
+                        console.log('已接收分享檔案:', file.name);
+                    }
+                });
             }
 
             const hasSharedUrl = applySharedUrl();
@@ -855,6 +840,8 @@
                 imgs.forEach(img => {
                     const currentSrc = img.getAttribute('src') || '';
                     const currentSrcset = img.getAttribute('srcset') || '';
+                    // 新假期 / WeekendHK 類文章常見：A 連結先係真圖，IMG src 只係 default.jpg 灰圖。
+                    // 自動等同「撳一下」：直接用外層連結嘅真圖取代灰圖。
                     if (!currentSrc || isPlaceholderImageUrl(currentSrc) || isPlaceholderImageUrl(currentSrcset)) {
                         img.setAttribute('src', resolvedHref);
                         img.removeAttribute('srcset');
@@ -872,6 +859,7 @@
 
         function normalizeMediaSources(root, baseUrl = '') {
             root.querySelectorAll('picture source, img, video, audio').forEach(el => {
+                // 擴充常見的 lazy load 屬性，特別是針對新假期等網站常用的 data-actualsrc
                 const lazySrc = firstUsableMediaValue(el, [
                     'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original', 
                     'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src',
@@ -884,11 +872,13 @@
                 const currentSrc = el.getAttribute('src');
                 
                 const bestSrcset = lazySrcset || srcset || '';
+                // 即使 currentSrc 唔係 placeholder，如果有 lazySrc 都優先考慮，因為 lazySrc 通常係原圖
                 const bestSrc = (lazySrc && (isPlaceholderImageUrl(currentSrc) || !currentSrc)) ? lazySrc : (lazySrc || currentSrc);
 
                 if (bestSrc) {
                     const resolved = resolveMediaUrl(bestSrc, baseUrl);
                     el.setAttribute('src', resolved);
+                    // 移除所有可能阻礙顯示的屬性
                     el.removeAttribute('loading');
                     el.removeAttribute('decoding');
                 }
@@ -902,6 +892,7 @@
                     if (resolvedSet) el.setAttribute('srcset', resolvedSet);
                 }
                 
+                // 強制顯示圖片，防止被 CSS 隱藏
                 if (el.tagName === 'IMG') {
                     el.style.setProperty('display', 'block', 'important');
                     el.style.setProperty('opacity', '1', 'important');
@@ -912,28 +903,39 @@
             });
         }
 
-        // 修改：這個函數現在只負責第 0 級的最基礎提取 (防 XSS 及強制刪除破壞性腳本)，
-        // 其他廣告與側欄的刪除移至 applyCleanupLevel 進行。
+        function addCoverImage(html, coverUrl, altText = '') {
+            // 已移除自動插入版頭圖片功能，直接返回原始內容
+            return html;
+        }
+
         function extractNuclear(htmlText, baseUrl = '', coverOverride = '') {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
+            const coverUrl = coverOverride || doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image:src"]')?.getAttribute('content') || '';
             let wrapper = doc.querySelector('#content-wrapper') || doc.querySelector('article') || doc.querySelector('main');
             let targetNode = wrapper ? wrapper : doc.body;
 
-            // 這些是絕對不能留的腳本和 UI 控制元件 (保護系統)
-            const systemBlackList = 'script, style, iframe:not([src*="youtube"]), .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls';
-            targetNode.querySelectorAll(systemBlackList).forEach(el => el.remove());
+            const blackList = 'button, script, style, iframe, nav, footer, aside, form, input, textarea, select, .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls';
+            targetNode.querySelectorAll(blackList).forEach(el => el.remove());
+            targetNode.querySelectorAll('[class~="ad"], [class*="adbox"], [class*="advert"], [class*="adsbygoogle"], [class*="ad-container"], [class*="ad-slot"], [data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]').forEach(el => el.remove());
+
+            targetNode.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href') || '';
+                if (href.includes('facebook.com/sharer') || href.includes('twitter.com/intent') || href.includes('linkedin.com/share')) a.remove();
+            });
 
             normalizeMediaSources(targetNode, baseUrl);
             promoteLinkedImageTargets(targetNode, baseUrl);
-            
             targetNode.querySelectorAll('*').forEach(el => {
                 const tagName = el.tagName.toLowerCase();
                 if (['img', 'source', 'picture', 'svg'].includes(tagName)) {
+                    // 唔好完全清除圖片嘅 style，保留基本顯示
                     el.style.maxWidth = '100%';
                     el.style.height = 'auto';
+                    // el.removeAttribute('class'); // 有時 class 會影響顯示，但 normalizeMediaSources 會處理
                     return;
                 }
+                // el.removeAttribute('style'); // 唔好一刀切移除所有 style，因為有啲圖片顯示需要 style
                 el.removeAttribute('class');
                 el.removeAttribute('width');
                 el.removeAttribute('height');
@@ -949,9 +951,13 @@
             return targetNode.innerHTML;
         }
 
+        // 升級 3：智慧處理過長網址
         function processLongURLs(container) {
             container.querySelectorAll('a').forEach(a => {
                 const text = a.innerText.trim();
+                
+                // 核心修正：如果 A 標籤本身就是一個圖片連結（例如 Jina 提取時會將圖片包在 A 標籤裡）
+                // 且內部沒有 IMG 標籤，則自動將其還原為圖片
                 const isImageLink = /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(text) || 
                                     /\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i.test(a.getAttribute('href') || '');
                 
@@ -963,6 +969,7 @@
                     }
                 }
 
+                // 如果裡面已經有圖片，絕對唔好將佢變成「外部連結」文字
                 if (a.querySelector('img, picture, svg, canvas, video')) return;
                 
                 if ((text.startsWith('http://') || text.startsWith('https://')) && text.length > 30) {
@@ -973,61 +980,49 @@
             });
         }
 
-        // 升級版檔案處理：支援 PDF、TXT、MD
-        async function handleFileUpload(event) {
+        function handleSharedFile(file) {
+            resetUI();
+            document.getElementById('loadingIcon').classList.remove('hidden');
+            document.getElementById('btnText').classList.add('hidden');
+            file.text().then(text => {
+                let rawContent = text;
+                articleTitle = file.name.replace(/\.[^/.]+$/, '');
+                if (/\.(md|txt)$/i.test(file.name)) rawContent = marked.parse(text);
+                else rawContent = extractNuclear(text);
+                renderContent(rawContent);
+            }).catch(error => {
+                console.error('讀取分享檔案失敗:', error);
+                showError('⚠️ 無法讀取分享檔案。');
+            }).finally(() => {
+                document.getElementById('loadingIcon').classList.add('hidden');
+                document.getElementById('btnText').classList.remove('hidden');
+            });
+        }
+
+        function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
             resetUI();
             document.getElementById('loadingIcon').classList.remove('hidden');
             document.getElementById('btnText').classList.add('hidden');
             
-            articleTitle = file.name.replace(/\.[^/.]+$/, ""); 
-            
-            try {
-                let rawContent = '';
-                
-                if (file.name.toLowerCase().endsWith('.pdf')) {
-                    // 使用 PDF.js 解析
-                    const pdfjsLib = window['pdfjs-dist/build/pdf'];
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                    const arrayBuffer = await file.arrayBuffer();
-                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const textContent = await page.getTextContent();
-                        const pageText = textContent.items.map(item => item.str).join(' ');
-                        rawContent += `<p>${pageText}</p>`;
-                    }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const text = e.target.result;
+                let rawContent = text;
+                articleTitle = file.name.replace(/\.[^/.]+$/, ""); 
+                if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
+                    rawContent = marked.parse(text);
                 } else {
-                    const text = await file.text();
-                    if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
-                        rawContent = marked.parse(text);
-                    } else {
-                        rawContent = text;
-                    }
+                    rawContent = extractNuclear(text);
                 }
-
-                // 執行簡繁轉換
-                rawContent = convertHtmlToHK(rawContent);
-                articleTitle = convertToHK(articleTitle);
-
-                // 進行最基礎提取 (第 0 級) 作為 Baseline
-                const baseHTML = extractNuclear(rawContent);
+                renderContent(rawContent);
                 
-                // 本地檔案通常不需要太嚴格的第 3 級清理，預設設定為 0 級
-                document.getElementById('cleanupLevel').value = '0';
-                cleanupLevel = 0;
-                
-                renderContent(baseHTML, true); // true = 自動應用 Cleanup (套用 0 級)
-                
-            } catch (err) {
-                console.error(err);
-                showError('讀取檔案失敗：無法解析該檔案格式。');
-            } finally {
                 document.getElementById('loadingIcon').classList.add('hidden');
                 document.getElementById('btnText').classList.remove('hidden');
-                event.target.value = ''; 
-            }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; 
         }
 
         async function fetchWithAI() {
@@ -1057,13 +1052,11 @@
                 const coverUrl = articleData.metadata?.['og:image'] || articleData.metadata?.['twitter:image'] || articleData.metadata?.['twitter:image:src'] || '';
                 if (!markdownText || markdownText.length < 50) throw new Error('無法提取有效內容。');
 
-                let rawHTML = marked.parse(markdownText);
+                const rawHTML = marked.parse(markdownText);
 
-                // 簡繁轉換
-                rawHTML = convertHtmlToHK(rawHTML);
-
+                // 優先使用 API 返回的標題，若無則從內容提取
                 if (articleData.title) {
-                    articleTitle = convertToHK(articleData.title.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, ''));
+                    articleTitle = articleData.title.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
                 } else {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = DOMPurify.sanitize(rawHTML);
@@ -1078,19 +1071,11 @@
                     }
                 }
                 
-                // 第 0 級基礎過濾，取得最原始的原汁原味 HTML 當作 Baseline
-                const baseHTML = extractNuclear(rawHTML, finalUrl, coverUrl);
+                const pureHTML = extractNuclear(rawHTML, finalUrl, coverUrl);
                 setCurrentArticleUrl(finalUrl);
-                
-                // 網頁提取預設套用第 3 級清理
-                document.getElementById('cleanupLevel').value = '3';
-                cleanupLevel = 3;
-                
-                // 渲染並自動套用 Cleanup (第 3 級)
-                renderContent(baseHTML, true);
-                
+                renderContent(pureHTML);
                 const record = ensureCurrentEditRecord();
-                if (record && !record.baseHTML) record.baseHTML = cleanupBaselineHTML; // 保存基準點
+                if (record && !record.baseHTML) record.baseHTML = sanitizeContentHTML(contentArea.innerHTML);
                 applySavedEditRecord();
                 addUrlHistory(finalUrl, articleTitle);
             } catch (error) {
@@ -1101,24 +1086,19 @@
             }
         }
 
-        function renderContent(rawHTML, autoApplyCleanup = true) {
+        function renderContent(rawHTML) {
             const cleanHTML = DOMPurify.sanitize(rawHTML, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
                 ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
             });
+            cleanupPreviewHTML = cleanHTML;
+            cleanupBaselineHTML = cleanHTML;
+            contentArea.innerHTML = cleanHTML;
+            normalizeMediaSources(contentArea, document.baseURI);
+            promoteLinkedImageTargets(contentArea, document.baseURI);
             
-            cleanupBaselineHTML = cleanHTML; // 記錄最基礎的第 0 級狀態
-            
-            if (autoApplyCleanup) {
-                applyCleanupLevel(false); // 會根據 cleanupLevel 過濾並注入 contentArea
-            } else {
-                contentArea.innerHTML = cleanHTML;
-                normalizeMediaSources(contentArea, document.baseURI);
-                promoteLinkedImageTargets(contentArea, document.baseURI);
-                processLongURLs(contentArea);
-                cleanupPreviewHTML = cleanHTML;
-            }
-            
+            // 套用網址縮短優化
+            processLongURLs(contentArea);
             updateCleanupPanels();
             
             const articleContainer = document.getElementById('articleContainer');
@@ -1147,7 +1127,6 @@
         }
 
         function cleanupSelectorsForLevel(level) {
-            if (level === 0) return '';
             const selectors = [
                 '[class~="ad"], [class*="adbox"], [class*="advert"], [class*="adsbygoogle"], [class*="ad-container"], [class*="ad-slot"], [data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]',
                 '[class*="recommend"], [class*="related"], [class*="recommended"], [class*="share"], [class*="social"], [class*="newsletter"], [class*="subscribe"], [class*="popup"], [class*="modal"]',
@@ -1159,7 +1138,6 @@
         }
 
         function removeMarkedNonArticleContent(root, level) {
-            if (level === 0) return;
             const marker = /廣告|推薦|相關文章|熱門文章|你可能感興趣|advert|sponsor|promot|related|recommend|banner|sidebar|native[-_ ]?ad|outbrain|taboola/i;
             const removable = Array.from(root.querySelectorAll('*')).filter(el => {
                 if (el === root || el.closest('figure')?.querySelector('img') === el) return false;
@@ -1174,52 +1152,52 @@
             }
         }
 
-        // 修改：動態套用清理級別 (包含第 0 級支援)
+        function isLikelyNonArticleImage(img) {
+            const context = `${img.alt || ''} ${img.title || ''} ${img.closest('a')?.innerText || ''} ${img.closest('figure')?.innerText || ''}`;
+            return /廣告|推薦|相關文章|熱門文章|你可能|advert|sponsor|promot|related|recommend|banner|sidebar|logo|avatar|icon/i.test(context);
+        }
+
+        function sanitizeContentHTML(html) {
+            return DOMPurify.sanitize(html, {
+                ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
+            });
+        }
+
         function applyCleanupLevel(persist = true) {
-            if (!cleanupBaselineHTML) return;
-            cleanupLevel = Number(document.getElementById('cleanupLevel')?.value || 3);
-            
-            // 永遠從第 0 級的 Baseline 出發
-            const doc = new DOMParser().parseFromString(`<div id="cleanup-root">${cleanupBaselineHTML}</div>`, 'text/html');
+            if (!cleanupPreviewHTML) return;
+            cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
+            cleanupLevel = Number(document.getElementById('cleanupLevel')?.value || cleanupLevel);
+            const doc = new DOMParser().parseFromString(`<div id="cleanup-root">${cleanupPreviewHTML}</div>`, 'text/html');
             const root = doc.getElementById('cleanup-root');
             if (!root) return;
-            
-            if (cleanupLevel > 0) {
-                // 如果是大於 0 的級別，執行額外的刪除
-                const formBlackList = 'button, nav, footer, aside, form, input, textarea, select';
-                root.querySelectorAll(formBlackList).forEach(el => el.remove());
-
-                const adSelectors = cleanupSelectorsForLevel(cleanupLevel);
-                if (adSelectors) root.querySelectorAll(adSelectors).forEach(el => el.remove());
-                
-                removeMarkedNonArticleContent(root, cleanupLevel);
-                
-                root.querySelectorAll('a').forEach(a => {
-                    const href = a.getAttribute('href') || '';
-                    if (/facebook\.com\/sharer|twitter\.com\/intent|linkedin\.com\/share/i.test(href)) a.remove();
+            root.querySelectorAll(cleanupSelectorsForLevel(cleanupLevel)).forEach(el => el.remove());
+            removeMarkedNonArticleContent(root, cleanupLevel);
+            root.querySelectorAll('a').forEach(a => {
+                const href = a.getAttribute('href') || '';
+                if (/facebook\.com\/sharer|twitter\.com\/intent|linkedin\.com\/share/i.test(href)) a.remove();
+            });
+            const allImages = Array.from(root.querySelectorAll('img'));
+            if (cleanupLevel === 2) {
+                // 第二級：圖片少啲（移除一半圖片，保留單數索引的）
+                allImages.forEach((img, index) => {
+                    if (index % 2 === 1) (img.closest('figure') || img).remove();
                 });
-                
-                const allImages = Array.from(root.querySelectorAll('img'));
-                if (cleanupLevel === 2) {
-                    allImages.forEach((img, index) => {
-                        if (index % 2 === 1) (img.closest('figure') || img).remove();
-                    });
-                } else if (cleanupLevel === 3) {
-                    allImages.forEach((img, index) => {
-                        if (index % 4 !== 0) (img.closest('figure') || img).remove();
-                    });
-                } else if (cleanupLevel === 4) {
-                    allImages.forEach((img, index) => {
-                        if (index > 0) (img.closest('figure') || img).remove();
-                    });
-                } else if (cleanupLevel === 5) {
-                    allImages.forEach(img => (img.closest('figure') || img).remove());
-                }
+            } else if (cleanupLevel === 3) {
+                // 第三級：圖片再少啲（保留 1/4 圖片）
+                allImages.forEach((img, index) => {
+                    if (index % 4 !== 0) (img.closest('figure') || img).remove();
+                });
+            } else if (cleanupLevel === 4) {
+                // 第四級：極少圖片（只保留第一張）
+                allImages.forEach((img, index) => {
+                    if (index > 0) (img.closest('figure') || img).remove();
+                });
+            } else if (cleanupLevel === 5) {
+                // 第五級：純文字（移除所有圖片）
+                allImages.forEach(img => (img.closest('figure') || img).remove());
             }
-            
             contentArea.innerHTML = sanitizeContentHTML(root.innerHTML);
-            cleanupPreviewHTML = contentArea.innerHTML; // 記錄目前畫面上的 HTML
-            
             normalizeMediaSources(contentArea, document.baseURI);
             promoteLinkedImageTargets(contentArea, document.baseURI);
             const record = ensureCurrentEditRecord();
@@ -1227,24 +1205,34 @@
             processLongURLs(contentArea);
             prepareTTS();
             injectSmartButtons();
-            
             const note = document.getElementById('cleanupLevelNote');
             if (note) {
-                if (cleanupLevel === 0) note.textContent = "已套用第 0 級；展示原始提取內容，沒有任何過濾，你可以點擊「開始清理」手動刪除多餘部分。";
-                else if (cleanupLevel === 1) note.textContent = "已套用第 1 級；盡量保留所有圖片。";
-                else if (cleanupLevel === 2) note.textContent = "已套用第 2 級；圖片減少約 50%。";
-                else if (cleanupLevel === 3) note.textContent = "已套用第 3 級；圖片減少約 75%。";
-                else if (cleanupLevel === 4) note.textContent = "已套用第 4 級；只保留首張主要圖片。";
-                else if (cleanupLevel === 5) note.textContent = "已套用第 5 級；移除所有圖片，僅顯示純文字。";
+                let noteText = `已套用第 ${cleanupLevel} 級；`;
+                if (cleanupLevel === 1) noteText += "盡量保留所有圖片。";
+                else if (cleanupLevel === 2) noteText += "圖片減少約 50%。";
+                else if (cleanupLevel === 3) noteText += "圖片減少約 75%。";
+                else if (cleanupLevel === 4) noteText += "只保留首張主要圖片。";
+                else if (cleanupLevel === 5) noteText += "移除所有圖片，僅顯示純文字。";
+                note.textContent = noteText;
             }
             updateCleanupPanels();
             if (persist) saveCurrentEditRecord();
         }
 
-        // 這個函數保留，以防相容舊版按鈕
         function restoreCleanupPreview() {
-            document.getElementById('cleanupLevel').value = '0';
-            applyCleanupLevel();
+            if (!cleanupPreviewHTML) return;
+            cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
+            contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
+            normalizeMediaSources(contentArea, document.baseURI);
+            const record = ensureCurrentEditRecord();
+            if (record) record.cleanupApplied = false;
+            processLongURLs(contentArea);
+            prepareTTS();
+            injectSmartButtons();
+            const note = document.getElementById('cleanupLevelNote');
+            if (note) note.textContent = '已復原到提取後內容，尚未套用額外清理級別。';
+            updateCleanupPanels();
+            saveCurrentEditRecord();
         }
 
         function updateCleanupPanels() {
@@ -1260,8 +1248,7 @@
         }
 
         function syncDeleteButtons() {
-            const selectable = getSelectableElements();
-            const hasDeleteSelection = (isDeleteMode && selectedElements.size > 0) || (isKeepMode && (selectable.length - keptElements.size > 0));
+            const hasDeleteSelection = (isDeleteMode && selectedElements.size > 0) || (isKeepMode && keptElements.size > 0);
             const executeBtn = document.getElementById('executeDeleteBtn');
             const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
             if (executeBtn) executeBtn.classList.toggle('hidden', !hasDeleteSelection);
@@ -1279,7 +1266,7 @@
             keptElements = new Set(selectable);
             selectable.forEach(el => el.classList.add('selected-for-keep'));
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已全選 ${keptElements.size} 個區塊（綠色高亮）；點擊可取消不想保留的段落，最後按第 3 步刪除非綠色內容。`;
+            if (note) note.textContent = `已選擇全部 ${keptElements.size} 個區塊；再點選想保留嘅內容，最後撳「刪除已選內容」。`;
             syncDeleteButtons();
             updateCleanupPanels();
         }
@@ -1298,9 +1285,10 @@
                 target.classList.add('selected-for-keep');
             }
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `目前已選取保留 ${keptElements.size} 個區塊（綠色高亮）；未標示綠色的區塊將在按第 3 步時被刪除。`;
+            if (note) note.textContent = `目前有 ${keptElements.size} 個區塊會被刪除；綠色部分係將會刪除嘅內容。`;
             syncDeleteButtons();
         }
+
 
         function clearKeepSelection() {
             keptElements.clear();
@@ -1316,17 +1304,20 @@
         }
 
         function executeKeepSelection() {
-            const selectable = getSelectableElements();
-            const toRemove = selectable.filter(el => !keptElements.has(el));
-            if (toRemove.length === 0 && keptElements.size === selectable.length) {
-                showError('⚠️ 目前所有區塊皆已被選取保留，沒有需要刪除的內容。');
+            if (!keptElements.size) {
+                showError('⚠️ 請先撳「選擇全部」，再點選想保留嘅內容。');
                 return;
             }
-            recordRemovedElements(toRemove, 'keep-delete');
-            toRemove.forEach(el => el.remove());
-            clearKeepSelection();
+            recordRemovedElements(Array.from(keptElements), 'keep-delete');
+            Array.from(keptElements).forEach(el => el.remove());
+            keptElements.clear();
+            keepSelectionInverted = false;
+            isKeepMode = false;
+            contentArea.classList.remove('keep-mode-active');
+            contentArea.removeEventListener('click', toggleKeepElement);
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = '已成功清理非保留內容，僅留存綠色選取項目。';
+            if (note) note.textContent = '已刪除所選內容；如需再整理，可重新撳「選擇全部」。';
+            syncDeleteButtons();
             prepareTTS();
             injectSmartButtons();
             updateCleanupPanels();
@@ -1431,11 +1422,12 @@
 
         function executeDelete() {
             if (isKeepMode && keptElements.size > 0) {
-                const selectable = getSelectableElements();
-                const toRemove = selectable.filter(el => !keptElements.has(el));
-                recordRemovedElements(toRemove, 'keep-delete');
-                toRemove.forEach(el => el.remove());
-                clearKeepSelection();
+                recordRemovedElements(Array.from(keptElements), 'keep-delete');
+                keptElements.forEach(el => el.remove());
+                keptElements.clear();
+                isKeepMode = false;
+                contentArea.classList.remove('keep-mode-active');
+                contentArea.removeEventListener('click', toggleKeepElement);
             } else if (selectedElements.size > 0) {
                 recordRemovedElements(Array.from(selectedElements), 'delete');
                 selectedElements.forEach(el => el.remove());
@@ -1482,9 +1474,10 @@
             target.classList.remove('delete-target-hover'); 
         }
 
+        // --- 核心修正：使用 event 阻截冒泡 ---
         function toggleReaderControls(event) {
             if (event) {
-                event.stopPropagation();
+                event.stopPropagation(); // 阻止事件向上冒泡到 document
             }
             const controls = document.getElementById('readerControls');
             if (controls) {
@@ -1495,11 +1488,13 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
+                // 如果點擊目標不在控制面板內，則將其收合
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
             }
         });
+        // ------------------------------------
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
@@ -1551,8 +1546,10 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
+            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
+                // 若系統未提供 voiceURI，則退回使用 name
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
                 if(!seenIDs.has(id)) { 
                     seenIDs.add(id); 
@@ -1702,9 +1699,12 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
+        // 核心更新：加入自訂檔名及路徑選擇的非同步下載功能
         async function downloadHTML() {
+            // 匯出時如果正在刪除模式，則強制關閉，避免把樣式一同匯出
             if (isDeleteMode) toggleDeleteMode();
 
+            // 動態從內容區域提取最新標題作為檔名
             const currentH1 = contentArea.querySelector('h1');
             if (currentH1 && currentH1.textContent.trim()) {
                 articleTitle = currentH1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
@@ -1777,6 +1777,7 @@
         li { margin-bottom: 0.25em; transition: background-color 0.3s; padding: 2px; border-radius: 4px; }
         a { color: #9333ea; text-decoration: underline; word-break: break-all; }
         
+        /* 匯出頁面的縮短網址樣式 */
         a.shortened-url { display: inline-flex; align-items: center; gap: 6px; background: #e0e7ff; color: #3730a3 !important; padding: 2px 10px; border-radius: 9999px; text-decoration: none; font-size: 0.85em; font-weight: 500; border: 1px solid #c7d2fe; transition: all 0.2s; margin: 0 4px; }
         a.shortened-url:hover { background: #c7d2fe; transform: translateY(-1px); }
         
@@ -1815,6 +1816,7 @@
 <body data-click-read="off">
 
     <div class="fab-container">
+        <!-- 匯出檔案同樣套用事件攔截 -->
         <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
@@ -1825,6 +1827,10 @@
         
         <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
+        
+        <button id="fabExecuteDeleteBtn" onclick="executeDelete()" class="trash-btn hidden" title="刪除所選">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
         
         <div class="control-panel collapsed" id="readerControls">
@@ -1865,6 +1871,7 @@
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
 
+        // 匯出檔案的核心修正：套用 event 阻截
         function toggleReaderControls(event) {
             if (event) {
                 event.stopPropagation();
@@ -1934,6 +1941,7 @@
                 return lang.includes('hk') || lang.includes('yue') || lang.includes('tw') || lang.includes('zh') || name.includes('cantonese') || name.includes('chinese');
             });
             
+            // 核心修改：放寬過濾條件，改用更精確的 ID (voiceURI) 區分，防止同名的不同音色被隱藏
             let uniqueVoices = [], seenIDs = new Set();
             zhVoices.forEach(v => {
                 let id = (v.voiceURI || 'default_uri') + '_' + v.name; 
@@ -2114,7 +2122,7 @@
         }
         window.addEventListener('scroll', checkScrollButtons);
         
-    <${'/'}script>
+    <${"/"}script>
 </body>
 </html>`;
 
@@ -2149,6 +2157,6 @@
             URL.revokeObjectURL(url);
         }
     </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
 </html>
-
