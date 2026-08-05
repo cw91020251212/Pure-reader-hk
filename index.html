@@ -90,9 +90,13 @@
         .delete-target-hover { outline: 2px dashed #ef4444 !important; background-color: rgba(239, 68, 68, 0.05) !important; border-radius: 4px; opacity: 0.8; }
         .selected-for-deletion { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
         .keep-mode-active * { cursor: crosshair !important; }
+        .keep-mode-active a { pointer-events: none !important; cursor: crosshair !important; }
+        /* 仍被選中 = 將會被刪除（黃色警示） */
+        .marked-for-removal { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
+        /* 已反選擇 = 會保留落嚟（綠色確認） */
         .keep-mode-active .selected-for-keep { background-color: #bbf7d0 !important; outline: 3px solid #16a34a !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important; position: relative; z-index: 20; }
         #cleanupLevelPanel.visible, #keepSelectionPanel.visible { display: block; }
-        
+
         .util-copy-btn { user-select: none; }
         
         .introjs-tooltip { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; }
@@ -258,11 +262,11 @@
             <div id="keepSelectionPanel" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <button onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
-                    <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 點選保留項目</div>
-                    <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除非保留內容</button>
+                    <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 反選擇要保留嘅項目</div>
+                    <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除仍選中內容</button>
                 </div>
                 <button onclick="clearKeepSelection()" class="rounded-lg border border-emerald-300 bg-white px-3 py-2 font-bold text-emerald-800 hover:bg-emerald-100">取消所有選擇</button>
-                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">先撳第 1 步「選擇全部」，再點擊文章中想保留嘅內容（綠色高亮），最後撳第 3 步刪除未選取內容。</p>
+                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">第 1 步「選擇全部」（全部變黃＝將被刪除）；第 2 步點擊你想保留嘅內容做反選擇（變綠＝會保留）；第 3 步刪除其餘仍然選中（黃色）嘅大部分內容。</p>
             </div>
             <div id="content-wrapper" class="markdown-body"></div>
         </div>
@@ -330,8 +334,9 @@
         let isDeleteMode = false;
         let isKeepMode = false;
         let selectedElements = new Set();
-        let keptElements = new Set();
-        let keepSelectionInverted = false;
+        // 精準保留模式：markedElements = 目前仍被「選中」、按第 3 步時會被刪除的區塊。
+        // 第 1 步全選 → 全部進入此集合；第 2 步點擊（反選擇）→ 從集合移除，即成為保留項目。
+        let markedElements = new Set();
         let cleanupLevel = 3;
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
@@ -654,7 +659,7 @@
                     },
                     {
                         element: document.querySelector('#keepSelectionPanel'),
-                        intro: '<b>進階功能：精準保留 (新功能)</b><br>「選擇全部」後點選保留段落（綠色高亮），最後按「刪除非保留內容」即可清除其他內容。'
+                        intro: '<b>進階功能：精準保留 (新功能)</b><br>當大部分內容都要刪除時，用呢個反選擇流程更快：先「選擇全部」（全部變黃），再點選你想保留嘅段落做反選擇（變綠），最後按「刪除仍選中內容」清走其餘黃色部分。'
                     },
                     {
                         element: document.querySelector('#toggleDeleteBtn'),
@@ -1278,7 +1283,8 @@
 
         function syncDeleteButtons() {
             const selectable = getSelectableElements();
-            const hasDeleteSelection = (isDeleteMode && selectedElements.size > 0) || (isKeepMode && (selectable.length - keptElements.size > 0));
+            const keepModeHasRemovable = isKeepMode && markedElements.size > 0 && markedElements.size < selectable.length;
+            const hasDeleteSelection = (isDeleteMode && selectedElements.size > 0) || keepModeHasRemovable;
             const executeBtn = document.getElementById('executeDeleteBtn');
             const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
             if (executeBtn) executeBtn.classList.toggle('hidden', !hasDeleteSelection);
@@ -1293,10 +1299,14 @@
                 contentArea.addEventListener('click', toggleKeepElement);
             }
             const selectable = getSelectableElements();
-            keptElements = new Set(selectable);
-            selectable.forEach(el => el.classList.add('selected-for-keep'));
+            // 第 1 步：全選 → 全部區塊都處於「已選中 / 將被刪除」狀態（黃色）。
+            markedElements = new Set(selectable);
+            selectable.forEach(el => {
+                el.classList.add('marked-for-removal');
+                el.classList.remove('selected-for-keep');
+            });
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已全選 ${keptElements.size} 個區塊（綠色高亮）；點擊可取消不想保留的段落，最後按第 3 步刪除非綠色內容。`;
+            if (note) note.textContent = `已全選 ${markedElements.size} 個區塊（黃色＝將被刪除）。第 2 步：點擊你想「保留」嘅區塊做反選擇，佢會變綠色；最後撳第 3 步刪除其餘黃色內容。`;
             syncDeleteButtons();
             updateCleanupPanels();
         }
@@ -1307,25 +1317,31 @@
             if (!target) return;
             e.preventDefault();
             e.stopPropagation();
-            if (keptElements.has(target)) {
-                keptElements.delete(target);
-                target.classList.remove('selected-for-keep');
-            } else {
-                keptElements.add(target);
+            if (markedElements.has(target)) {
+                // 反選擇：由「選中／將刪除」變成「保留」。
+                markedElements.delete(target);
+                target.classList.remove('marked-for-removal');
                 target.classList.add('selected-for-keep');
+            } else {
+                // 再次點擊：取消反選擇，重新變回「選中／將刪除」。
+                markedElements.add(target);
+                target.classList.add('marked-for-removal');
+                target.classList.remove('selected-for-keep');
             }
+            const selectable = getSelectableElements();
+            const keepCount = selectable.length - markedElements.size;
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `目前已選取保留 ${keptElements.size} 個區塊（綠色高亮）；未標示綠色的區塊將在按第 3 步時被刪除。`;
+            if (note) note.textContent = `已反選擇（保留）${keepCount} 個區塊（綠色）；仍有 ${markedElements.size} 個區塊處於選中狀態（黃色），撳第 3 步就會刪除呢批。`;
             syncDeleteButtons();
         }
 
         function clearKeepSelection() {
-            keptElements.clear();
-            keepSelectionInverted = false;
+            markedElements.clear();
             isKeepMode = false;
             contentArea.classList.remove('keep-mode-active');
             contentArea.removeEventListener('click', toggleKeepElement);
             contentArea.querySelectorAll('.selected-for-keep').forEach(el => el.classList.remove('selected-for-keep'));
+            contentArea.querySelectorAll('.marked-for-removal').forEach(el => el.classList.remove('marked-for-removal'));
             const note = document.getElementById('keepSelectionNote');
             if (note) note.textContent = '已取消所有選擇；如要開始，請撳第 1 步「選擇全部」。';
             syncDeleteButtons();
@@ -1334,16 +1350,22 @@
 
         function executeKeepSelection() {
             const selectable = getSelectableElements();
-            const toRemove = selectable.filter(el => !keptElements.has(el));
-            if (toRemove.length === 0 && keptElements.size === selectable.length) {
-                showError('⚠️ 目前所有區塊皆已被選取保留，沒有需要刪除的內容。');
+            // 第 3 步：刪除仍然處於選中狀態（黃色）的區塊；已反選擇（綠色）的一律保留。
+            const toRemove = selectable.filter(el => markedElements.has(el));
+            if (toRemove.length === 0) {
+                showError('⚠️ 目前冇任何區塊處於選中狀態，冇內容需要刪除。請先撳第 1 步「選擇全部」。');
                 return;
             }
+            if (toRemove.length === selectable.length) {
+                showError('⚠️ 全部區塊都仍處於選中狀態，咁樣會刪除整篇文章。請先於第 2 步點選你想保留嘅區塊（變綠色）。');
+                return;
+            }
+            const keepCount = selectable.length - toRemove.length;
             recordRemovedElements(toRemove, 'keep-delete');
             toRemove.forEach(el => el.remove());
             clearKeepSelection();
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = '已成功清理非保留內容，僅留存綠色選取項目。';
+            if (note) note.textContent = `已刪除 ${toRemove.length} 個選中區塊，保留 ${keepCount} 個你反選擇嘅區塊。`;
             prepareTTS();
             injectSmartButtons();
             updateCleanupPanels();
@@ -1389,8 +1411,7 @@
                 contentArea.removeEventListener('click', toggleKeepElement);
             }
             selectedElements.clear();
-            keptElements.clear();
-            keepSelectionInverted = false;
+            markedElements.clear();
             cleanupPreviewHTML = '';
             cleanupBaselineHTML = '';
             document.getElementById('errorMessage').classList.add('hidden');
@@ -1447,12 +1468,9 @@
         }
 
         function executeDelete() {
-            if (isKeepMode && keptElements.size > 0) {
-                const selectable = getSelectableElements();
-                const toRemove = selectable.filter(el => !keptElements.has(el));
-                recordRemovedElements(toRemove, 'keep-delete');
-                toRemove.forEach(el => el.remove());
-                clearKeepSelection();
+            if (isKeepMode && markedElements.size > 0) {
+                executeKeepSelection();
+                return;
             } else if (selectedElements.size > 0) {
                 recordRemovedElements(Array.from(selectedElements), 'delete');
                 selectedElements.forEach(el => el.remove());
