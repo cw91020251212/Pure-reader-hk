@@ -242,10 +242,6 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>儲存檔案</span>
                     </button>
-                    <button id="shareBtnMain" onclick="shareArticle()" class="w-full sm:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold px-5 py-3 rounded-xl border border-indigo-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                        <span>分享文章</span>
-                    </button>
                 </div>
             </div>
             <div id="cleanupLevelPanel" class="hidden mb-6 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
@@ -304,14 +300,6 @@
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
                 <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
-            </div>
-            <div class="panel-row">
-                <span class="panel-label">朗讀循環</span>
-                <button id="loopModeBtn" class="action-btn wide bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300" onclick="toggleLoopPlayback()">🔄 循環：關閉</button>
-            </div>
-            <div class="panel-row">
-                <span class="panel-label">文章分享</span>
-                <button class="action-btn wide bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-700/50" onclick="shareArticle()">🔗 分享文章</button>
             </div>
             <div class="panel-row">
                 <span class="panel-label">文字大小</span>
@@ -1122,7 +1110,6 @@
                 injectSmartButtons(); 
             }, 500);
             setTimeout(checkScrollButtons, 600);
-            updateLoopBtnUI();
         }
 
         function cleanupSelectorsForLevel(level) {
@@ -1549,52 +1536,6 @@
             }
         });
 
-        let isLoopEnabled = SafeStorage.get('isLoopEnabled') === 'true';
-        function updateLoopBtnUI() {
-            const btn = document.getElementById('loopModeBtn');
-            if (!btn) return;
-            if (isLoopEnabled) {
-                btn.innerHTML = '🔄 循環：開啟';
-                btn.className = 'action-btn wide bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-700/50';
-            } else {
-                btn.innerHTML = '🔄 循環：關閉';
-                btn.className = 'action-btn wide bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300';
-            }
-        }
-        function toggleLoopPlayback() {
-            isLoopEnabled = !isLoopEnabled;
-            SafeStorage.set('isLoopEnabled', isLoopEnabled);
-            updateLoopBtnUI();
-        }
-
-        async function shareArticle() {
-            const title = document.title || 'PureRead HK 文章分享';
-            let url = window.location.href;
-            if (typeof currentArticleUrl !== 'undefined' && currentArticleUrl && !window.location.protocol.startsWith('file')) {
-                try {
-                    const shareUrl = new URL(window.location.origin + window.location.pathname);
-                    shareUrl.searchParams.set('url', currentArticleUrl);
-                    url = shareUrl.toString();
-                } catch (e) { console.error(e); }
-            }
-            if (navigator.share) {
-                try {
-                    await navigator.share({ title, url });
-                } catch (err) {
-                    console.log('分享取消或失敗:', err);
-                }
-            } else {
-                try {
-                    await navigator.clipboard.writeText(url);
-                    if (typeof showError === 'function') showError('✅ 網址已複製到剪貼簿！');
-                    else alert('✅ 網址已複製到剪貼簿！');
-                } catch (err) {
-                    if (typeof showError === 'function') showError('⚠️ 無法複製網址。');
-                    else alert('⚠️ 無法複製網址。');
-                }
-            }
-        }
-
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
             const isOn = document.body.dataset.clickRead !== 'off'; 
@@ -1747,13 +1688,7 @@
                         newEl.classList.remove('reading-highlight', 'paused-highlight');
 
                         if (isPlaying && !isPaused && !isManualJump) {
-                            if (currentIndex + 1 < utterances.length) {
-                                playUtterance(currentIndex + 1);
-                            } else if (isLoopEnabled) {
-                                playUtterance(0);
-                            } else {
-                                stopExportTts();
-                            }
+                            if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
                         }
                     };
                     
@@ -1933,14 +1868,6 @@
                 <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
             </div>
             <div class="panel-row">
-                <span class="panel-label">朗讀循環</span>
-                <button id="loopModeBtn" class="action-btn wide bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300" onclick="toggleLoopPlayback()">🔄 循環：關閉</button>
-            </div>
-            <div class="panel-row">
-                <span class="panel-label">文章分享</span>
-                <button class="action-btn wide bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-700/50" onclick="shareArticle()">🔗 分享文章</button>
-            </div>
-            <div class="panel-row">
                 <span class="panel-label">文字大小</span>
                 <div class="btn-group">
                     <button class="action-btn" onclick="adjustSize(-2)" title="縮細文字">A-</button>
@@ -1991,52 +1918,6 @@
                 }
             }
         });
-
-        let isLoopEnabled = SafeStorage.get('isLoopEnabled') === 'true';
-        function updateLoopBtnUI() {
-            const btn = document.getElementById('loopModeBtn');
-            if (!btn) return;
-            if (isLoopEnabled) {
-                btn.innerHTML = '🔄 循環：開啟';
-                btn.className = 'action-btn wide bg-indigo-100 text-indigo-700 hover:bg-indigo-200 border border-indigo-700/50';
-            } else {
-                btn.innerHTML = '🔄 循環：關閉';
-                btn.className = 'action-btn wide bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300';
-            }
-        }
-        function toggleLoopPlayback() {
-            isLoopEnabled = !isLoopEnabled;
-            SafeStorage.set('isLoopEnabled', isLoopEnabled);
-            updateLoopBtnUI();
-        }
-
-        async function shareArticle() {
-            const title = document.title || 'PureRead HK 文章分享';
-            let url = window.location.href;
-            if (typeof currentArticleUrl !== 'undefined' && currentArticleUrl && !window.location.protocol.startsWith('file')) {
-                try {
-                    const shareUrl = new URL(window.location.origin + window.location.pathname);
-                    shareUrl.searchParams.set('url', currentArticleUrl);
-                    url = shareUrl.toString();
-                } catch (e) { console.error(e); }
-            }
-            if (navigator.share) {
-                try {
-                    await navigator.share({ title, url });
-                } catch (err) {
-                    console.log('分享取消或失敗:', err);
-                }
-            } else {
-                try {
-                    await navigator.clipboard.writeText(url);
-                    if (typeof showError === 'function') showError('✅ 網址已複製到剪貼簿！');
-                    else alert('✅ 網址已複製到剪貼簿！');
-                } catch (err) {
-                    if (typeof showError === 'function') showError('⚠️ 無法複製網址。');
-                    else alert('⚠️ 無法複製網址。');
-                }
-            }
-        }
 
         function toggleClickToRead() {
             const btn = document.getElementById('clickModeBtn');
@@ -2189,13 +2070,7 @@
                         newEl.classList.remove('reading-highlight', 'paused-highlight');
 
                         if (isPlaying && !isPaused && !isManualJump) {
-                            if (currentIndex + 1 < utterances.length) {
-                                playUtterance(currentIndex + 1);
-                            } else if (isLoopEnabled) {
-                                playUtterance(0);
-                            } else {
-                                stopExportTts();
-                            }
+                            if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
                         }
                     };
                     
@@ -2272,8 +2147,8 @@
             if (isLongPage && !isAtBottom) bottomBtn.classList.remove('hidden');
             else bottomBtn.classList.add('hidden');
         }
-                window.addEventListener('scroll', checkScrollButtons);
-        updateLoopBtnUI();
+        window.addEventListener('scroll', checkScrollButtons);
+        
     <${'/'}script>
 </body>
 </html>`;
@@ -2310,5 +2185,151 @@
         }
     </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+
+<script>
+    /**
+     * 【MHT 暴力修復版 v8】針對手機 Chrome/Edge 特化
+     * 解決：圖片抓取為 0、內容顯示後消失、MHT 格式不相容
+     */
+    let mhtImageMap = new Map();
+
+    // 1. 強力解碼：處理 MHT 的 Quoted-Printable 編碼
+    function decodeQP(str) {
+        return str.replace(/=([0-9A-F]{2})/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/=\r?\n/g, '');
+    }
+
+    // 2. 暴力解析器：不再依賴 boundary，直接全局掃描圖片和 HTML
+    function parseMHT(text) {
+        mhtImageMap.clear();
+        
+        // 提取 HTML 部分
+        let htmlContent = '';
+        const htmlMatch = text.match(/Content-Type: text\/html[\s\S]*?\r?\n\r?\n([\s\S]*?)(?=--|$)/i);
+        if (htmlMatch) {
+            htmlContent = htmlMatch[1];
+            if (text.includes('Quoted-Printable')) htmlContent = decodeQP(htmlContent);
+        } else {
+            htmlContent = text; // 備選：如果找不到 HTML 標記，則視為普通文本
+        }
+
+        // 暴力掃描圖片：尋找所有 Base64 圖片塊
+        // 這個正則表達式會抓取所有包含圖片類型、網址和 Base64 數據的區塊
+        const imgRegex = /Content-Type: image\/([a-z0-9.-]+)[\s\S]*?Content-Location: ([^\s\r\n]+)[\s\S]*?base64[\s\S]*?\r?\n\r?\n([\s\S]*?)(?=\r?\n--|$)/gi;
+        
+        let match;
+        while ((match = imgRegex.exec(text)) !== null) {
+            const type = match[1];
+            const url = match[2].trim().replace(/^'|'$/g, ''); // 移除可能的引號
+            const base64 = match[3].replace(/[\r\n\s]/g, '');
+            if (url && base64) {
+                mhtImageMap.set(url, `data:image/${type};base64,${base64}`);
+            }
+        }
+        
+        console.log("MHT 解析完成，圖片數量:", mhtImageMap.size);
+        return htmlContent;
+    }
+
+    // 3. 媒體縫合：將圖片放回 HTML
+    function normalizeMediaSources(root) {
+        root.querySelectorAll('img, picture, source').forEach(el => {
+            const img = el.tagName === 'IMG' ? el : el.querySelector('img');
+            if (!img) return;
+            
+            const attrs = ['data-srcset', 'data-src', 'srcset', 'src', 'data-actualsrc', 'data-original'];
+            for (const attr of attrs) {
+                const val = el.getAttribute(attr);
+                if (val && val.includes('http' )) {
+                    const url = val.split(',')[0].trim().split(/\s+/)[0];
+                    if (mhtImageMap.has(url)) {
+                        img.src = mhtImageMap.get(url);
+                        img.removeAttribute('srcset');
+                        img.style.cssText = "display:block!important; max-width:100%!important; height:auto!important; border-radius:12px; margin:20px auto; opacity:1!important; visibility:visible!important;";
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. 修改後的文件處理函數
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const loadingIcon = document.getElementById('loadingIcon');
+        if (loadingIcon) loadingIcon.classList.remove('hidden');
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const rawText = e.target.result;
+                window.articleTitle = file.name.replace(/\.[^/.]+$/, '');
+                
+                const processedHTML = parseMHT(rawText);
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(processedHTML, 'text/html');
+                
+                // 盡可能找回內容，如果找不到特定標籤就用 body
+                let content = doc.querySelector('article') || doc.querySelector('main') || doc.body;
+                
+                renderContent(content.innerHTML);
+                
+                const msg = `✅ 讀取成功！找回圖片: ${mhtImageMap.size} 張`;
+                const errDiv = document.getElementById('errorMessage');
+                if (errDiv) {
+                    errDiv.innerHTML = `<span style="color:green; font-weight:bold;">${msg}</span>`;
+                    errDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('解析失敗，請確認檔案是否正確。');
+            } finally {
+                if (loadingIcon) loadingIcon.classList.add('hidden');
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // 5. 渲染函數：確保不被隱藏
+    function renderContent(rawHTML) {
+        const contentArea = document.getElementById('content-wrapper');
+        const container = document.getElementById('articleContainer');
+        
+        const cleanHTML = DOMPurify.sanitize(rawHTML, {
+            ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption'],
+            ADD_ATTR: ['src', 'srcset', 'data-src', 'data-srcset'],
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|xxx|data):|[^a-z0-9+.-])/i
+        });
+        
+        contentArea.innerHTML = cleanHTML;
+        normalizeMediaSources(contentArea);
+        
+        if (container) {
+            container.classList.remove('hidden');
+            container.style.display = 'block'; // 強制顯示
+        }
+        window.scrollTo({ top: container.offsetTop - 20, behavior: 'smooth' });
+    }
+
+    // 6. 粘貼圖片支持
+    document.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        const container = document.getElementById('content-wrapper');
+        for (const item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const newImg = document.createElement('img');
+                    newImg.src = ev.target.result;
+                    newImg.style.cssText = "display:block; max-width:100%; height:auto; margin:20px auto; border-radius:12px; border:3px solid #6366f1;";
+                    container.insertBefore(newImg, container.firstChild);
+                };
+                reader.readAsDataURL(item.getAsFile());
+            }
+        }
+    });
+</script>
 </body>
 </html>
