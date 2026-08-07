@@ -55,6 +55,101 @@
         
         .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; position: relative; margin-bottom: 16px; white-space: pre-wrap; word-break: break-word; font-size: 0.9em; max-width: 100%; }
         .markdown-body code { white-space: pre-wrap; word-break: break-word; }
+
+        /* ══════════════════════════════════════════════════════════════
+         * 【手機直向修正】原本整個 App 一個 @media 斷點都沒有，
+         * 而且原站 HTML 帶大量硬編碼 inline 寬度（實測 551 處 width:NNNpx，
+         * 例如 <figure style="width: 960px">），在 375px 螢幕會撐到 1001px，
+         * 令整個版面闊過螢幕、按鈕被推出界。
+         * 以下規則把所有內容強制收窄到容器內。
+         * ══════════════════════════════════════════════════════════════ */
+
+        /* 1. 壓制原站所有硬編碼寬度（figure / div / table / iframe 等） */
+        .markdown-body figure,
+        .markdown-body [style*="width"],
+        .markdown-body [width] {
+            width: auto !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+            float: none !important;   /* 原站 alignleft/alignright 會做成擠壓 */
+        }
+
+        /* 2. 圖片一律填滿可用寬度、保持比例、唔會裁切 */
+        .markdown-body img {
+            width: auto !important;
+            max-width: 100% !important;
+            height: auto !important;
+            object-fit: contain;
+        }
+
+        /* 3. 圖說文字唔好跟住 960px 走 */
+        .markdown-body figcaption {
+            width: auto !important;
+            max-width: 100% !important;
+            font-size: 0.88em;
+            color: #64748b;
+            text-align: center;
+            padding: 6px 4px 0;
+            line-height: 1.6;
+        }
+
+        /* 4. 表格可以自己橫向捲動，唔會撐爆版面 */
+        .markdown-body table {
+            display: block;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* 5. 影片 / 嵌入內容自適應 */
+        .markdown-body iframe,
+        .markdown-body video,
+        .markdown-body embed,
+        .markdown-body object {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: auto;
+            aspect-ratio: 16 / 9;
+        }
+
+        /* 6. 最後防線：任何情況都唔准橫向捲動 */
+        html, body { max-width: 100%; overflow-x: hidden; }
+
+        /* ── 手機直向專用斷點（≤640px）────────────────────────────── */
+        @media (max-width: 640px) {
+            /* 外層同卡片內距收窄，把浪費嘅左右留白（原本合計約 80px）還原給內容 */
+            .page-shell { padding-left: 10px !important; padding-right: 10px !important; }
+            .card-pad { padding: 16px !important; }
+
+            /* 圖片盡量用盡卡片寬度，並限高避免長圖霸佔整個螢幕 */
+            .markdown-body img {
+                width: 100% !important;
+                max-height: 78vh;
+                margin: 14px auto !important;
+                border-radius: 10px;
+            }
+
+            /* 直向長圖（例如 2160x3840）唔好逼到要一路捲，改為適應螢幕高度 */
+            .markdown-body figure { margin: 14px 0 !important; }
+
+            /* 標題同正文字級微調，一行放多啲字 */
+            .markdown-body h1 { font-size: 1.55em !important; line-height: 1.35; }
+            .markdown-body h2 { font-size: 1.28em !important; }
+            .markdown-body h3 { font-size: 1.12em !important; }
+            .markdown-body blockquote { padding: 0.75em !important; }
+
+            /* 頂部標題列改直向排列，唔好擠成一橫行 */
+            #articleContainer { padding: 16px !important; }
+        }
+
+        /* 極窄機（≤380px，例如 iPhone SE）再收多少少 */
+        @media (max-width: 380px) {
+            .page-shell { padding-left: 6px !important; padding-right: 6px !important; }
+            .card-pad, #articleContainer { padding: 12px !important; }
+        }
         
         .markdown-body ul, .markdown-body ol { padding-left: 2em; margin-bottom: 16px; font-size: 1em; }
         .markdown-body li { margin-bottom: 0.25em; font-size: 1em; }
@@ -173,8 +268,8 @@
 </head>
 <body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="off">
 
-    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-1 w-full relative">
-        <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-300 mb-8">
+    <div class="page-shell max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-1 w-full relative">
+        <div class="card-pad bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-300 mb-8">
             <div class="flex items-center justify-between mb-2 flex-nowrap gap-2">
                 <div class="flex items-center gap-2 sm:gap-3 shrink-0">
                     <div class="bg-indigo-100 p-1.5 sm:p-2 rounded-lg">
@@ -899,7 +994,45 @@
             return best;
         }
 
+        /**
+         * 【手機版面修正】剝除原站帶落嚟嘅硬編碼尺寸。
+         * 原站（如 WeekendHK）大量使用 <figure style="width: 960px">、
+         * <img width="960" height="640">、float:left 等桌面排版屬性，
+         * 實測一篇文章有 551 處 inline 寬度。單靠 CSS !important 唔夠穩妥
+         * （inline style 優先權高，而且會影響「儲存檔案」匯出嘅 HTML），
+         * 所以直接在 DOM 層清走。
+         */
+        function stripFixedLayout(root) {
+            if (!root) return;
+            root.querySelectorAll('[width], [height]').forEach(el => {
+                if (/^(IMG|VIDEO|CANVAS|SVG)$/.test(el.tagName)) {
+                    el.removeAttribute('width');
+                    el.removeAttribute('height');
+                } else {
+                    el.removeAttribute('width');
+                    el.removeAttribute('height');
+                }
+            });
+            root.querySelectorAll('[style]').forEach(el => {
+                const st = el.style;
+                // 清走一切令版面闊過螢幕嘅屬性
+                ['width', 'min-width', 'max-width', 'height', 'min-height',
+                 'float', 'margin-left', 'margin-right', 'left', 'right',
+                 'position', 'transform'].forEach(prop => {
+                    const v = st.getPropertyValue(prop);
+                    if (!v) return;
+                    // 只清固定像素/大數值，保留 100% 、auto 之類本身安全嘅值
+                    if (prop === 'float' || /\d\s*(px|pt|cm|in|em|rem|vw)/i.test(v) ||
+                        (prop === 'position' && /absolute|fixed/i.test(v))) {
+                        st.removeProperty(prop);
+                    }
+                });
+                if (!el.getAttribute('style')) el.removeAttribute('style');
+            });
+        }
+
         function normalizeMediaSources(root, baseUrl = '') {
+            stripFixedLayout(root);
             root.querySelectorAll('picture source, img, video, audio').forEach(el => {
                 const lazySrc = firstUsableMediaValue(el, [
                     'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original', 
@@ -949,8 +1082,12 @@
                     el.style.setProperty('display', 'block', 'important');
                     el.style.setProperty('opacity', '1', 'important');
                     el.style.setProperty('visibility', 'visible', 'important');
-                    el.style.setProperty('min-width', '50px', 'important');
-                    el.style.setProperty('min-height', '50px', 'important');
+                    // 【手機修正】原本強推 min-width/min-height: 50px，會令圖片
+                    // 無法自由縮至容器內。改為明確限制唔可以闊過容器。
+                    el.style.setProperty('max-width', '100%', 'important');
+                    el.style.setProperty('height', 'auto', 'important');
+                    el.style.removeProperty('min-width');
+                    el.style.removeProperty('min-height');
                 }
             });
         }
@@ -1875,13 +2012,34 @@
             line-height: 1.8; 
             max-width: 800px !important; 
             margin: 0 auto !important; 
-            padding: 40px 20px 120px 20px !important; 
-            color: #24292e; 
-            background-color: #fafafa; 
-            overflow-x: hidden; 
-            font-size: 16px !important; 
+            padding: 40px 20px 120px 20px !important;
+            color: #24292e;
+            background-color: #fafafa;
+            overflow-x: hidden;
+            font-size: 16px !important;
         }
-        
+
+        /* 【手機直向修正】匯出檔案同樣要壓制原站硬編碼寬度，
+         * 否則儲存出嚟嘅 HTML 在手機睇一樣會出界。 */
+        html, body { max-width: 100%; overflow-x: hidden; }
+        figure, [style*="width"], [width] {
+            width: auto !important; max-width: 100% !important;
+            min-width: 0 !important; float: none !important;
+            margin-left: auto !important; margin-right: auto !important;
+        }
+        figcaption { width: auto !important; max-width: 100% !important;
+            font-size: 0.88em; color: #64748b; text-align: center; padding: 6px 4px 0; }
+        table { display: block; width: 100% !important; max-width: 100% !important; overflow-x: auto; }
+        iframe, video, embed, object { width: 100% !important; max-width: 100% !important; height: auto; aspect-ratio: 16/9; }
+
+        @media (max-width: 640px) {
+            body { padding: 16px 12px 80px 12px !important; }
+            img { width: 100% !important; max-height: 78vh; margin: 14px auto !important; }
+            h1 { font-size: 1.55em !important; line-height: 1.35; }
+            h2 { font-size: 1.28em !important; }
+            h3 { font-size: 1.12em !important; }
+        }
+
         #content-wrapper { 
             font-size: var(--base-font-size) !important; 
             width: 100%; max-width: 100%; 
