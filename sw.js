@@ -1,9 +1,5 @@
-const CACHE_NAME = 'pureread-hk-v6-original-images';
-const APP_SHELL = [
-  './', './index.html', './manifest.json', './favicon.ico',
-  './assets/icon.jpeg', './assets/icon-192.png', './assets/icon-512.png',
-  './assets/icon-maskable-512.png', './assets/apple-touch-icon.png'
-];
+const CACHE_NAME = 'pureread-hk-v5-share-url';
+const APP_SHELL = ['./', './index.html', './manifest.json', './assets/icon.jpeg'];
 const DB_NAME = 'pureread-hk-share';
 const STORE_NAME = 'files';
 
@@ -33,20 +29,7 @@ async function saveSharedFile(file) {
 }
 
 self.addEventListener('install', event => {
-  /* 【修正】原本用 cache.addAll()，它係原子操作：APP_SHELL 中任何一個檔 404，
-   * 整個 install 就會 reject，Service Worker 完全裝唔上（實測 caches 得個空殼 []，
-   * 離線功能全失效）。改為逐個 cache.add() 並容忍個別失敗，
-   * 咁樣就算某個圖示唔見都唔會拖垮整個 App。 */
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    await Promise.all(APP_SHELL.map(async url => {
-      try {
-        await cache.add(new Request(url, { cache: 'reload' }));
-      } catch (err) {
-        console.warn('[SW] 略過無法快取的資源:', url, err);
-      }
-    }));
-  })());
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
   self.skipWaiting();
 });
 
@@ -100,27 +83,5 @@ self.addEventListener('fetch', event => {
     return;
   }
   if (event.request.method !== 'GET') return;
-
-  /* 【修正】原本離線時只做 caches.match(event.request)，但頁面導航的 request
-   * 帶 query string（例如 ?shared_file=1 、?url=…），同快取入面的 './index.html'
-   * 對唔上，結果離線開 App 會白畫面。現在導航失敗時明確回退到 index.html。 */
-  event.respondWith((async () => {
-    try {
-      const fresh = await fetch(event.request);
-      // 順手把成功取得的 app shell 更新入快取（stale-while-revalidate）
-      if (fresh && fresh.ok && new URL(event.request.url).origin === self.location.origin) {
-        const cache = await caches.open(CACHE_NAME);
-        cache.put(event.request, fresh.clone()).catch(() => {});
-      }
-      return fresh;
-    } catch (err) {
-      const hit = await caches.match(event.request, { ignoreSearch: true });
-      if (hit) return hit;
-      if (event.request.mode === 'navigate') {
-        const shell = await caches.match('./index.html');
-        if (shell) return shell;
-      }
-      throw err;
-    }
-  })());
+  event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
 });
