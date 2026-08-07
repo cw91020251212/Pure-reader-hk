@@ -9,9 +9,9 @@
     <meta property="og:description" content="純淨閱讀、文章整理與文字朗讀工具。">
     <meta property="og:type" content="website">
     <link rel="icon" href="./favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="192x192" href="./assets/icon-192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="./assets/icon-512.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/icon.jpeg">
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/icon.jpeg">
+    <link rel="apple-touch-icon" href="./assets/icon.jpeg">
     <link rel="manifest" href="./manifest.json">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -55,101 +55,6 @@
         
         .markdown-body pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; position: relative; margin-bottom: 16px; white-space: pre-wrap; word-break: break-word; font-size: 0.9em; max-width: 100%; }
         .markdown-body code { white-space: pre-wrap; word-break: break-word; }
-
-        /* ══════════════════════════════════════════════════════════════
-         * 【手機直向修正】原本整個 App 一個 @media 斷點都沒有，
-         * 而且原站 HTML 帶大量硬編碼 inline 寬度（實測 551 處 width:NNNpx，
-         * 例如 <figure style="width: 960px">），在 375px 螢幕會撐到 1001px，
-         * 令整個版面闊過螢幕、按鈕被推出界。
-         * 以下規則把所有內容強制收窄到容器內。
-         * ══════════════════════════════════════════════════════════════ */
-
-        /* 1. 壓制原站所有硬編碼寬度（figure / div / table / iframe 等） */
-        .markdown-body figure,
-        .markdown-body [style*="width"],
-        .markdown-body [width] {
-            width: auto !important;
-            max-width: 100% !important;
-            min-width: 0 !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-            float: none !important;   /* 原站 alignleft/alignright 會做成擠壓 */
-        }
-
-        /* 2. 圖片一律填滿可用寬度、保持比例、唔會裁切 */
-        .markdown-body img {
-            width: auto !important;
-            max-width: 100% !important;
-            height: auto !important;
-            object-fit: contain;
-        }
-
-        /* 3. 圖說文字唔好跟住 960px 走 */
-        .markdown-body figcaption {
-            width: auto !important;
-            max-width: 100% !important;
-            font-size: 0.88em;
-            color: #64748b;
-            text-align: center;
-            padding: 6px 4px 0;
-            line-height: 1.6;
-        }
-
-        /* 4. 表格可以自己橫向捲動，唔會撐爆版面 */
-        .markdown-body table {
-            display: block;
-            width: 100% !important;
-            max-width: 100% !important;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* 5. 影片 / 嵌入內容自適應 */
-        .markdown-body iframe,
-        .markdown-body video,
-        .markdown-body embed,
-        .markdown-body object {
-            width: 100% !important;
-            max-width: 100% !important;
-            height: auto;
-            aspect-ratio: 16 / 9;
-        }
-
-        /* 6. 最後防線：任何情況都唔准橫向捲動 */
-        html, body { max-width: 100%; overflow-x: hidden; }
-
-        /* ── 手機直向專用斷點（≤640px）────────────────────────────── */
-        @media (max-width: 640px) {
-            /* 外層同卡片內距收窄，把浪費嘅左右留白（原本合計約 80px）還原給內容 */
-            .page-shell { padding-left: 10px !important; padding-right: 10px !important; }
-            .card-pad { padding: 16px !important; }
-
-            /* 圖片盡量用盡卡片寬度，並限高避免長圖霸佔整個螢幕 */
-            .markdown-body img {
-                width: 100% !important;
-                max-height: 78vh;
-                margin: 14px auto !important;
-                border-radius: 10px;
-            }
-
-            /* 直向長圖（例如 2160x3840）唔好逼到要一路捲，改為適應螢幕高度 */
-            .markdown-body figure { margin: 14px 0 !important; }
-
-            /* 標題同正文字級微調，一行放多啲字 */
-            .markdown-body h1 { font-size: 1.55em !important; line-height: 1.35; }
-            .markdown-body h2 { font-size: 1.28em !important; }
-            .markdown-body h3 { font-size: 1.12em !important; }
-            .markdown-body blockquote { padding: 0.75em !important; }
-
-            /* 頂部標題列改直向排列，唔好擠成一橫行 */
-            #articleContainer { padding: 16px !important; }
-        }
-
-        /* 極窄機（≤380px，例如 iPhone SE）再收多少少 */
-        @media (max-width: 380px) {
-            .page-shell { padding-left: 6px !important; padding-right: 6px !important; }
-            .card-pad, #articleContainer { padding: 12px !important; }
-        }
         
         .markdown-body ul, .markdown-body ol { padding-left: 2em; margin-bottom: 16px; font-size: 1em; }
         .markdown-body li { margin-bottom: 0.25em; font-size: 1em; }
@@ -268,8 +173,8 @@
 </head>
 <body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="off">
 
-    <div class="page-shell max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-1 w-full relative">
-        <div class="card-pad bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-300 mb-8">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 flex-1 w-full relative">
+        <div class="bg-white rounded-2xl shadow-sm p-6 sm:p-8 border border-slate-300 mb-8">
             <div class="flex items-center justify-between mb-2 flex-nowrap gap-2">
                 <div class="flex items-center gap-2 sm:gap-3 shrink-0">
                     <div class="bg-indigo-100 p-1.5 sm:p-2 rounded-lg">
@@ -296,11 +201,11 @@
                     <span id="btnText">提取網址</span>
                     <div id="loadingIcon" class="loader hidden"></div>
                 </button>
-                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="直接上傳舊有檔案，系統會自動重整排版。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    上傳檔案
-                    <input type="file" id="fileInput" accept=".html,.htm,.md,.txt" class="hidden" onchange="handleFileUpload(event)">
-                </label>
+                <label id="uploadBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+    上傳檔案
+    <input type="file" id="fileInput" accept="*" class="hidden" onchange="handleFileUpload(event )">
+</label>
             </div>
             <div id="errorMessage" class="mt-4 p-4 bg-red-50 text-red-700 font-bold rounded-xl text-sm hidden border border-red-300"></div>
             <div class="mt-4">
@@ -953,86 +858,7 @@
             try { return new URL(value, baseUrl || document.baseURI).href; } catch { return value; }
         }
 
-        /**
-         * 【原圖還原 v1】把 CDN 縮圖網址還原成原圖網址。
-         * 實測針對 imgs.weekendhk.com 這類 WordPress + 圖片 CDN 架構：
-         *   1. 清 ?v=1 之類 cache-buster
-         *   2. 清 CDN 轉檔尾   xxx.png.webp -> xxx.png
-         *   3. 清 CDN 寬度前綴 /322x/ /644x/ -> 取消縮放
-         *   4. 清 WP 尺寸後綴  -975x630 -> 取得原始上載檔
-         * 實測：1024x768 (89KB) -> 2048x1536 (235KB)，最大取得 5828x3885。
-         */
-        function toOriginalImageUrl(u) {
-            if (!u || typeof u !== 'string') return u;
-            if (u.startsWith('data:') || u.startsWith('blob:')) return u;
-            let s = u.split('#')[0].split('?')[0];
-            s = s.replace(/\.(jpe?g|png)\.webp$/i, '.$1');
-            s = s.replace(/^(https?:\/\/[^/]+\/)\d{2,5}x\//i, '$1');
-            // 必須要求前面有 "-"，否則會誤傷 ww_logo350x100.png 這類本身含尺寸的檔名
-            s = s.replace(/-\d{2,5}x\d{2,5}(?=\.[a-z0-9]{2,5}$)/i, '');
-            return s;
-        }
-
-        /** 從 srcset 挑「解析度最大」那個（原本 firstSrcsetUrl 只取第一個，往往最細）。 */
-        function largestFromSrcset(value) {
-            if (!value) return '';
-            let best = '', bestScore = -1;
-            value.split(',').forEach(part => {
-                const bits = part.trim().split(/\s+/).filter(Boolean);
-                if (!bits.length) return;
-                const url = bits[0];
-                const d = bits.slice(1).join(' ');
-                let score = 0;
-                const w = d.match(/(\d+)w/i);
-                const x = d.match(/([\d.]+)x/i);
-                if (w) score = parseInt(w[1], 10);
-                else if (x) score = parseFloat(x[1]) * 1000;
-                const p = url.match(/\/(\d{2,5})x\//);   // 網址內的寬度前綴也是線索
-                if (p) score = Math.max(score, parseInt(p[1], 10));
-                if (score > bestScore) { bestScore = score; best = url; }
-            });
-            return best;
-        }
-
-        /**
-         * 【手機版面修正】剝除原站帶落嚟嘅硬編碼尺寸。
-         * 原站（如 WeekendHK）大量使用 <figure style="width: 960px">、
-         * <img width="960" height="640">、float:left 等桌面排版屬性，
-         * 實測一篇文章有 551 處 inline 寬度。單靠 CSS !important 唔夠穩妥
-         * （inline style 優先權高，而且會影響「儲存檔案」匯出嘅 HTML），
-         * 所以直接在 DOM 層清走。
-         */
-        function stripFixedLayout(root) {
-            if (!root) return;
-            root.querySelectorAll('[width], [height]').forEach(el => {
-                if (/^(IMG|VIDEO|CANVAS|SVG)$/.test(el.tagName)) {
-                    el.removeAttribute('width');
-                    el.removeAttribute('height');
-                } else {
-                    el.removeAttribute('width');
-                    el.removeAttribute('height');
-                }
-            });
-            root.querySelectorAll('[style]').forEach(el => {
-                const st = el.style;
-                // 清走一切令版面闊過螢幕嘅屬性
-                ['width', 'min-width', 'max-width', 'height', 'min-height',
-                 'float', 'margin-left', 'margin-right', 'left', 'right',
-                 'position', 'transform'].forEach(prop => {
-                    const v = st.getPropertyValue(prop);
-                    if (!v) return;
-                    // 只清固定像素/大數值，保留 100% 、auto 之類本身安全嘅值
-                    if (prop === 'float' || /\d\s*(px|pt|cm|in|em|rem|vw)/i.test(v) ||
-                        (prop === 'position' && /absolute|fixed/i.test(v))) {
-                        st.removeProperty(prop);
-                    }
-                });
-                if (!el.getAttribute('style')) el.removeAttribute('style');
-            });
-        }
-
         function normalizeMediaSources(root, baseUrl = '') {
-            stripFixedLayout(root);
             root.querySelectorAll('picture source, img, video, audio').forEach(el => {
                 const lazySrc = firstUsableMediaValue(el, [
                     'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original', 
@@ -1046,34 +872,20 @@
                 const currentSrc = el.getAttribute('src');
                 
                 const bestSrcset = lazySrcset || srcset || '';
-                let bestSrc = (lazySrc && (isPlaceholderImageUrl(currentSrc) || !currentSrc)) ? lazySrc : (lazySrc || currentSrc);
-
-                // 若 src 係佔位圖（default.jpg）而 srcset 有真圖，改用 srcset 中最大的一個
-                if ((!bestSrc || isPlaceholderImageUrl(bestSrc)) && bestSrcset) {
-                    const fromSet = largestFromSrcset(bestSrcset);
-                    if (fromSet) bestSrc = fromSet;
-                }
+                const bestSrc = (lazySrc && (isPlaceholderImageUrl(currentSrc) || !currentSrc)) ? lazySrc : (lazySrc || currentSrc);
 
                 if (bestSrc) {
-                    // 先解析成絕對網址，再還原成原圖
-                    const resolved = toOriginalImageUrl(resolveMediaUrl(bestSrc, baseUrl));
+                    const resolved = resolveMediaUrl(bestSrc, baseUrl);
                     el.setAttribute('src', resolved);
                     el.removeAttribute('loading');
                     el.removeAttribute('decoding');
-                    // srcset 會蓋過 src，既然已取得原圖就移除，避免瀏覽器又挑細圖
-                    if (el.tagName === 'IMG') {
-                        el.removeAttribute('srcset');
-                        el.removeAttribute('sizes');
-                    }
                 }
                 
-                // <source> 仍需保留 srcset（<picture> 靠它揀圖），但每個網址都還原成原圖
-                if (bestSrcset && el.tagName === 'SOURCE') {
+                if (bestSrcset) {
                     const resolvedSet = bestSrcset.split(',').map(part => {
                         const bits = part.trim().split(/\s+/);
                         if (!bits[0]) return '';
-                        const u = toOriginalImageUrl(resolveMediaUrl(bits[0], baseUrl));
-                        return `${u}${bits.slice(1).length ? ` ${bits.slice(1).join(' ')}` : ''}`;
+                        return `${resolveMediaUrl(bits[0], baseUrl)}${bits.slice(1).length ? ` ${bits.slice(1).join(' ')}` : ''}`;
                     }).filter(Boolean).join(', ');
                     if (resolvedSet) el.setAttribute('srcset', resolvedSet);
                 }
@@ -1082,12 +894,8 @@
                     el.style.setProperty('display', 'block', 'important');
                     el.style.setProperty('opacity', '1', 'important');
                     el.style.setProperty('visibility', 'visible', 'important');
-                    // 【手機修正】原本強推 min-width/min-height: 50px，會令圖片
-                    // 無法自由縮至容器內。改為明確限制唔可以闊過容器。
-                    el.style.setProperty('max-width', '100%', 'important');
-                    el.style.setProperty('height', 'auto', 'important');
-                    el.style.removeProperty('min-width');
-                    el.style.removeProperty('min-height');
+                    el.style.setProperty('min-width', '50px', 'important');
+                    el.style.setProperty('min-height', '50px', 'important');
                 }
             });
         }
@@ -1224,62 +1032,15 @@
                     document.getElementById('btnText').classList.remove('hidden');
                     return;
                 }
-                /* ────────────────────────────────────────────────────────────
-                 * 【核心修正】改用 Jina 的「原始 HTML」模式，唔再要 Markdown。
-                 * 原因：Markdown 格式先天無法表達 <picture> / <source srcset>，
-                 * 圖片資訊在轉 Markdown 那一刻已永久遺失，前端點修都無用。
-                 * 實測同一篇文章：
-                 *     Markdown 模式 -> 只剩 14 個圖片網址（且全部係縮圖）
-                 *     HTML 模式     -> 113 個圖片網址（含全部 <picture> 原圖）
-                 * 只需加一個 header 'x-respond-with: html'，而且 Jina 有回
-                 * access-control-allow-origin，瀏覽器可直接跨域呼叫，唔需要代理。
-                 * ──────────────────────────────────────────────────────────── */
-                let rawHTML = '';
-                let articleData = {};
-                let coverUrl = '';
-                let usedHtmlMode = false;
+                const response = await fetch(`https://r.jina.ai/${finalUrl}`, { headers: { 'Accept': 'application/json' } });
+                if (!response.ok) throw new Error('無法讀取該網站。');
+                const payload = await response.json();
+                const articleData = payload.data || payload;
+                const markdownText = articleData.content || articleData.markdown || '';
+                const coverUrl = articleData.metadata?.['og:image'] || articleData.metadata?.['twitter:image'] || articleData.metadata?.['twitter:image:src'] || '';
+                if (!markdownText || markdownText.length < 50) throw new Error('無法提取有效內容。');
 
-                try {
-                    const htmlRes = await fetch(`https://r.jina.ai/${finalUrl}`, {
-                        headers: { 'x-respond-with': 'html' }
-                    });
-                    if (htmlRes.ok) {
-                        const fullHtml = await htmlRes.text();
-                        if (fullHtml && fullHtml.length > 500) {
-                            rawHTML = fullHtml;
-                            usedHtmlMode = true;
-                        }
-                    }
-                } catch (e) {
-                    console.warn('[PureRead HK] HTML 模式失敗，回退 Markdown：', e);
-                }
-
-                // 回退：HTML 模式不可用時，仍用原本的 Markdown 流程（保證唔會壞）
-                if (!usedHtmlMode) {
-                    const response = await fetch(`https://r.jina.ai/${finalUrl}`, { headers: { 'Accept': 'application/json' } });
-                    if (!response.ok) throw new Error('無法讀取該網站。');
-                    const payload = await response.json();
-                    articleData = payload.data || payload;
-                    const markdownText = articleData.content || articleData.markdown || '';
-                    coverUrl = articleData.metadata?.['og:image'] || articleData.metadata?.['twitter:image'] || articleData.metadata?.['twitter:image:src'] || '';
-                    if (!markdownText || markdownText.length < 50) throw new Error('無法提取有效內容。');
-                    rawHTML = marked.parse(markdownText);
-                } else {
-                    // HTML 模式：自行抽 title 同封面圖
-                    const metaDoc = new DOMParser().parseFromString(rawHTML, 'text/html');
-                    const t = metaDoc.querySelector('title');
-                    if (t && t.textContent) articleData.title = t.textContent;
-                    const og = metaDoc.querySelector('meta[property="og:image"], meta[name="twitter:image"]');
-                    if (og) coverUrl = toOriginalImageUrl(og.getAttribute('content') || '');
-                    // 只保留 <article> 內容區，剔除頁頭/頁尾/側欄/推薦位
-                    const art = metaDoc.querySelector('article');
-                    if (art && art.innerHTML && art.innerHTML.length > 500) {
-                        rawHTML = art.innerHTML;
-                    } else {
-                        const body = metaDoc.querySelector('body');
-                        if (body) rawHTML = body.innerHTML;
-                    }
-                }
+                const rawHTML = marked.parse(markdownText);
 
                 if (articleData.title) {
                     articleTitle = articleData.title.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
@@ -1320,11 +1081,8 @@
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
             contentArea.innerHTML = cleanHTML;
-            // 【修正】base 要用「文章來源網址」，唔係 App 自己的 document.baseURI，
-            // 否則相對路徑圖片會被解析到 App 網域，變成 404。
-            const mediaBase = currentArticleUrl || document.baseURI;
-            normalizeMediaSources(contentArea, mediaBase);
-            promoteLinkedImageTargets(contentArea, mediaBase);
+            normalizeMediaSources(contentArea, document.baseURI);
+            promoteLinkedImageTargets(contentArea, document.baseURI);
             
             processLongURLs(contentArea);
             updateCleanupPanels();
@@ -2012,34 +1770,13 @@
             line-height: 1.8; 
             max-width: 800px !important; 
             margin: 0 auto !important; 
-            padding: 40px 20px 120px 20px !important;
-            color: #24292e;
-            background-color: #fafafa;
-            overflow-x: hidden;
-            font-size: 16px !important;
+            padding: 40px 20px 120px 20px !important; 
+            color: #24292e; 
+            background-color: #fafafa; 
+            overflow-x: hidden; 
+            font-size: 16px !important; 
         }
-
-        /* 【手機直向修正】匯出檔案同樣要壓制原站硬編碼寬度，
-         * 否則儲存出嚟嘅 HTML 在手機睇一樣會出界。 */
-        html, body { max-width: 100%; overflow-x: hidden; }
-        figure, [style*="width"], [width] {
-            width: auto !important; max-width: 100% !important;
-            min-width: 0 !important; float: none !important;
-            margin-left: auto !important; margin-right: auto !important;
-        }
-        figcaption { width: auto !important; max-width: 100% !important;
-            font-size: 0.88em; color: #64748b; text-align: center; padding: 6px 4px 0; }
-        table { display: block; width: 100% !important; max-width: 100% !important; overflow-x: auto; }
-        iframe, video, embed, object { width: 100% !important; max-width: 100% !important; height: auto; aspect-ratio: 16/9; }
-
-        @media (max-width: 640px) {
-            body { padding: 16px 12px 80px 12px !important; }
-            img { width: 100% !important; max-height: 78vh; margin: 14px auto !important; }
-            h1 { font-size: 1.55em !important; line-height: 1.35; }
-            h2 { font-size: 1.28em !important; }
-            h3 { font-size: 1.12em !important; }
-        }
-
+        
         #content-wrapper { 
             font-size: var(--base-font-size) !important; 
             width: 100%; max-width: 100%; 
@@ -2448,5 +2185,166 @@
         }
     </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+
+<script>
+    /**
+     * 【MHT 終極修復 v7】全自給自足版
+     * 解決：檔案不識別、讀取無回應、圖片縫合失敗
+     */
+    
+    // 基礎變量與工具函數 (確保不報錯)
+    let mhtImageMap = new Map();
+    if (typeof articleTitle === 'undefined') window.articleTitle = "純淨文章";
+
+    function safeShowError(msg) {
+        const errDiv = document.getElementById('errorMessage');
+        if (errDiv) {
+            errDiv.textContent = msg;
+            errDiv.classList.remove('hidden');
+            setTimeout(() => errDiv.classList.add('hidden'), 5000);
+        } else {
+            alert(msg);
+        }
+    }
+
+    function safeResetUI() {
+        const container = document.getElementById('articleContainer');
+        const wrapper = document.getElementById('content-wrapper');
+        if (container) container.classList.add('hidden');
+        if (wrapper) wrapper.innerHTML = '';
+        if (typeof stopTTS === 'function') stopTTS();
+    }
+
+    // 1. 解碼器：處理 MHT 的 Quoted-Printable 編碼
+    function decodeQP(str) {
+        return str.replace(/=([0-9A-F]{2})/gi, (match, hex) => String.fromCharCode(parseInt(hex, 16))).replace(/=\r?\n/g, '');
+    }
+
+    // 2. MHT 解析器：提取 HTML 和 Base64 圖片
+    function parseMHT(text) {
+        mhtImageMap.clear();
+        if (!text.includes('multipart/related') && !text.includes('boundary=')) return text;
+
+        const boundaryMatch = text.match(/boundary="?([^";\s\r\n]+)"?/i);
+        const boundary = boundaryMatch ? boundaryMatch[1] : null;
+        if (!boundary) return text;
+
+        const parts = text.split('--' + boundary);
+        let htmlContent = '';
+
+        parts.forEach(part => {
+            if (part.includes('Content-Type: text/html')) {
+                const sections = part.split(/\r?\n\r?\n/);
+                let body = sections.slice(1).join('\n');
+                if (part.includes('Quoted-Printable')) body = decodeQP(body);
+                htmlContent = body;
+            } else if (part.includes('Content-Type: image/')) {
+                const location = part.match(/Content-Location: (https?:\/\/[^\s\r\n]+ )/i)?.[1];
+                const sections = part.split(/\r?\n\r?\n/);
+                const base64 = sections.slice(1).join('').replace(/[\r\n]/g, '');
+                const type = part.match(/Content-Type: (image\/[a-z0-9.-]+)/i)?.[1] || 'image/jpeg';
+                if (location && base64) mhtImageMap.set(location.trim(), `data:${type};base64,${base64}`);
+            }
+        });
+        return htmlContent || text;
+    }
+
+    // 3. 媒體縫合：將 MHT 圖片還原
+    function normalizeMediaSources(root, baseUrl = '') {
+        root.querySelectorAll('img, picture, source').forEach(el => {
+            const img = el.tagName === 'IMG' ? el : el.querySelector('img');
+            if (!img) return;
+            const attrs = ['data-srcset', 'data-src', 'srcset', 'src', 'data-actualsrc', 'data-original'];
+            for (const attr of attrs) {
+                const val = el.getAttribute(attr);
+                if (val && val.includes('http' )) {
+                    const url = val.split(',')[0].trim().split(/\s+/)[0];
+                    if (mhtImageMap.has(url)) {
+                        img.src = mhtImageMap.get(url);
+                        img.removeAttribute('srcset');
+                        img.style.cssText = "display:block!important; max-width:100%!important; height:auto!important; border-radius:12px; margin:20px auto;";
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    // 4. 強化版文件上傳函數
+    async function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        safeResetUI();
+        const loadingIcon = document.getElementById('loadingIcon');
+        if (loadingIcon) loadingIcon.classList.remove('hidden');
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const rawText = e.target.result;
+                window.articleTitle = file.name.replace(/\.[^/.]+$/, '');
+                
+                const processedHTML = parseMHT(rawText);
+                const pureHTML = extractNuclear(processedHTML);
+                
+                renderContent(pureHTML);
+                safeShowError(`✅ 成功讀取：${file.name} (圖片: ${mhtImageMap.size})`);
+            } catch (err) {
+                console.error(err);
+                safeShowError('⚠️ 檔案解析失敗，請確認檔案完整性。');
+            } finally {
+                if (loadingIcon) loadingIcon.classList.add('hidden');
+                event.target.value = '';
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    // 5. 渲染函數
+    function renderContent(rawHTML) {
+        const contentArea = document.getElementById('content-wrapper');
+        const container = document.getElementById('articleContainer');
+        if (!contentArea || !container) return;
+
+        const cleanHTML = DOMPurify.sanitize(rawHTML, {
+            ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption'],
+            ADD_ATTR: ['src', 'srcset', 'data-src', 'data-srcset'],
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|xxx|data):|[^a-z0-9+.-])/i
+        });
+        
+        contentArea.innerHTML = cleanHTML;
+        normalizeMediaSources(contentArea, document.baseURI);
+        container.classList.remove('hidden');
+        window.scrollTo({ top: container.offsetTop - 20, behavior: 'smooth' });
+    }
+
+    function extractNuclear(htmlText) {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
+        let targetNode = doc.querySelector('article') || doc.querySelector('main') || doc.body;
+        normalizeMediaSources(targetNode);
+        return targetNode.innerHTML;
+    }
+
+    // 6. 粘貼補救
+    document.addEventListener('paste', (e) => {
+        const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+        const container = document.getElementById('content-wrapper');
+        if (!container) return;
+        for (const item of items) {
+            if (item.type.indexOf('image') !== -1) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const newImg = document.createElement('img');
+                    newImg.src = ev.target.result;
+                    newImg.style.cssText = "display:block; max-width:100%; height:auto; margin:20px auto; border-radius:12px; border:3px solid #6366f1;";
+                    container.insertBefore(newImg, container.firstChild);
+                };
+                reader.readAsDataURL(item.getAsFile());
+            }
+        }
+    });
+</script>
 </body>
 </html>
