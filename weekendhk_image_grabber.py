@@ -79,12 +79,31 @@ def to_original(url):
     return cands
 
 
-def scope_to_article(html):
-    """只保留 <article>…</article> 區塊，剔除 header / footer / 側欄 / 推薦位。
-    找不到就回傳原文。"""
+RE_POST_ID = re.compile(r"-(\d{5,10})/?$")
+
+
+def article_post_id(page_url):
+    """由網址尾段抽出 WordPress post id，例如 …-3475990/?utm_term=x → 3475990。"""
+    m = RE_POST_ID.search(strip_query(page_url).rstrip("/") + "/")
+    return m.group(1) if m else None
+
+
+def scope_to_article(html, page_url=""):
+    """回傳文章內容區，剔除 header / footer / 側欄 / 推薦位。
+
+    WeekendHK 有兩種版式，必須兩種都覆蓋：
+      (a) 正文內嵌 <figure> 圖 —— 圖在 <article> 內
+      (b) 只有一張主題圖 (img.featured_image) —— 它在 <article> **之外**，
+          位於 DIV#post-<id> 之內、<article> 開始標籤之前
+
+    所以擷取範圍由 DIV#post-<id> 起、到 </article> 止：
+    這樣 (b) 的主題圖會包含在內，而所有推薦文章縮圖（一律排在 </article>
+    之後）依然被排除。找不到 <article> 就回傳原文。
+    """
     m = re.search(r"<article\b[^>]*>", html, re.I)
     if not m:
         return html, False
+    art_start = m.start()
     start = m.end()
     # 由 start 起做 <article> 標籤配對，取對應的收尾
     depth, pos = 1, start
@@ -95,16 +114,46 @@ def scope_to_article(html):
             break
         depth += -1 if t.group(0).lower().startswith("</") else 1
         pos = t.end()
-    return html[start:pos], True
+
+    body = html[start:pos]
+
+    # 正文已經有圖 → 版式 (a)，照舊
+    if re.search(r"<(?:img|picture|source)\b", body, re.I):
+        return body, True
+
+    # 版式 (b)：向前擴展到本篇的 DIV#post-<id>，撿回主題圖
+    pid = article_post_id(page_url)
+    head = None
+    if pid:
+        pm = re.search(r'<div\b[^>]*\bid=["\']post-%s["\']' % re.escape(pid), html, re.I)
+        if pm and pm.start() < art_start:
+            head = html[pm.start():art_start]
+    if head is None:
+        # 冇 post id 就退而求其次：只向前望一小段，避免撈到頁頭 banner
+        pm = re.search(r'<div\b[^>]*\bid=["\']post-\d+["\']', html, re.I)
+        if pm and pm.start() < art_start and art_start - pm.start() < 40000:
+            head = html[pm.start():art_start]
+
+    if head and re.search(r"<(?:img|picture|source)\b", head, re.I):
+        return head + body, True
+    return body, True
 
 
 def harvest_urls(html, page_url, article_only=True):
     """從 HTML 撈出所有圖片候選網址：src / srcset / data-* / <source> / og:image。"""
+    full_html = html
     if article_only:
-        scoped, ok = scope_to_article(html)
+        scoped, ok = scope_to_article(html, page_url)
         if ok and len(scoped) > 500:
             html = scoped
     found = []
+
+    # og:image / twitter:image 兜底：有些文章正文完全冇圖，主題圖只存在於 meta
+    for pat in (r'<meta[^>]+property=["\']og:image["\'][^>]+content=["\']([^"\']+)',
+                r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:image["\']',
+                r'<meta[^>]+name=["\']twitter:image(?::src)?["\'][^>]+content=["\']([^"\']+)'):
+        for m in re.finditer(pat, full_html or html, re.I):
+            found.append(m.group(1).strip())
 
     # srcset 可含多個 "url 2x, url 1x"
     for m in re.finditer(r'(?:data-)?srcset\s*=\s*["\']([^"\']+)["\']', html, re.I):
