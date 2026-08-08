@@ -337,6 +337,10 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>儲存檔案</span>
                     </button>
+                    <button id="shareBtn" onclick="shareArticle()" data-title="分享出去" data-intro="直接將檔案分享去 WhatsApp 等其他 App，唔使離開本程式。" class="w-full sm:w-auto bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-5 py-3 rounded-xl border border-sky-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342A3 3 0 106.316 10.658m2.368 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684zm0-12.632a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" /></svg>
+                        <span>分享</span>
+                    </button>
                 </div>
             </div>
             <div id="cleanupLevelPanel" class="hidden mb-6 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
@@ -2033,7 +2037,13 @@
         
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
-        async function downloadHTML() {
+        /**
+         * 產生匯出用嘅獨立 HTML 檔內容。
+         * 【重要】必須保持同步（唔可以 async/await）：分享功能要喺同一個
+         * 用戶點擊手勢內叫 navigator.share()，中間 await 過就會失去
+         * transient activation，Android 會直接擲 NotAllowedError。
+         */
+        function buildExportHTML() {
             if (isDeleteMode) toggleDeleteMode();
 
             const currentH1 = contentArea.querySelector('h1');
@@ -2050,8 +2060,8 @@
             });
             
             const finalContent = cloneContent.innerHTML;
-            if (!finalContent.trim()) return;
-            
+            if (!finalContent.trim()) return null;
+
             const downloadContent = `<!DOCTYPE html>
 <html lang="zh-HK">
 <head>
@@ -2470,6 +2480,18 @@
 </body>
 </html>`;
 
+            return downloadContent;
+        }
+
+        function exportFileName() {
+            const base = (articleTitle || '純淨文章').replace(/[\\/:*?"<>|]/g, '').trim() || '純淨文章';
+            return base.endsWith('.html') ? base : base + '.html';
+        }
+
+        async function downloadHTML() {
+            const downloadContent = buildExportHTML();
+            if (!downloadContent) return;
+
             try {
                 if (window.showSaveFilePicker) {
                     const handle = await window.showSaveFilePicker({
@@ -2500,6 +2522,96 @@
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         }
+
+        /**
+         * 直接分享匯出檔去 WhatsApp 等其他 App，唔使離開本程式。
+         *
+         * 關鍵限制（踩過嘅坑）：
+         *  1. navigator.share() 必須喺用戶手勢嘅同一個 task 內同步叫，
+         *     所以先同步造好 File，唔可以 await 任何嘢先。
+         *  2. 要先用 navigator.canShare({files}) 探測；部分瀏覽器有 share
+         *     但唔支援 files，硬叫會擲錯。
+         *  3. 用戶按取消會擲 AbortError，唔算錯誤，唔應該彈警告。
+         */
+        async function shareArticle() {
+            const btn = document.getElementById('shareBtn');
+            const downloadContent = buildExportHTML();
+            if (!downloadContent) {
+                showShareToast('冇內容可以分享，請先抽取文章。', true);
+                return;
+            }
+
+            const name = exportFileName();
+            const title = articleTitle || '純淨文章';
+            // 同步造 File，保住用戶手勢
+            const file = new File([downloadContent], name, { type: 'text/html' });
+
+            // 情況 A：支援分享檔案 → 直接分享 HTML 檔本身
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({ files: [file], title: title });
+                    showShareToast('已分享 ✔');
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return;   // 用戶取消，正常
+                    console.error('分享檔案失敗:', err);
+                    showShareToast('分享失敗：' + (err.message || err.name), true);
+                }
+                return;
+            }
+
+            // 情況 B：只支援分享文字/連結 → 退而求其次，分享標題 + 原文網址
+            if (navigator.share) {
+                try {
+                    await navigator.share({
+                        title: title,
+                        text: title,
+                        url: currentArticleUrl || location.href
+                    });
+                    showShareToast('已分享連結（此瀏覽器唔支援分享檔案）');
+                } catch (err) {
+                    if (err && err.name === 'AbortError') return;
+                    console.error('分享連結失敗:', err);
+                    showShareToast('分享失敗：' + (err.message || err.name), true);
+                }
+                return;
+            }
+
+            // 情況 C：完全唔支援（多數係桌面瀏覽器）→ 改為儲存檔案
+            showShareToast('此瀏覽器唔支援直接分享，已改為儲存檔案。', true);
+            downloadHTML();
+        }
+
+        // 輕量提示條，避免用 alert() 打斷閱讀
+        let shareToastTimer = null;
+        function showShareToast(msg, isError = false) {
+            let el = document.getElementById('shareToast');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'shareToast';
+                document.body.appendChild(el);
+            }
+            el.textContent = msg;
+            el.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);' +
+                'max-width:88vw;padding:10px 18px;border-radius:9999px;z-index:99999;' +
+                'font-size:14px;font-weight:700;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.25);' +
+                'background:' + (isError ? '#b91c1c' : '#047857') + ';';
+            clearTimeout(shareToastTimer);
+            shareToastTimer = setTimeout(() => el.remove(), 3200);
+        }
+
+        // 桌面瀏覽器唔支援分享檔案時，將按鈕文字改成更準確嘅描述
+        window.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('shareBtn');
+            if (!btn) return;
+            let canFiles = false;
+            try {
+                canFiles = !!(navigator.canShare &&
+                    navigator.canShare({ files: [new File(['x'], 'a.html', { type: 'text/html' })] }));
+            } catch (e) { canFiles = false; }
+            if (!canFiles && !navigator.share) {
+                btn.title = '此瀏覽器唔支援直接分享，按下會改為儲存檔案';
+            }
+        });
     </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
 </body>
