@@ -185,9 +185,10 @@
         .delete-target-hover { outline: 2px dashed #ef4444 !important; background-color: rgba(239, 68, 68, 0.05) !important; border-radius: 4px; opacity: 0.8; }
         .selected-for-deletion { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
         .keep-mode-active * { cursor: crosshair !important; }
-        .keep-mode-active a { pointer-events: none !important; cursor: crosshair !important; }
+        .keep-mode-active a { pointer-events: auto !important; cursor: crosshair !important; text-decoration: underline !important; }
         /* 仍被選中 = 將會被刪除（黃色警示） */
         .marked-for-removal { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
+        .keep-mode-active .keep-selectable-item:empty { min-height: 16px; display: block; }
         /* 已反選擇 = 會保留落嚟（綠色確認） */
         .keep-mode-active .selected-for-keep { background-color: #bbf7d0 !important; outline: 3px solid #16a34a !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important; position: relative; z-index: 20; }
         #cleanupLevelPanel.visible, #keepSelectionPanel.visible { display: block; }
@@ -360,7 +361,7 @@
             </div>
             <div id="keepSelectionPanel" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <button onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
+                    <button id="keepSelectAllBtn" onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
                     <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 反選擇要保留嘅項目</div>
                     <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除仍選中內容</button>
                 </div>
@@ -377,11 +378,11 @@
         </footer>
     </div>
 
-    <div class="fab-container">
+    <details class="fab-container">
         <!-- 套用事件攔截，防止瞬間觸發全域點擊事件而關閉選單 -->
-        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
+        <summary class="fab-toggle" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
+        </summary>
         
         <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -395,7 +396,7 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
         </button>
         
-        <div class="control-panel collapsed" id="readerControls">
+        <div class="control-panel" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
                 <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
@@ -421,7 +422,7 @@
                 </select>
             </div>
         </div>
-    </div>
+    </details>
 
     <script>
         const SafeStorage = {
@@ -1597,7 +1598,32 @@
         }
 
         function getSelectableElements() {
-            return Array.from(contentArea.children).filter(el => el.textContent.trim() || el.querySelector('img, picture, figure, table'));
+            const items = [];
+            const excluded = 'script, style, template, svg, [hidden], [aria-hidden="true"], .util-copy-btn';
+            const media = 'img, picture, figure, table, video, iframe, canvas, object, embed';
+            const add = (el) => {
+                if (!el || el === contentArea || el.matches(excluded) || el.closest('.util-copy-btn')) return;
+                el.classList.add('keep-selectable-item');
+                items.push(el);
+            };
+            const walk = (parent) => {
+                Array.from(parent.children).forEach(el => {
+                    if (el.matches(excluded)) return;
+                    const children = Array.from(el.children).filter(child => !child.matches(excluded));
+                    const hasText = Boolean(el.textContent.trim());
+                    const hasMedia = Boolean(el.querySelector(media));
+                    const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                    const hasRenderableChildren = children.some(child => child.tagName !== 'BR');
+                    if (!hasText && !hasMedia && !hasRenderableChildren) {
+                        add(el);
+                        return;
+                    }
+                    if (!children.length || hasDirectText || el.matches(media)) add(el);
+                    if (children.length) walk(el);
+                });
+            };
+            walk(contentArea);
+            return items;
         }
 
         function syncDeleteButtons() {
@@ -1624,16 +1650,21 @@
                 el.classList.add('marked-for-removal');
                 el.classList.remove('selected-for-keep');
             });
+            const selectAllBtn = document.getElementById('keepSelectAllBtn');
+            if (selectAllBtn) {
+                selectAllBtn.textContent = '✅ 已全選（逐件揀要保留）';
+                selectAllBtn.className = 'rounded-lg border border-amber-700 bg-amber-300 px-3 py-2 font-bold text-amber-950 shadow-sm hover:bg-amber-400';
+            }
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已全選 ${markedElements.size} 個區塊（黃色＝將被刪除）。第 2 步：點擊你想「保留」嘅區塊做反選擇，佢會變綠色；最後撳第 3 步刪除其餘黃色內容。`;
+            if (note) note.textContent = `已選擇 ${markedElements.size} 個細小區塊（黃色＝將被刪除）。第 2 步：逐件點擊你想保留嘅區塊，佢會變綠色；最後撳第 3 步刪除其餘黃色內容。`;
             syncDeleteButtons();
             updateCleanupPanels();
         }
 
         function toggleKeepElement(e) {
             if (!isKeepMode) return;
-            const target = e.target.closest('#content-wrapper > *');
-            if (!target) return;
+            const target = e.target.closest('.keep-selectable-item');
+            if (!target || !contentArea.contains(target)) return;
             e.preventDefault();
             e.stopPropagation();
             if (markedElements.has(target)) {
@@ -1650,7 +1681,7 @@
             const selectable = getSelectableElements();
             const keepCount = selectable.length - markedElements.size;
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已反選擇（保留）${keepCount} 個區塊（綠色）；仍有 ${markedElements.size} 個區塊處於選中狀態（黃色），撳第 3 步就會刪除呢批。`;
+            if (note) note.textContent = `已反選擇（保留）${keepCount} 個細小區塊（綠色）；仍有 ${markedElements.size} 個區塊處於選中狀態（黃色），撳第 3 步就會刪除呢批。`;
             syncDeleteButtons();
         }
 
@@ -1661,6 +1692,11 @@
             contentArea.removeEventListener('click', toggleKeepElement);
             contentArea.querySelectorAll('.selected-for-keep').forEach(el => el.classList.remove('selected-for-keep'));
             contentArea.querySelectorAll('.marked-for-removal').forEach(el => el.classList.remove('marked-for-removal'));
+            const selectAllBtn = document.getElementById('keepSelectAllBtn');
+            if (selectAllBtn) {
+                selectAllBtn.textContent = '1️⃣ 選擇全部';
+                selectAllBtn.className = 'rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700';
+            }
             const note = document.getElementById('keepSelectionNote');
             if (note) note.textContent = '已取消所有選擇；如要開始，請撳第 1 步「選擇全部」。';
             syncDeleteButtons();
@@ -1849,6 +1885,7 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
+                if (controls.closest('.fab-container')) return;
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
@@ -2272,6 +2309,8 @@
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         .fab-container, .fab-container * { box-sizing: border-box; }
         
+        .fab-toggle { list-style: none; }
+        .fab-toggle::-webkit-details-marker { display: none; }
         .fab-toggle { background: linear-gradient(225deg, #f3e8ff 0%, #a855f7 50%, #7e22ce 100%); color: #fff; border: 1px solid #3b0764; width: 44px !important; height: 44px !important; border-radius: 50%; font-size: 20px !important; cursor: pointer; box-shadow: -4px 4px 0px rgba(76, 29, 149, 0.45); display: flex; align-items: center; justify-content: center; transition: all 0.15s; z-index: 60; }
         .fab-toggle:hover { transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(76, 29, 149, 0.35); }
         .fab-toggle:active { transform: translate(-3px, 3px); box-shadow: 0px 0px 0px transparent !important; }
@@ -2300,10 +2339,10 @@
 </head>
 <body data-click-read="off">
 
-    <div class="fab-container">
-        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
+    <details class="fab-container">
+        <summary class="fab-toggle" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </button>
+        </summary>
         
         <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -2313,7 +2352,7 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
         </button>
         
-        <div class="control-panel collapsed" id="readerControls">
+        <div class="control-panel" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
                 <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
@@ -2339,7 +2378,7 @@
                 </select>
             </div>
         </div>
-    </div>
+    </details>
     
     <div id="content-wrapper">
         ${finalContent}
@@ -2364,6 +2403,7 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
+                if (controls.closest('.fab-container')) return;
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
