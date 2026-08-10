@@ -1947,76 +1947,111 @@
             if (typeof injectSmartButtons === 'function') injectSmartButtons();
         }
 
+        function getTTSPlainText(el) {
+            const clone = el.cloneNode(true);
+            clone.querySelectorAll('.util-copy-btn, script, style, button, input, textarea, select').forEach(node => node.remove());
+            return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function splitTTSText(text, maxLength = 180) {
+            const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+            if (!normalized) return [];
+            const chunks = [];
+            let rest = normalized;
+            while (rest.length > maxLength) {
+                let cut = -1;
+                const preferred = /[。！？!?；;：:，,、]\s*/g;
+                let match;
+                while ((match = preferred.exec(rest)) && match.index < maxLength) cut = match.index + match[0].length;
+                if (cut < Math.floor(maxLength * 0.55)) {
+                    const space = rest.lastIndexOf(' ', maxLength);
+                    cut = space > 0 ? space + 1 : maxLength;
+                }
+                chunks.push(rest.slice(0, cut).trim());
+                rest = rest.slice(cut).trim();
+            }
+            if (rest) chunks.push(rest);
+            return chunks;
+        }
+
         function prepareTTS() {
             utterances = [];
-            let allElements = Array.from(document.getElementById('content-wrapper').querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
-            let elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
+            const wrapper = document.getElementById('content-wrapper');
+            if (!wrapper) return;
+            const allElements = Array.from(wrapper.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
+            const elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
 
-            let voices = window.speechSynthesis.getVoices();
+            const voices = window.speechSynthesis.getVoices();
             let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
             if (!voice) voice = voices.find(v => {
                 const lang = v.lang.toLowerCase(), name = v.name.toLowerCase();
                 return lang.includes('hk') || lang.includes('yue') || name.includes('cantonese');
-            }) || voices.find(v => v.lang.includes('zh'));
+            }) || voices.find(v => v.lang.toLowerCase().includes('zh'));
 
             elements.forEach((el) => {
-                let text = el.innerText.trim();
-                if (text) {
-                    el.classList.add('readable-item');
-                    
-                    let newEl = el.cloneNode(true);
-                    el.parentNode.replaceChild(newEl, el);
-
-                    let u = new SpeechSynthesisUtterance(text);
+                const text = getTTSPlainText(el);
+                if (!text) return;
+                el.classList.add('readable-item');
+                const newEl = el.cloneNode(true);
+                el.parentNode.replaceChild(newEl, el);
+                const chunks = splitTTSText(text);
+                chunks.forEach((chunk) => {
+                    const u = new SpeechSynthesisUtterance(chunk);
                     if (voice) {
                         u.voice = voice;
-                        u.lang = voice.lang; 
+                        u.lang = voice.lang;
                     }
                     u.rate = currentRate;
-                    
-                    let uIndex = utterances.length;
+                    const uIndex = utterances.length;
                     u.onstart = () => {
-                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
-                            e.classList.remove('reading-highlight', 'paused-highlight');
-                        });
+                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
                         newEl.classList.add('reading-highlight');
-                        if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         SafeStorage.set('ttsBookmark_' + document.title, uIndex);
-                        currentIndex = uIndex; 
+                        currentIndex = uIndex;
                     };
                     u.onend = () => {
-                        newEl.classList.remove('reading-highlight', 'paused-highlight');
-
-                        if (isPlaying && !isPaused && !isManualJump) {
-                            if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
+                        if (uIndex === utterances.length - 1 || !isPlaying || isPaused || isManualJump) {
+                            newEl.classList.remove('reading-highlight', 'paused-highlight');
+                        }
+                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
+                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
+                            else stopExportTts();
                         }
                     };
-                    
-                    utterances.push({ u: u, el: newEl });
-                    
-                    newEl.addEventListener('click', (e) => {
-                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
-                            e.preventDefault();
+                    u.onerror = (event) => {
+                        console.warn('[PureRead HK] TTS chunk failed:', event.error, chunk.slice(0, 80));
+                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
+                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
+                            else stopExportTts();
                         }
-                        if(e.target.closest('.util-copy-btn')) return;
-                        
-                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
-                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
-                        
-                        e.preventDefault(); e.stopPropagation(); 
-                        
-                        if (uIndex === currentIndex && isPlaying) {
-                            stopExportTts();
-                            return;
-                        }
-
-                        startReadingFrom(uIndex);
-                    });
-                }
+                    };
+                    utterances.push({ u, el: newEl });
+                });
+                newEl.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
+                    if (e.target.closest('.util-copy-btn')) return;
+                    const isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
+                    if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const firstIndex = utterances.findIndex(item => item.el === newEl);
+                    if (firstIndex < 0) return;
+                    if (isPlaying && utterances[currentIndex]?.el === newEl) {
+                        stopExportTts();
+                        return;
+                    }
+                    startReadingFrom(firstIndex);
+                });
             });
         }
 
-        function playUtterance(index) { if (index >= utterances.length) return; currentIndex = index; window.speechSynthesis.speak(utterances[index].u); }
+        function playUtterance(index) {
+            if (index >= utterances.length) return;
+            currentIndex = index;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterances[index].u);
+        }
         
         function startReadingFrom(index) {
             isManualJump = true;
@@ -2356,76 +2391,111 @@
             else { prepareTTS(); }
         }
 
+        function getTTSPlainText(el) {
+            const clone = el.cloneNode(true);
+            clone.querySelectorAll('.util-copy-btn, script, style, button, input, textarea, select').forEach(node => node.remove());
+            return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function splitTTSText(text, maxLength = 180) {
+            const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+            if (!normalized) return [];
+            const chunks = [];
+            let rest = normalized;
+            while (rest.length > maxLength) {
+                let cut = -1;
+                const preferred = /[。！？!?；;：:，,、]\s*/g;
+                let match;
+                while ((match = preferred.exec(rest)) && match.index < maxLength) cut = match.index + match[0].length;
+                if (cut < Math.floor(maxLength * 0.55)) {
+                    const space = rest.lastIndexOf(' ', maxLength);
+                    cut = space > 0 ? space + 1 : maxLength;
+                }
+                chunks.push(rest.slice(0, cut).trim());
+                rest = rest.slice(cut).trim();
+            }
+            if (rest) chunks.push(rest);
+            return chunks;
+        }
+
         function prepareTTS() {
             utterances = [];
-            let allElements = Array.from(document.getElementById('content-wrapper').querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
-            let elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
+            const wrapper = document.getElementById('content-wrapper');
+            if (!wrapper) return;
+            const allElements = Array.from(wrapper.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
+            const elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
 
-            let voices = window.speechSynthesis.getVoices();
+            const voices = window.speechSynthesis.getVoices();
             let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
             if (!voice) voice = voices.find(v => {
                 const lang = v.lang.toLowerCase(), name = v.name.toLowerCase();
                 return lang.includes('hk') || lang.includes('yue') || name.includes('cantonese');
-            }) || voices.find(v => v.lang.includes('zh'));
+            }) || voices.find(v => v.lang.toLowerCase().includes('zh'));
 
             elements.forEach((el) => {
-                let text = el.innerText.trim();
-                if (text) {
-                    el.classList.add('readable-item');
-                    
-                    let newEl = el.cloneNode(true);
-                    el.parentNode.replaceChild(newEl, el);
-
-                    let u = new SpeechSynthesisUtterance(text);
+                const text = getTTSPlainText(el);
+                if (!text) return;
+                el.classList.add('readable-item');
+                const newEl = el.cloneNode(true);
+                el.parentNode.replaceChild(newEl, el);
+                const chunks = splitTTSText(text);
+                chunks.forEach((chunk) => {
+                    const u = new SpeechSynthesisUtterance(chunk);
                     if (voice) {
                         u.voice = voice;
-                        u.lang = voice.lang; 
+                        u.lang = voice.lang;
                     }
                     u.rate = currentRate;
-                    
-                    let uIndex = utterances.length;
+                    const uIndex = utterances.length;
                     u.onstart = () => {
-                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
-                            e.classList.remove('reading-highlight', 'paused-highlight');
-                        });
+                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
                         newEl.classList.add('reading-highlight');
-                        if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         SafeStorage.set('ttsBookmark_' + document.title, uIndex);
-                        currentIndex = uIndex; 
+                        currentIndex = uIndex;
                     };
                     u.onend = () => {
-                        newEl.classList.remove('reading-highlight', 'paused-highlight');
-
-                        if (isPlaying && !isPaused && !isManualJump) {
-                            if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
+                        if (uIndex === utterances.length - 1 || !isPlaying || isPaused || isManualJump) {
+                            newEl.classList.remove('reading-highlight', 'paused-highlight');
+                        }
+                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
+                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
+                            else stopExportTts();
                         }
                     };
-                    
-                    utterances.push({ u: u, el: newEl });
-                    
-                    newEl.addEventListener('click', (e) => {
-                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
-                            e.preventDefault();
+                    u.onerror = (event) => {
+                        console.warn('[PureRead HK] TTS chunk failed:', event.error, chunk.slice(0, 80));
+                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
+                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
+                            else stopExportTts();
                         }
-                        if(e.target.closest('.util-copy-btn')) return;
-                        
-                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
-                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
-                        
-                        e.preventDefault(); e.stopPropagation(); 
-                        
-                        if (uIndex === currentIndex && isPlaying) {
-                            stopExportTts();
-                            return;
-                        }
-
-                        startReadingFrom(uIndex);
-                    });
-                }
+                    };
+                    utterances.push({ u, el: newEl });
+                });
+                newEl.addEventListener('click', (e) => {
+                    if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
+                    if (e.target.closest('.util-copy-btn')) return;
+                    const isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
+                    if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const firstIndex = utterances.findIndex(item => item.el === newEl);
+                    if (firstIndex < 0) return;
+                    if (isPlaying && utterances[currentIndex]?.el === newEl) {
+                        stopExportTts();
+                        return;
+                    }
+                    startReadingFrom(firstIndex);
+                });
             });
         }
 
-        function playUtterance(index) { if (index >= utterances.length) return; currentIndex = index; window.speechSynthesis.speak(utterances[index].u); }
+        function playUtterance(index) {
+            if (index >= utterances.length) return;
+            currentIndex = index;
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utterances[index].u);
+        }
         
         function startReadingFrom(index) {
             isManualJump = true;
