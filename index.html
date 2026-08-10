@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 【圖片防盜連對策】唔送 Referer：好多新聞網站圖片伺服器見到外站 Referer 就封鎖（403） -->
+    <meta name="referrer" content="no-referrer">
     <meta name="description" content="PureRead HK（純淨閱讀器）是一個以繁體中文介面打造的純淨閱讀及朗讀工具，可提取文章、整理排版、刪除多餘段落，並支援文字朗讀與高光標示。">
     <meta name="theme-color" content="#4f46e5">
     <meta property="og:title" content="PureRead HK｜純淨閱讀器">
@@ -988,6 +990,58 @@
         }
 
         /**
+         * 【圖片載入失敗自動補救】好多網站圖片直連會失敗，常見原因：
+         *   1. 防盜連（檢查 Referer/Origin，外站一律 403）
+         *   2. 「原圖還原」剝咗簽名參數，變咗無效網址
+         *   3. http:// 圖片喺 https 頁面被封鎖（混合內容）
+         * 補救次序：fallback 原網址 → weserv 圖片代理（伺服器端代攞，冇 Referer 問題）。
+         * 用 capture phase 喺 document 層面接住所有 img error，唔使逐張綁。
+         */
+        function imageProxyUrl(u) {
+            if (!u || !/^https?:\/\//i.test(u)) return '';
+            return 'https://images.weserv.nl/?url=' + encodeURIComponent(u);
+        }
+        document.addEventListener('error', (e) => {
+            const img = e.target;
+            if (!img || img.tagName !== 'IMG' || !contentArea.contains(img)) return;
+            const stage = img.getAttribute('data-recover-stage') || '';
+            const currentSrc = img.getAttribute('src') || '';
+            if (!stage) {
+                // 第 1 步：有 fallback（未剝參數嘅原網址）就先試佢
+                const fb = img.getAttribute('data-fallback-src');
+                img.setAttribute('data-recover-stage', 'fallback');
+                if (fb && fb !== currentSrc) {
+                    // <picture> 嘅 <source> 會蓋過 <img src>，要一齊清走先會生效
+                    const pic = img.closest('picture');
+                    if (pic) pic.querySelectorAll('source').forEach(s => s.remove());
+                    img.removeAttribute('srcset');
+                    img.setAttribute('src', fb);
+                    return;
+                }
+                // 冇 fallback 就直接跳去代理
+            }
+            if (stage === '' || stage === 'fallback') {
+                // 第 2 步：經圖片代理伺服器代攞（繞過防盜連）
+                const target = img.getAttribute('data-fallback-src') || currentSrc;
+                const proxied = imageProxyUrl(target.startsWith('https://images.weserv.nl') ? '' : target);
+                img.setAttribute('data-recover-stage', 'proxy');
+                if (proxied && proxied !== currentSrc) {
+                    const pic = img.closest('picture');
+                    if (pic) pic.querySelectorAll('source').forEach(s => s.remove());
+                    img.removeAttribute('srcset');
+                    img.setAttribute('src', proxied);
+                    return;
+                }
+            }
+            // 全部方法都失敗：畀返個明顯提示，等用戶知道呢度本來有張圖
+            if (stage === 'proxy') {
+                img.setAttribute('data-recover-stage', 'gave-up');
+                img.style.setProperty('min-height', '40px');
+                img.alt = img.alt || '⚠️ 圖片無法載入';
+            }
+        }, true);
+
+        /**
          * 【原圖還原 v1】把 CDN 縮圖網址還原成原圖網址。
          * 實測針對 imgs.weekendhk.com 這類 WordPress + 圖片 CDN 架構：
          *   1. 清 ?v=1 之類 cache-buster
@@ -1090,7 +1144,19 @@
 
                 if (bestSrc) {
                     // 先解析成絕對網址，再還原成原圖
-                    const resolved = toOriginalImageUrl(resolveMediaUrl(bestSrc, baseUrl));
+                    let rawResolved = resolveMediaUrl(bestSrc, baseUrl);
+                    // 【混合內容修正】HTTPS 頁面載入 http:// 圖片會被瀏覽器直接封鎖，
+                    // 一律升級做 https（載入失敗會經 fallback 機制退返原網址）。
+                    if (rawResolved.startsWith('http://')) {
+                        el.setAttribute('data-fallback-src', rawResolved);
+                        rawResolved = 'https://' + rawResolved.slice(7);
+                    }
+                    const resolved = toOriginalImageUrl(rawResolved);
+                    // 【原圖還原保險】剝走 ?參數／尺寸後綴有機會整死簽名網址；
+                    // 記低未剝之前條網址，載入失敗時自動退返用佢。
+                    if (resolved !== rawResolved && !el.hasAttribute('data-fallback-src')) {
+                        el.setAttribute('data-fallback-src', rawResolved);
+                    }
                     el.setAttribute('src', resolved);
                     el.removeAttribute('loading');
                     el.removeAttribute('decoding');
@@ -1469,7 +1535,7 @@
         function renderContent(rawHTML) {
             const cleanHTML = DOMPurify.sanitize(rawHTML, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-fallback-src']
             });
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
@@ -1554,7 +1620,7 @@
         function sanitizeContentHTML(html) {
             return DOMPurify.sanitize(html, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-fallback-src']
             });
         }
 
@@ -2377,6 +2443,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
     <title>${articleTitle}</title>
     <style>
         :root { --base-font-size: 18px; }
@@ -2546,6 +2613,38 @@
             get: function(key) { try { return window.localStorage.getItem(key); } catch(e) { return null; } },
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
+
+        // 【圖片載入失敗自動補救】匯出檔同主程式一樣：先試 fallback 原網址，再經圖片代理
+        document.addEventListener('error', (e) => {
+            const img = e.target;
+            if (!img || img.tagName !== 'IMG') return;
+            const stage = img.getAttribute('data-recover-stage') || '';
+            const currentSrc = img.getAttribute('src') || '';
+            const clearPictureSources = () => {
+                const pic = img.closest('picture');
+                if (pic) pic.querySelectorAll('source').forEach(s => s.remove());
+                img.removeAttribute('srcset');
+            };
+            if (!stage) {
+                const fb = img.getAttribute('data-fallback-src');
+                img.setAttribute('data-recover-stage', 'fallback');
+                if (fb && fb !== currentSrc) { clearPictureSources(); img.setAttribute('src', fb); return; }
+            }
+            if (stage === '' || stage === 'fallback') {
+                const target = img.getAttribute('data-fallback-src') || currentSrc;
+                img.setAttribute('data-recover-stage', 'proxy');
+                if (/^https?:\/\//i.test(target) && !target.startsWith('https://images.weserv.nl')) {
+                    clearPictureSources();
+                    img.setAttribute('src', 'https://images.weserv.nl/?url=' + encodeURIComponent(target));
+                    return;
+                }
+            }
+            if (stage === 'proxy') {
+                img.setAttribute('data-recover-stage', 'gave-up');
+                img.style.minHeight = '40px';
+                img.alt = img.alt || '⚠️ 圖片無法載入';
+            }
+        }, true);
 
         function toggleReaderControls(event) {
             if (event) {
@@ -3040,5 +3139,6 @@
         });
     </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1}' crossorigin="anonymous"></script>
 </body>
 </html>
