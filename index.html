@@ -363,6 +363,14 @@
                 <p id="cleanupLevelNote" class="mt-2 text-xs text-indigo-700">先提取文章，再選擇清理級別；不同級別會按比例過濾圖片。</p>
             </div>
             <div id="keepSelectionPanel" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <label for="keepGranularity" class="whitespace-nowrap font-bold text-emerald-900">選取細緻度</label>
+                    <select id="keepGranularity" onchange="changeKeepGranularity()" class="flex-1 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-emerald-900">
+                        <option value="coarse">大段・最粗（成個大區做一個單位）</option>
+                        <option value="medium" selected>中等・逐段（一段文字／一個列表做一個單位）</option>
+                        <option value="fine">細碎・最細（逐句逐項逐張圖）</option>
+                    </select>
+                </div>
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <button id="keepSelectAllBtn" onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
                     <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 反選擇要保留嘅項目</div>
@@ -444,6 +452,9 @@
         // 精準保留模式：markedElements = 目前仍被「選中」、按第 3 步時會被刪除的區塊。
         // 第 1 步全選 → 全部進入此集合；第 2 步點擊（反選擇）→ 從集合移除，即成為保留項目。
         let markedElements = new Set();
+        // 選取細緻度：coarse＝大段（頂層區塊）、medium＝逐段（段落／列表／圖片各為一個單位）、fine＝最細碎（原有行為）。
+        let keepGranularity = 'medium';
+        const KEEP_GRANULARITY_KEY = 'pureReadKeepGranularity_v1';
         let cleanupLevel = 3;
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
@@ -845,6 +856,13 @@
             }
             renderUrlHistory();
             updateClearUrlButton();
+            // 還原上次揀嘅選取細緻度。
+            const savedGranularity = SafeStorage.get(KEEP_GRANULARITY_KEY);
+            if (savedGranularity && ['coarse', 'medium', 'fine'].includes(savedGranularity)) {
+                keepGranularity = savedGranularity;
+                const granularitySel = document.getElementById('keepGranularity');
+                if (granularitySel) granularitySel.value = savedGranularity;
+            }
             document.getElementById('urlInput')?.addEventListener('input', updateClearUrlButton);
             checkScrollButtons();
 
@@ -1608,11 +1626,43 @@
             const items = [];
             const excluded = 'script, style, template, svg, [hidden], [aria-hidden="true"], .util-copy-btn';
             const media = 'img, picture, figure, table, video, iframe, canvas, object, embed';
+            // 先清走舊有標記，確保切換細緻度之後，區塊邊界會跟隨新設定重新計算。
+            contentArea.querySelectorAll('.keep-selectable-item').forEach(el => el.classList.remove('keep-selectable-item'));
             const add = (el) => {
                 if (!el || el === contentArea || el.matches(excluded) || el.closest('.util-copy-btn')) return;
                 el.classList.add('keep-selectable-item');
                 items.push(el);
             };
+
+            if (keepGranularity === 'coarse') {
+                // 大段（最粗）：contentArea 每個頂層子元素當一個單位，唔再向下拆。
+                Array.from(contentArea.children).forEach(el => {
+                    if (el.matches(excluded)) return;
+                    add(el);
+                });
+                return items;
+            }
+
+            if (keepGranularity === 'medium') {
+                // 中等（逐段）：一段文字／一個標題／成個列表／一張圖各自係一個單位；
+                // 純容器（div、section 等）就繼續向下行，唔會又選容器又選入面嘅嘢。
+                const unit = 'p, h1, h2, h3, h4, h5, h6, ul, ol, dl, table, blockquote, pre, figure, hr, img, picture, video, iframe, canvas, object, embed';
+                const walkMedium = (parent) => {
+                    Array.from(parent.children).forEach(el => {
+                        if (el.matches(excluded)) return;
+                        if (el.matches(unit)) { add(el); return; }
+                        const children = Array.from(el.children).filter(child => !child.matches(excluded));
+                        const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                        const hasRenderableChildren = children.some(child => child.tagName !== 'BR');
+                        if (!hasRenderableChildren || hasDirectText) { add(el); return; }
+                        walkMedium(el);
+                    });
+                };
+                walkMedium(contentArea);
+                return items;
+            }
+
+            // 細碎（最細）：原有行為，逐句逐項逐張圖咁拆。
             const walk = (parent) => {
                 Array.from(parent.children).forEach(el => {
                     if (el.matches(excluded)) return;
@@ -1631,6 +1681,24 @@
             };
             walk(contentArea);
             return items;
+        }
+
+        function changeKeepGranularity() {
+            const sel = document.getElementById('keepGranularity');
+            if (!sel) return;
+            keepGranularity = sel.value;
+            SafeStorage.set(KEEP_GRANULARITY_KEY, keepGranularity);
+            const note = document.getElementById('keepSelectionNote');
+            if (isKeepMode && markedElements.size > 0) {
+                // 已經開始咗選擇流程 → 按新細緻度重新全選（之前嘅反選擇會重置）。
+                contentArea.querySelectorAll('.selected-for-keep').forEach(el => el.classList.remove('selected-for-keep'));
+                contentArea.querySelectorAll('.marked-for-removal').forEach(el => el.classList.remove('marked-for-removal'));
+                markedElements.clear();
+                selectAllKeepSelection();
+                if (note) note.textContent = `已按新細緻度重新選擇全部（共 ${markedElements.size} 個區塊）；之前嘅反選擇需要重新點選。`;
+            } else if (note) {
+                note.textContent = '已更新選取細緻度；撳第 1 步「選擇全部」就會按新設定分區。';
+            }
         }
 
         function syncDeleteButtons() {
