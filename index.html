@@ -571,6 +571,7 @@
             if (hasSavedHTML && record.baseHTML) {
                 isApplyingEditRecord = true;
                 contentArea.innerHTML = sanitizeContentHTML(record.currentHTML);
+                applyTraditionalConversion(false);
                 normalizeMediaSources(contentArea, document.baseURI);
                 processLongURLs(contentArea);
                 isApplyingEditRecord = false;
@@ -1378,6 +1379,18 @@
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
             contentArea.innerHTML = cleanHTML;
+            if (!applyTraditionalConversion(false)) {
+                setTimeout(() => {
+                    if (applyTraditionalConversion(false)) {
+                        cleanupPreviewHTML = sanitizeContentHTML(contentArea.innerHTML);
+                        cleanupBaselineHTML = cleanupPreviewHTML;
+                        prepareTTS();
+                        injectSmartButtons();
+                    }
+                }, 300);
+            }
+            cleanupPreviewHTML = sanitizeContentHTML(contentArea.innerHTML);
+            cleanupBaselineHTML = cleanupPreviewHTML;
             // 【修正】base 要用「文章來源網址」，唔係 App 自己的 document.baseURI，
             // 否則相對路徑圖片會被解析到 App 網域，變成 404。
             const mediaBase = currentArticleUrl || document.baseURI;
@@ -1452,30 +1465,33 @@
 
         let openccConverter = null;
 
+        function applyTraditionalConversion(updateSnapshots = true) {
+            if (!contentArea || !window.OpenCC) return false;
+            if (!openccConverter) openccConverter = window.OpenCC.Converter({ from: 'cn', to: 'hk' });
+            if (articleTitle) articleTitle = openccConverter(articleTitle);
+            const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.nodeValue && node.nodeValue.trim()) node.nodeValue = openccConverter(node.nodeValue);
+            }
+            if (updateSnapshots) {
+                cleanupPreviewHTML = sanitizeContentHTML(contentArea.innerHTML);
+                cleanupBaselineHTML = cleanupPreviewHTML;
+            }
+            return true;
+        }
+
         function convertToTraditional() {
             if (!contentArea || !contentArea.children.length) {
                 showError('⚠️ 請先提取文章內容。');
                 return;
             }
             try {
-                if (!openccConverter && window.OpenCC) {
-                    openccConverter = window.OpenCC.Converter({ from: 'cn', to: 'hk' });
-                }
-                if (!openccConverter) {
+                if (!applyTraditionalConversion(true)) {
                     showError('⚠️ 簡轉繁模組載入中，請稍後再試。');
                     return;
                 }
-                
-                if (articleTitle) articleTitle = openccConverter(articleTitle);
-                
-                const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, null, false);
-                let node;
-                while (node = walker.nextNode()) {
-                    if (node.nodeValue && node.nodeValue.trim()) {
-                        node.nodeValue = openccConverter(node.nodeValue);
-                    }
-                }
-                
+
                 prepareTTS();
                 injectSmartButtons();
                 saveCurrentEditRecord();
@@ -1493,6 +1509,7 @@
             
             if (cleanupLevel === 0) {
                 contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
+                applyTraditionalConversion(false);
                 normalizeMediaSources(contentArea, document.baseURI);
                 promoteLinkedImageTargets(contentArea, document.baseURI);
                 processLongURLs(contentArea);
@@ -1531,6 +1548,7 @@
                 allImages.forEach(img => (img.closest('figure') || img).remove());
             }
             contentArea.innerHTML = sanitizeContentHTML(root.innerHTML);
+            applyTraditionalConversion(false);
             normalizeMediaSources(contentArea, document.baseURI);
             promoteLinkedImageTargets(contentArea, document.baseURI);
             const record = ensureCurrentEditRecord();
@@ -1557,6 +1575,7 @@
             if (!cleanupPreviewHTML) return;
             cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
             contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
+            applyTraditionalConversion(false);
             normalizeMediaSources(contentArea, document.baseURI);
             const record = ensureCurrentEditRecord();
             if (record) record.cleanupApplied = false;
@@ -1870,6 +1889,7 @@
         }
 
         let isPlaying = false, isPaused = false, isManualJump = false;
+        let speechRunToken = 0, activeSpeech = null, selectedTTSVoice = null;
         let utterances = [], currentIndex = parseInt(SafeStorage.get('ttsBookmark_' + document.title)) || 0;
         
         let selectedVoiceName = SafeStorage.get('ttsVoiceName_v18') || ''; 
@@ -1953,7 +1973,35 @@
             return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
         }
 
-        function splitTTSText(text, maxLength = 180) {
+        function collectTTSReadableElements(wrapper) {
+            const semanticSelector = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figcaption, dt, dd, td, th, caption';
+            const excludedSelector = 'script, style, button, input, textarea, select, template, svg';
+            const semantic = Array.from(wrapper.querySelectorAll(semanticSelector)).filter(el => {
+                return !el.closest(excludedSelector) && getTTSPlainText(el) && !el.querySelector(semanticSelector);
+            });
+            const fallback = Array.from(wrapper.querySelectorAll('*')).filter(el => {
+                if (el.matches(excludedSelector) || el.closest(semanticSelector)) return false;
+                if (!getTTSPlainText(el)) return false;
+                const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                if (!hasDirectText) return false;
+                return !Array.from(el.querySelectorAll('*')).some(child => {
+                    if (child.matches(excludedSelector) || child.closest(semanticSelector)) return false;
+                    return Array.from(child.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                });
+            });
+            return semantic.concat(fallback).sort((a, b) => {
+                if (a === b) return 0;
+                return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+            });
+        }
+
+        function getTTSChunkLimit(text) {
+            const value = String(text || '');
+            const cjkCount = (value.match(/[\u2e80-\u2fff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g) || []).length;
+            return cjkCount / Math.max(value.length, 1) > 0.25 ? 48 : 90;
+        }
+
+        function splitTTSText(text, maxLength = getTTSChunkLimit(text)) {
             const normalized = String(text || '').replace(/\s+/g, ' ').trim();
             if (!normalized) return [];
             const chunks = [];
@@ -1978,15 +2026,14 @@
             utterances = [];
             const wrapper = document.getElementById('content-wrapper');
             if (!wrapper) return;
-            const allElements = Array.from(wrapper.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
-            const elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
+            const elements = collectTTSReadableElements(wrapper);
 
             const voices = window.speechSynthesis.getVoices();
-            let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
-            if (!voice) voice = voices.find(v => {
+            selectedTTSVoice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
+            if (!selectedTTSVoice) selectedTTSVoice = voices.find(v => {
                 const lang = v.lang.toLowerCase(), name = v.name.toLowerCase();
                 return lang.includes('hk') || lang.includes('yue') || name.includes('cantonese');
-            }) || voices.find(v => v.lang.toLowerCase().includes('zh'));
+            }) || voices.find(v => v.lang.toLowerCase().includes('zh')) || null;
 
             elements.forEach((el) => {
                 const text = getTTSPlainText(el);
@@ -1994,45 +2041,11 @@
                 el.classList.add('readable-item');
                 const newEl = el.cloneNode(true);
                 el.parentNode.replaceChild(newEl, el);
-                const chunks = splitTTSText(text);
-                chunks.forEach((chunk) => {
-                    const u = new SpeechSynthesisUtterance(chunk);
-                    if (voice) {
-                        u.voice = voice;
-                        u.lang = voice.lang;
-                    }
-                    u.rate = currentRate;
-                    const uIndex = utterances.length;
-                    u.onstart = () => {
-                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
-                        newEl.classList.add('reading-highlight');
-                        if (isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        SafeStorage.set('ttsBookmark_' + document.title, uIndex);
-                        currentIndex = uIndex;
-                    };
-                    u.onend = () => {
-                        if (uIndex === utterances.length - 1 || !isPlaying || isPaused || isManualJump) {
-                            newEl.classList.remove('reading-highlight', 'paused-highlight');
-                        }
-                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
-                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
-                            else stopExportTts();
-                        }
-                    };
-                    u.onerror = (event) => {
-                        console.warn('[PureRead HK] TTS chunk failed:', event.error, chunk.slice(0, 80));
-                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
-                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
-                            else stopExportTts();
-                        }
-                    };
-                    utterances.push({ u, el: newEl });
-                });
+                splitTTSText(text).forEach(chunk => utterances.push({ text: chunk, el: newEl }));
                 newEl.addEventListener('click', (e) => {
                     if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
                     if (e.target.closest('.util-copy-btn')) return;
-                    const isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
-                    if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return;
+                    if (document.querySelector('.delete-mode-active') !== null || document.body.dataset.clickRead === 'off') return;
                     e.preventDefault();
                     e.stopPropagation();
                     const firstIndex = utterances.findIndex(item => item.el === newEl);
@@ -2046,30 +2059,105 @@
             });
         }
 
-        function playUtterance(index) {
-            if (index >= utterances.length) return;
+        function playUtterance(index, retryCount = 0) {
+            if (!isPlaying || index >= utterances.length) return;
+            const runToken = speechRunToken;
+            const item = utterances[index];
+            const u = new SpeechSynthesisUtterance(item.text);
+            let settled = false;
+            let lastBoundary = -1;
+            let boundarySeen = false;
             currentIndex = index;
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(utterances[index].u);
+            if (selectedTTSVoice) {
+                u.voice = selectedTTSVoice;
+                u.lang = selectedTTSVoice.lang;
+            }
+            u.rate = currentRate;
+            activeSpeech = u;
+            const retryCurrentChunk = (reason) => {
+                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
+                settled = true;
+                activeSpeech = null;
+                item.el.classList.add('reading-highlight');
+                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
+                console.warn('[PureRead HK] TTS chunk incomplete:', reason, item.text.slice(0, 80));
+                if (retryCount < 5) {
+                    setTimeout(() => {
+                        if (isPlaying && !isPaused && !isManualJump && currentIndex === index && runToken === speechRunToken) playUtterance(index, retryCount + 1);
+                    }, 300 + retryCount * 200);
+                } else {
+                    isPlaying = false;
+                    console.warn('[PureRead HK] TTS stopped on the same chunk after retries; it was not skipped.');
+                }
+            };
+            const advance = () => {
+                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
+                const expectedTail = Math.max(3, Math.floor(item.text.length * 0.15));
+                if (boundarySeen && lastBoundary < item.text.length - expectedTail) {
+                    retryCurrentChunk('early-end');
+                    return;
+                }
+                settled = true;
+                activeSpeech = null;
+                item.el.classList.remove('reading-highlight', 'paused-highlight');
+                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
+                if (index + 1 < utterances.length) {
+                    setTimeout(() => {
+                        if (runToken === speechRunToken && isPlaying && !isPaused && !isManualJump && currentIndex === index && activeSpeech === null) playUtterance(index + 1);
+                    }, 100);
+                } else {
+                    stopExportTts();
+                }
+            };
+            u.onstart = () => {
+                if (runToken !== speechRunToken || activeSpeech !== u) return;
+                document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
+                item.el.classList.add('reading-highlight');
+                item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                SafeStorage.set('ttsBookmark_' + document.title, index);
+                currentIndex = index;
+            };
+            u.onboundary = (event) => {
+                if (runToken !== speechRunToken || activeSpeech !== u) return;
+                if (typeof event.charIndex === 'number') {
+                    boundarySeen = true;
+                    lastBoundary = Math.max(lastBoundary, event.charIndex);
+                }
+            };
+            u.onend = advance;
+            u.onerror = (event) => {
+                if (event.error === 'canceled' || event.error === 'interrupted') {
+                    if (runToken !== speechRunToken || !isPlaying || isManualJump) return;
+                }
+                retryCurrentChunk(event.error || 'speech-error');
+            };
+            window.speechSynthesis.speak(u);
         }
-        
+
         function startReadingFrom(index) {
+            speechRunToken += 1;
+            activeSpeech = null;
             isManualJump = true;
             window.speechSynthesis.cancel();
             setTimeout(() => {
-                isManualJump = false; isPlaying = true; isPaused = false;
+                isManualJump = false;
+                isPlaying = true;
+                isPaused = false;
                 playUtterance(index);
-            }, 50);
+            }, 80);
         }
 
         function stopExportTts() {
-            isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
-            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
-                e.classList.remove('reading-highlight', 'paused-highlight');
-            });
-            setTimeout(() => { isManualJump = false; }, 50);
+            speechRunToken += 1;
+            activeSpeech = null;
+            isManualJump = true;
+            window.speechSynthesis.cancel();
+            isPlaying = false;
+            isPaused = false;
+            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
+            setTimeout(() => { isManualJump = false; }, 80);
         }
-        
+
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
         /**
@@ -2080,6 +2168,7 @@
          */
         function buildExportHTML() {
             if (isDeleteMode) toggleDeleteMode();
+            applyTraditionalConversion(false);
 
             const currentH1 = contentArea.querySelector('h1');
             if (currentH1 && currentH1.textContent.trim()) {
@@ -2315,6 +2404,7 @@
         }
 
         let isPlaying = false, isPaused = false, isManualJump = false;
+        let speechRunToken = 0, activeSpeech = null, selectedTTSVoice = null;
         let utterances = [], currentIndex = parseInt(SafeStorage.get('ttsBookmark_' + document.title)) || 0;
         
         let selectedVoiceName = SafeStorage.get('ttsVoiceName_v18') || '';
@@ -2397,7 +2487,35 @@
             return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
         }
 
-        function splitTTSText(text, maxLength = 180) {
+        function collectTTSReadableElements(wrapper) {
+            const semanticSelector = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figcaption, dt, dd, td, th, caption';
+            const excludedSelector = 'script, style, button, input, textarea, select, template, svg';
+            const semantic = Array.from(wrapper.querySelectorAll(semanticSelector)).filter(el => {
+                return !el.closest(excludedSelector) && getTTSPlainText(el) && !el.querySelector(semanticSelector);
+            });
+            const fallback = Array.from(wrapper.querySelectorAll('*')).filter(el => {
+                if (el.matches(excludedSelector) || el.closest(semanticSelector)) return false;
+                if (!getTTSPlainText(el)) return false;
+                const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                if (!hasDirectText) return false;
+                return !Array.from(el.querySelectorAll('*')).some(child => {
+                    if (child.matches(excludedSelector) || child.closest(semanticSelector)) return false;
+                    return Array.from(child.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+                });
+            });
+            return semantic.concat(fallback).sort((a, b) => {
+                if (a === b) return 0;
+                return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+            });
+        }
+
+        function getTTSChunkLimit(text) {
+            const value = String(text || '');
+            const cjkCount = (value.match(/[\u2e80-\u2fff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g) || []).length;
+            return cjkCount / Math.max(value.length, 1) > 0.25 ? 48 : 90;
+        }
+
+        function splitTTSText(text, maxLength = getTTSChunkLimit(text)) {
             const normalized = String(text || '').replace(/\s+/g, ' ').trim();
             if (!normalized) return [];
             const chunks = [];
@@ -2422,15 +2540,14 @@
             utterances = [];
             const wrapper = document.getElementById('content-wrapper');
             if (!wrapper) return;
-            const allElements = Array.from(wrapper.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
-            const elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
+            const elements = collectTTSReadableElements(wrapper);
 
             const voices = window.speechSynthesis.getVoices();
-            let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
-            if (!voice) voice = voices.find(v => {
+            selectedTTSVoice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
+            if (!selectedTTSVoice) selectedTTSVoice = voices.find(v => {
                 const lang = v.lang.toLowerCase(), name = v.name.toLowerCase();
                 return lang.includes('hk') || lang.includes('yue') || name.includes('cantonese');
-            }) || voices.find(v => v.lang.toLowerCase().includes('zh'));
+            }) || voices.find(v => v.lang.toLowerCase().includes('zh')) || null;
 
             elements.forEach((el) => {
                 const text = getTTSPlainText(el);
@@ -2438,45 +2555,11 @@
                 el.classList.add('readable-item');
                 const newEl = el.cloneNode(true);
                 el.parentNode.replaceChild(newEl, el);
-                const chunks = splitTTSText(text);
-                chunks.forEach((chunk) => {
-                    const u = new SpeechSynthesisUtterance(chunk);
-                    if (voice) {
-                        u.voice = voice;
-                        u.lang = voice.lang;
-                    }
-                    u.rate = currentRate;
-                    const uIndex = utterances.length;
-                    u.onstart = () => {
-                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
-                        newEl.classList.add('reading-highlight');
-                        if (isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        SafeStorage.set('ttsBookmark_' + document.title, uIndex);
-                        currentIndex = uIndex;
-                    };
-                    u.onend = () => {
-                        if (uIndex === utterances.length - 1 || !isPlaying || isPaused || isManualJump) {
-                            newEl.classList.remove('reading-highlight', 'paused-highlight');
-                        }
-                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
-                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
-                            else stopExportTts();
-                        }
-                    };
-                    u.onerror = (event) => {
-                        console.warn('[PureRead HK] TTS chunk failed:', event.error, chunk.slice(0, 80));
-                        if (isPlaying && !isPaused && !isManualJump && currentIndex === uIndex) {
-                            if (uIndex + 1 < utterances.length) playUtterance(uIndex + 1);
-                            else stopExportTts();
-                        }
-                    };
-                    utterances.push({ u, el: newEl });
-                });
+                splitTTSText(text).forEach(chunk => utterances.push({ text: chunk, el: newEl }));
                 newEl.addEventListener('click', (e) => {
                     if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
                     if (e.target.closest('.util-copy-btn')) return;
-                    const isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
-                    if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return;
+                    if (document.querySelector('.delete-mode-active') !== null || document.body.dataset.clickRead === 'off') return;
                     e.preventDefault();
                     e.stopPropagation();
                     const firstIndex = utterances.findIndex(item => item.el === newEl);
@@ -2490,31 +2573,107 @@
             });
         }
 
-        function playUtterance(index) {
-            if (index >= utterances.length) return;
+        function playUtterance(index, retryCount = 0) {
+            if (!isPlaying || index >= utterances.length) return;
+            const runToken = speechRunToken;
+            const item = utterances[index];
+            const u = new SpeechSynthesisUtterance(item.text);
+            let settled = false;
+            let lastBoundary = -1;
+            let boundarySeen = false;
             currentIndex = index;
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(utterances[index].u);
+            if (selectedTTSVoice) {
+                u.voice = selectedTTSVoice;
+                u.lang = selectedTTSVoice.lang;
+            }
+            u.rate = currentRate;
+            activeSpeech = u;
+            const retryCurrentChunk = (reason) => {
+                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
+                settled = true;
+                activeSpeech = null;
+                item.el.classList.add('reading-highlight');
+                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
+                console.warn('[PureRead HK] TTS chunk incomplete:', reason, item.text.slice(0, 80));
+                if (retryCount < 5) {
+                    setTimeout(() => {
+                        if (isPlaying && !isPaused && !isManualJump && currentIndex === index && runToken === speechRunToken) playUtterance(index, retryCount + 1);
+                    }, 300 + retryCount * 200);
+                } else {
+                    isPlaying = false;
+                    console.warn('[PureRead HK] TTS stopped on the same chunk after retries; it was not skipped.');
+                }
+            };
+            const advance = () => {
+                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
+                const expectedTail = Math.max(3, Math.floor(item.text.length * 0.15));
+                if (boundarySeen && lastBoundary < item.text.length - expectedTail) {
+                    retryCurrentChunk('early-end');
+                    return;
+                }
+                settled = true;
+                activeSpeech = null;
+                item.el.classList.remove('reading-highlight', 'paused-highlight');
+                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
+                if (index + 1 < utterances.length) {
+                    setTimeout(() => {
+                        if (runToken === speechRunToken && isPlaying && !isPaused && !isManualJump && currentIndex === index && activeSpeech === null) playUtterance(index + 1);
+                    }, 100);
+                } else {
+                    stopExportTts();
+                }
+            };
+            u.onstart = () => {
+                if (runToken !== speechRunToken || activeSpeech !== u) return;
+                document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
+                item.el.classList.add('reading-highlight');
+                item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                SafeStorage.set('ttsBookmark_' + document.title, index);
+                currentIndex = index;
+            };
+            u.onboundary = (event) => {
+                if (runToken !== speechRunToken || activeSpeech !== u) return;
+                if (typeof event.charIndex === 'number') {
+                    boundarySeen = true;
+                    lastBoundary = Math.max(lastBoundary, event.charIndex);
+                }
+            };
+            u.onend = advance;
+            u.onerror = (event) => {
+                if (event.error === 'canceled' || event.error === 'interrupted') {
+                    if (runToken !== speechRunToken || !isPlaying || isManualJump) return;
+                }
+                retryCurrentChunk(event.error || 'speech-error');
+            };
+            window.speechSynthesis.speak(u);
         }
-        
+
         function startReadingFrom(index) {
+            speechRunToken += 1;
+            activeSpeech = null;
             isManualJump = true;
             window.speechSynthesis.cancel();
             setTimeout(() => {
-                isManualJump = false; isPlaying = true; isPaused = false;
+                isManualJump = false;
+                isPlaying = true;
+                isPaused = false;
                 playUtterance(index);
-            }, 50);
+            }, 80);
         }
 
         function stopExportTts() {
-            isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
-            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
-                e.classList.remove('reading-highlight', 'paused-highlight');
-            });
-            setTimeout(() => { isManualJump = false; }, 50);
+            speechRunToken += 1;
+            activeSpeech = null;
+            isManualJump = true;
+            window.speechSynthesis.cancel();
+            isPlaying = false;
+            isPaused = false;
+            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
+            setTimeout(() => { isManualJump = false; }, 80);
         }
-        
+
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
+
 
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
