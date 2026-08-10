@@ -189,6 +189,9 @@
         /* 仍被選中 = 將會被刪除（黃色警示） */
         .marked-for-removal { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
         .keep-mode-active .keep-selectable-item:empty { min-height: 16px; display: block; }
+        /* 空白區塊：喺選擇模式下顯示虛線框＋標示，等吉位都可以點選刪除 */
+        .keep-mode-active .keep-empty-item { display: block; min-height: 22px; outline: 2px dashed #94a3b8; border-radius: 6px; }
+        .keep-mode-active .keep-empty-item::before { content: '⬜ 空白位（可點選刪除）'; font-size: 12px; color: #64748b; }
         /* 已反選擇 = 會保留落嚟（綠色確認） */
         .keep-mode-active .selected-for-keep { background-color: #bbf7d0 !important; outline: 3px solid #16a34a !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important; position: relative; z-index: 20; }
         #cleanupLevelPanel.visible, #keepSelectionPanel.visible { display: block; }
@@ -1136,6 +1139,49 @@
         }
 
         /**
+         * 雜圖判定：追蹤像素、廣告 banner、網站 logo、佔位圖等。
+         * 呢啲圖唔應該佔用清理級別嘅「保留名額」，否則真文章圖會被錯殺。
+         */
+        function isJunkImage(img) {
+            const src = (img.getAttribute('src') || '').toLowerCase();
+            if (!src) return true;
+            if (src.startsWith('data:image/gif')) return true;   // 1x1 佔位 gif
+            // 追蹤/統計像素
+            if (/scorecardresearch|doubleclick|googlesyndication|google-analytics|facebook\.com\/tr|\/pixel|\/beacon/.test(src)) return true;
+            // 網站裝飾圖：logo、banner、推廣位、icon、按鈕、佔位圖
+            if (/(^|[^a-z])(logo|banner|promote|promo|icon|avatar|badge|sprite|spacer|blank|advert|button|appstore|google_play|loader|loading|spinner|new\.gif)s?([^a-z]|$)/.test(src)) return true;
+            if (/default\d+x\d+/.test(src)) return true;
+            // 有闊高屬性（或 inline style）而且細過 80px 嘅多數係裝飾圖
+            const w = parseInt(img.getAttribute('width') || '0', 10) || parseInt(img.style.width || '0', 10);
+            const h = parseInt(img.getAttribute('height') || '0', 10) || parseInt(img.style.height || '0', 10);
+            if ((w > 0 && w < 80) || (h > 0 && h < 80)) return true;
+            return false;
+        }
+
+        /**
+         * 冇 <article> 標籤嘅網站（如 ulifestyle）：用「文字密度」啟發式搵正文容器。
+         * 計分方法：段落文字總長度 + 深度獎勵（越深＝包得越貼身，唔會揀到成個 body wrapper）。
+         * 明顯係頁頭/頁尾/側欄/留言/推薦嘅容器直接跳過。
+         */
+        function findMainContentNode(doc) {
+            const body = doc.body;
+            if (!body) return null;
+            let best = null, bestScore = 0;
+            doc.querySelectorAll('main, section, div').forEach(el => {
+                const idClass = `${el.className || ''} ${el.id || ''}`;
+                if (/(^|[\s_-])(nav|header|footer|sidebar|menu|comment|related|recommend|promo|share|breadcrumb)/i.test(idClass)) return;
+                let textLen = 0;
+                el.querySelectorAll('p, h2, h3, li, td').forEach(p => { textLen += p.textContent.trim().length; });
+                if (textLen < 200) return;   // 太少文字，唔似正文
+                let depth = 0, n = el;
+                while (n && n !== body) { depth++; n = n.parentElement; }
+                const score = textLen + depth * 50;
+                if (score > bestScore) { bestScore = score; best = el; }
+            });
+            return best;
+        }
+
+        /**
          * 抽出文章內容區。WeekendHK 有兩種版式，必須兩種都覆蓋：
          *  (a) 正文內嵌 <figure> 圖 → 圖在 <article> 內，照舊處理。
          *  (b) 只有一張主題圖 (img.featured_image) → 它在 <article> **之外**，
@@ -1178,11 +1224,30 @@
             const doc = parser.parseFromString(htmlText, 'text/html');
             const coverUrl = coverOverride || doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image:src"]')?.getAttribute('content') || '';
             let wrapper = doc.querySelector('#content-wrapper') || doc.querySelector('article') || doc.querySelector('main');
+            // 冇 <article>/<main> 嘅網站（如 ulifestyle）：用文字密度啟發式搵正文，
+            // 唔好成個 body 照單全收（會連 header/選單/推薦文一齊入晒嚟）。
+            if (!wrapper) wrapper = findMainContentNode(doc);
             let targetNode = wrapper ? wrapper : doc.body;
 
             const blackList = 'button, script, style, iframe, nav, footer, aside, form, input, textarea, select, .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls';
             targetNode.querySelectorAll(blackList).forEach(el => el.remove());
             targetNode.querySelectorAll('[class~="ad"], [class*="adbox"], [class*="advert"], [class*="adsbygoogle"], [class*="ad-container"], [class*="ad-slot"], [data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]').forEach(el => el.remove());
+            // 清走追蹤像素、logo、banner 等雜圖——佢哋唔會再霸佔清理級別嘅圖片名額
+            targetNode.querySelectorAll('img').forEach(img => { if (isJunkImage(img)) (img.closest('picture') || img).remove(); });
+            // 連結密度過濾：選單／推薦文列表嘅特徵係「幾乎全部文字都係連結」。
+            // 由外向內掃：連結文字佔比 > 60% 而且有 3 條或以上連結嘅容器，整個移除。
+            Array.from(targetNode.querySelectorAll('div, ul, ol, section, header')).forEach(el => {
+                if (!el.isConnected) return;                       // 祖先已被刪
+                if (el.querySelector('img[src*="/content/"], picture, video')) return; // 有正文媒體就唔郁
+                // 【重要】用「淨字元」計（清晒空白），否則選單啲 tab/換行會灌大分母
+                const text = el.textContent.replace(/\s+/g, '');
+                if (!text || text.length > 2000) return;           // 太長唔似選單
+                const links = el.querySelectorAll('a');
+                if (links.length < 3) return;
+                let linkLen = 0;
+                links.forEach(a => { linkLen += a.textContent.replace(/\s+/g, '').length; });
+                if (linkLen / text.length > 0.6) el.remove();
+            });
 
             targetNode.querySelectorAll('a').forEach(a => {
                 const href = a.getAttribute('href') || '';
@@ -1204,6 +1269,10 @@
                 el.removeAttribute('data-click-read');
             });
 
+            // 空 SVG（冇任何圖形內容）會被 height:auto 撐到成千 px 高，變成大片空白
+            targetNode.querySelectorAll('svg').forEach(svg => {
+                if (!svg.querySelector('path, circle, rect, line, polygon, polyline, ellipse, text, use, image')) svg.remove();
+            });
             targetNode.querySelectorAll('p, div, span, section, figure').forEach(el => {
                 const hasMedia = el.querySelector('img, svg, picture, canvas, video, iframe') !== null;
                 const hasText = el.innerText.trim().length > 0;
@@ -1557,6 +1626,8 @@
                 const href = a.getAttribute('href') || '';
                 if (/facebook\.com\/sharer|twitter\.com\/intent|linkedin\.com\/share/i.test(href)) a.remove();
             });
+            // 雜圖（追蹤像素/logo/banner）直接刪，唔畀佢哋霸佔保留名額
+            root.querySelectorAll('img').forEach(img => { if (isJunkImage(img)) (img.closest('picture') || img).remove(); });
             const allImages = Array.from(root.querySelectorAll('img'));
             if (cleanupLevel === 2) {
                 allImages.forEach((img, index) => {
@@ -1627,10 +1698,13 @@
             const excluded = 'script, style, template, svg, [hidden], [aria-hidden="true"], .util-copy-btn';
             const media = 'img, picture, figure, table, video, iframe, canvas, object, embed';
             // 先清走舊有標記，確保切換細緻度之後，區塊邊界會跟隨新設定重新計算。
-            contentArea.querySelectorAll('.keep-selectable-item').forEach(el => el.classList.remove('keep-selectable-item'));
+            contentArea.querySelectorAll('.keep-selectable-item').forEach(el => el.classList.remove('keep-selectable-item', 'keep-empty-item'));
             const add = (el) => {
                 if (!el || el === contentArea || el.matches(excluded) || el.closest('.util-copy-btn')) return;
                 el.classList.add('keep-selectable-item');
+                // 空白區塊（冇文字又冇圖片）：加標示 class，等佢喺選擇模式下有虛線框可以睇到、點到。
+                const isEmpty = !el.textContent.trim() && !el.matches(media) && !el.querySelector(media);
+                el.classList.toggle('keep-empty-item', isEmpty);
                 items.push(el);
             };
 
