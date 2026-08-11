@@ -3,8 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- 【圖片防盜連對策】唔送 Referer：好多新聞網站圖片伺服器見到外站 Referer 就封鎖（403） -->
-    <meta name="referrer" content="no-referrer">
     <meta name="description" content="PureRead HK（純淨閱讀器）是一個以繁體中文介面打造的純淨閱讀及朗讀工具，可提取文章、整理排版、刪除多餘段落，並支援文字朗讀與高光標示。">
     <meta name="theme-color" content="#4f46e5">
     <meta property="og:title" content="PureRead HK｜純淨閱讀器">
@@ -187,13 +185,9 @@
         .delete-target-hover { outline: 2px dashed #ef4444 !important; background-color: rgba(239, 68, 68, 0.05) !important; border-radius: 4px; opacity: 0.8; }
         .selected-for-deletion { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
         .keep-mode-active * { cursor: crosshair !important; }
-        .keep-mode-active a { pointer-events: auto !important; cursor: crosshair !important; text-decoration: underline !important; }
+        .keep-mode-active a { pointer-events: none !important; cursor: crosshair !important; }
         /* 仍被選中 = 將會被刪除（黃色警示） */
         .marked-for-removal { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
-        .keep-mode-active .keep-selectable-item:empty { min-height: 16px; display: block; }
-        /* 空白區塊：喺選擇模式下顯示虛線框＋標示，等吉位都可以點選刪除 */
-        .keep-mode-active .keep-empty-item { display: block; min-height: 22px; outline: 2px dashed #94a3b8; border-radius: 6px; }
-        .keep-mode-active .keep-empty-item::before { content: '⬜ 空白位（可點選刪除）'; font-size: 12px; color: #64748b; }
         /* 已反選擇 = 會保留落嚟（綠色確認） */
         .keep-mode-active .selected-for-keep { background-color: #bbf7d0 !important; outline: 3px solid #16a34a !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important; position: relative; z-index: 20; }
         #cleanupLevelPanel.visible, #keepSelectionPanel.visible { display: block; }
@@ -207,9 +201,6 @@
         
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         .fab-container, .fab-container * { box-sizing: border-box; }
-        .fab-menu { display: contents; }
-        .fab-container > .scroll-btn, .fab-container > .trash-btn { display: flex; }
-        .fab-container > .scroll-btn.hidden, .fab-container > .trash-btn.hidden { display: none !important; }
         
         .fab-toggle { 
             background: linear-gradient(225deg, #f3e8ff 0%, #a855f7 50%, #7e22ce 100%); 
@@ -368,16 +359,8 @@
                 <p id="cleanupLevelNote" class="mt-2 text-xs text-indigo-700">先提取文章，再選擇清理級別；不同級別會按比例過濾圖片。</p>
             </div>
             <div id="keepSelectionPanel" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <div class="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-                    <label for="keepGranularity" class="whitespace-nowrap font-bold text-emerald-900">選取細緻度</label>
-                    <select id="keepGranularity" onchange="changeKeepGranularity()" class="flex-1 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-emerald-900">
-                        <option value="coarse">大段・最粗（成個大區做一個單位）</option>
-                        <option value="medium" selected>中等・逐段（一段文字／一個列表做一個單位）</option>
-                        <option value="fine">細碎・最細（逐句逐項逐張圖）</option>
-                    </select>
-                </div>
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <button id="keepSelectAllBtn" onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
+                    <button onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
                     <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 反選擇要保留嘅項目</div>
                     <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除仍選中內容</button>
                 </div>
@@ -395,13 +378,24 @@
     </div>
 
     <div class="fab-container">
-        <details class="fab-menu">
-
         <!-- 套用事件攔截，防止瞬間觸發全域點擊事件而關閉選單 -->
-                <summary class="fab-toggle" title="選單">
+        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </summary>
-<div class="control-panel" id="readerControls">
+        </button>
+        
+        <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        
+        <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
+        
+        <button id="fabExecuteDeleteBtn" onclick="executeDelete()" class="trash-btn hidden" title="刪除所選">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+        
+        <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
                 <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
@@ -427,22 +421,7 @@
                 </select>
             </div>
         </div>
-        </details>
-
-        
-        <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-        
-        <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-        </button>
-        
-        <button id="fabExecuteDeleteBtn" onclick="executeDelete()" class="trash-btn hidden" title="刪除所選">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-        </button>
-        
-            </div>
+    </div>
 
     <script>
         const SafeStorage = {
@@ -457,9 +436,6 @@
         // 精準保留模式：markedElements = 目前仍被「選中」、按第 3 步時會被刪除的區塊。
         // 第 1 步全選 → 全部進入此集合；第 2 步點擊（反選擇）→ 從集合移除，即成為保留項目。
         let markedElements = new Set();
-        // 選取細緻度：coarse＝大段（頂層區塊）、medium＝逐段（段落／列表／圖片各為一個單位）、fine＝最細碎（原有行為）。
-        let keepGranularity = 'medium';
-        const KEEP_GRANULARITY_KEY = 'pureReadKeepGranularity_v1';
         let cleanupLevel = 3;
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
@@ -595,7 +571,6 @@
             if (hasSavedHTML && record.baseHTML) {
                 isApplyingEditRecord = true;
                 contentArea.innerHTML = sanitizeContentHTML(record.currentHTML);
-                applyTraditionalConversion(false);
                 normalizeMediaSources(contentArea, document.baseURI);
                 processLongURLs(contentArea);
                 isApplyingEditRecord = false;
@@ -861,13 +836,6 @@
             }
             renderUrlHistory();
             updateClearUrlButton();
-            // 還原上次揀嘅選取細緻度。
-            const savedGranularity = SafeStorage.get(KEEP_GRANULARITY_KEY);
-            if (savedGranularity && ['coarse', 'medium', 'fine'].includes(savedGranularity)) {
-                keepGranularity = savedGranularity;
-                const granularitySel = document.getElementById('keepGranularity');
-                if (granularitySel) granularitySel.value = savedGranularity;
-            }
             document.getElementById('urlInput')?.addEventListener('input', updateClearUrlButton);
             checkScrollButtons();
 
@@ -990,58 +958,6 @@
         }
 
         /**
-         * 【圖片載入失敗自動補救】好多網站圖片直連會失敗，常見原因：
-         *   1. 防盜連（檢查 Referer/Origin，外站一律 403）
-         *   2. 「原圖還原」剝咗簽名參數，變咗無效網址
-         *   3. http:// 圖片喺 https 頁面被封鎖（混合內容）
-         * 補救次序：fallback 原網址 → weserv 圖片代理（伺服器端代攞，冇 Referer 問題）。
-         * 用 capture phase 喺 document 層面接住所有 img error，唔使逐張綁。
-         */
-        function imageProxyUrl(u) {
-            if (!u || !/^https?:\/\//i.test(u)) return '';
-            return 'https://images.weserv.nl/?url=' + encodeURIComponent(u);
-        }
-        document.addEventListener('error', (e) => {
-            const img = e.target;
-            if (!img || img.tagName !== 'IMG' || !contentArea.contains(img)) return;
-            const stage = img.getAttribute('data-recover-stage') || '';
-            const currentSrc = img.getAttribute('src') || '';
-            if (!stage) {
-                // 第 1 步：有 fallback（未剝參數嘅原網址）就先試佢
-                const fb = img.getAttribute('data-fallback-src');
-                img.setAttribute('data-recover-stage', 'fallback');
-                if (fb && fb !== currentSrc) {
-                    // <picture> 嘅 <source> 會蓋過 <img src>，要一齊清走先會生效
-                    const pic = img.closest('picture');
-                    if (pic) pic.querySelectorAll('source').forEach(s => s.remove());
-                    img.removeAttribute('srcset');
-                    img.setAttribute('src', fb);
-                    return;
-                }
-                // 冇 fallback 就直接跳去代理
-            }
-            if (stage === '' || stage === 'fallback') {
-                // 第 2 步：經圖片代理伺服器代攞（繞過防盜連）
-                const target = img.getAttribute('data-fallback-src') || currentSrc;
-                const proxied = imageProxyUrl(target.startsWith('https://images.weserv.nl') ? '' : target);
-                img.setAttribute('data-recover-stage', 'proxy');
-                if (proxied && proxied !== currentSrc) {
-                    const pic = img.closest('picture');
-                    if (pic) pic.querySelectorAll('source').forEach(s => s.remove());
-                    img.removeAttribute('srcset');
-                    img.setAttribute('src', proxied);
-                    return;
-                }
-            }
-            // 全部方法都失敗：畀返個明顯提示，等用戶知道呢度本來有張圖
-            if (stage === 'proxy') {
-                img.setAttribute('data-recover-stage', 'gave-up');
-                img.style.setProperty('min-height', '40px');
-                img.alt = img.alt || '⚠️ 圖片無法載入';
-            }
-        }, true);
-
-        /**
          * 【原圖還原 v1】把 CDN 縮圖網址還原成原圖網址。
          * 實測針對 imgs.weekendhk.com 這類 WordPress + 圖片 CDN 架構：
          *   1. 清 ?v=1 之類 cache-buster
@@ -1144,19 +1060,7 @@
 
                 if (bestSrc) {
                     // 先解析成絕對網址，再還原成原圖
-                    let rawResolved = resolveMediaUrl(bestSrc, baseUrl);
-                    // 【混合內容修正】HTTPS 頁面載入 http:// 圖片會被瀏覽器直接封鎖，
-                    // 一律升級做 https（載入失敗會經 fallback 機制退返原網址）。
-                    if (rawResolved.startsWith('http://')) {
-                        el.setAttribute('data-fallback-src', rawResolved);
-                        rawResolved = 'https://' + rawResolved.slice(7);
-                    }
-                    const resolved = toOriginalImageUrl(rawResolved);
-                    // 【原圖還原保險】剝走 ?參數／尺寸後綴有機會整死簽名網址；
-                    // 記低未剝之前條網址，載入失敗時自動退返用佢。
-                    if (resolved !== rawResolved && !el.hasAttribute('data-fallback-src')) {
-                        el.setAttribute('data-fallback-src', rawResolved);
-                    }
+                    const resolved = toOriginalImageUrl(resolveMediaUrl(bestSrc, baseUrl));
                     el.setAttribute('src', resolved);
                     el.removeAttribute('loading');
                     el.removeAttribute('decoding');
@@ -1205,49 +1109,6 @@
         }
 
         /**
-         * 雜圖判定：追蹤像素、廣告 banner、網站 logo、佔位圖等。
-         * 呢啲圖唔應該佔用清理級別嘅「保留名額」，否則真文章圖會被錯殺。
-         */
-        function isJunkImage(img) {
-            const src = (img.getAttribute('src') || '').toLowerCase();
-            if (!src) return true;
-            if (src.startsWith('data:image/gif')) return true;   // 1x1 佔位 gif
-            // 追蹤/統計像素
-            if (/scorecardresearch|doubleclick|googlesyndication|google-analytics|facebook\.com\/tr|\/pixel|\/beacon/.test(src)) return true;
-            // 網站裝飾圖：logo、banner、推廣位、icon、按鈕、佔位圖
-            if (/(^|[^a-z])(logo|banner|promote|promo|icon|avatar|badge|sprite|spacer|blank|advert|button|appstore|google_play|loader|loading|spinner|new\.gif)s?([^a-z]|$)/.test(src)) return true;
-            if (/default\d+x\d+/.test(src)) return true;
-            // 有闊高屬性（或 inline style）而且細過 80px 嘅多數係裝飾圖
-            const w = parseInt(img.getAttribute('width') || '0', 10) || parseInt(img.style.width || '0', 10);
-            const h = parseInt(img.getAttribute('height') || '0', 10) || parseInt(img.style.height || '0', 10);
-            if ((w > 0 && w < 80) || (h > 0 && h < 80)) return true;
-            return false;
-        }
-
-        /**
-         * 冇 <article> 標籤嘅網站（如 ulifestyle）：用「文字密度」啟發式搵正文容器。
-         * 計分方法：段落文字總長度 + 深度獎勵（越深＝包得越貼身，唔會揀到成個 body wrapper）。
-         * 明顯係頁頭/頁尾/側欄/留言/推薦嘅容器直接跳過。
-         */
-        function findMainContentNode(doc) {
-            const body = doc.body;
-            if (!body) return null;
-            let best = null, bestScore = 0;
-            doc.querySelectorAll('main, section, div').forEach(el => {
-                const idClass = `${el.className || ''} ${el.id || ''}`;
-                if (/(^|[\s_-])(nav|header|footer|sidebar|menu|comment|related|recommend|promo|share|breadcrumb)/i.test(idClass)) return;
-                let textLen = 0;
-                el.querySelectorAll('p, h2, h3, li, td').forEach(p => { textLen += p.textContent.trim().length; });
-                if (textLen < 200) return;   // 太少文字，唔似正文
-                let depth = 0, n = el;
-                while (n && n !== body) { depth++; n = n.parentElement; }
-                const score = textLen + depth * 50;
-                if (score > bestScore) { bestScore = score; best = el; }
-            });
-            return best;
-        }
-
-        /**
          * 抽出文章內容區。WeekendHK 有兩種版式，必須兩種都覆蓋：
          *  (a) 正文內嵌 <figure> 圖 → 圖在 <article> 內，照舊處理。
          *  (b) 只有一張主題圖 (img.featured_image) → 它在 <article> **之外**，
@@ -1290,30 +1151,11 @@
             const doc = parser.parseFromString(htmlText, 'text/html');
             const coverUrl = coverOverride || doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image:src"]')?.getAttribute('content') || '';
             let wrapper = doc.querySelector('#content-wrapper') || doc.querySelector('article') || doc.querySelector('main');
-            // 冇 <article>/<main> 嘅網站（如 ulifestyle）：用文字密度啟發式搵正文，
-            // 唔好成個 body 照單全收（會連 header/選單/推薦文一齊入晒嚟）。
-            if (!wrapper) wrapper = findMainContentNode(doc);
             let targetNode = wrapper ? wrapper : doc.body;
 
             const blackList = 'button, script, style, iframe, nav, footer, aside, form, input, textarea, select, .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls';
             targetNode.querySelectorAll(blackList).forEach(el => el.remove());
             targetNode.querySelectorAll('[class~="ad"], [class*="adbox"], [class*="advert"], [class*="adsbygoogle"], [class*="ad-container"], [class*="ad-slot"], [data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]').forEach(el => el.remove());
-            // 清走追蹤像素、logo、banner 等雜圖——佢哋唔會再霸佔清理級別嘅圖片名額
-            targetNode.querySelectorAll('img').forEach(img => { if (isJunkImage(img)) (img.closest('picture') || img).remove(); });
-            // 連結密度過濾：選單／推薦文列表嘅特徵係「幾乎全部文字都係連結」。
-            // 由外向內掃：連結文字佔比 > 60% 而且有 3 條或以上連結嘅容器，整個移除。
-            Array.from(targetNode.querySelectorAll('div, ul, ol, section, header')).forEach(el => {
-                if (!el.isConnected) return;                       // 祖先已被刪
-                if (el.querySelector('img[src*="/content/"], picture, video')) return; // 有正文媒體就唔郁
-                // 【重要】用「淨字元」計（清晒空白），否則選單啲 tab/換行會灌大分母
-                const text = el.textContent.replace(/\s+/g, '');
-                if (!text || text.length > 2000) return;           // 太長唔似選單
-                const links = el.querySelectorAll('a');
-                if (links.length < 3) return;
-                let linkLen = 0;
-                links.forEach(a => { linkLen += a.textContent.replace(/\s+/g, '').length; });
-                if (linkLen / text.length > 0.6) el.remove();
-            });
 
             targetNode.querySelectorAll('a').forEach(a => {
                 const href = a.getAttribute('href') || '';
@@ -1335,10 +1177,6 @@
                 el.removeAttribute('data-click-read');
             });
 
-            // 空 SVG（冇任何圖形內容）會被 height:auto 撐到成千 px 高，變成大片空白
-            targetNode.querySelectorAll('svg').forEach(svg => {
-                if (!svg.querySelector('path, circle, rect, line, polygon, polyline, ellipse, text, use, image')) svg.remove();
-            });
             targetNode.querySelectorAll('p, div, span, section, figure').forEach(el => {
                 const hasMedia = el.querySelector('img, svg, picture, canvas, video, iframe') !== null;
                 const hasText = el.innerText.trim().length > 0;
@@ -1535,23 +1373,11 @@
         function renderContent(rawHTML) {
             const cleanHTML = DOMPurify.sanitize(rawHTML, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-fallback-src']
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
             });
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
             contentArea.innerHTML = cleanHTML;
-            if (!applyTraditionalConversion(false)) {
-                setTimeout(() => {
-                    if (applyTraditionalConversion(false)) {
-                        cleanupPreviewHTML = sanitizeContentHTML(contentArea.innerHTML);
-                        cleanupBaselineHTML = cleanupPreviewHTML;
-                        prepareTTS();
-                        injectSmartButtons();
-                    }
-                }, 300);
-            }
-            cleanupPreviewHTML = sanitizeContentHTML(contentArea.innerHTML);
-            cleanupBaselineHTML = cleanupPreviewHTML;
             // 【修正】base 要用「文章來源網址」，唔係 App 自己的 document.baseURI，
             // 否則相對路徑圖片會被解析到 App 網域，變成 404。
             const mediaBase = currentArticleUrl || document.baseURI;
@@ -1620,27 +1446,11 @@
         function sanitizeContentHTML(html) {
             return DOMPurify.sanitize(html, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-fallback-src']
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
             });
         }
 
         let openccConverter = null;
-
-        function applyTraditionalConversion(updateSnapshots = true) {
-            if (!contentArea || !window.OpenCC) return false;
-            if (!openccConverter) openccConverter = window.OpenCC.Converter({ from: 'cn', to: 'hk' });
-            if (articleTitle) articleTitle = openccConverter(articleTitle);
-            const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, null, false);
-            let node;
-            while (node = walker.nextNode()) {
-                if (node.nodeValue && node.nodeValue.trim()) node.nodeValue = openccConverter(node.nodeValue);
-            }
-            if (updateSnapshots) {
-                cleanupPreviewHTML = sanitizeContentHTML(contentArea.innerHTML);
-                cleanupBaselineHTML = cleanupPreviewHTML;
-            }
-            return true;
-        }
 
         function convertToTraditional() {
             if (!contentArea || !contentArea.children.length) {
@@ -1648,11 +1458,24 @@
                 return;
             }
             try {
-                if (!applyTraditionalConversion(true)) {
+                if (!openccConverter && window.OpenCC) {
+                    openccConverter = window.OpenCC.Converter({ from: 'cn', to: 'hk' });
+                }
+                if (!openccConverter) {
                     showError('⚠️ 簡轉繁模組載入中，請稍後再試。');
                     return;
                 }
-
+                
+                if (articleTitle) articleTitle = openccConverter(articleTitle);
+                
+                const walker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    if (node.nodeValue && node.nodeValue.trim()) {
+                        node.nodeValue = openccConverter(node.nodeValue);
+                    }
+                }
+                
                 prepareTTS();
                 injectSmartButtons();
                 saveCurrentEditRecord();
@@ -1670,7 +1493,6 @@
             
             if (cleanupLevel === 0) {
                 contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
-                applyTraditionalConversion(false);
                 normalizeMediaSources(contentArea, document.baseURI);
                 promoteLinkedImageTargets(contentArea, document.baseURI);
                 processLongURLs(contentArea);
@@ -1692,8 +1514,6 @@
                 const href = a.getAttribute('href') || '';
                 if (/facebook\.com\/sharer|twitter\.com\/intent|linkedin\.com\/share/i.test(href)) a.remove();
             });
-            // 雜圖（追蹤像素/logo/banner）直接刪，唔畀佢哋霸佔保留名額
-            root.querySelectorAll('img').forEach(img => { if (isJunkImage(img)) (img.closest('picture') || img).remove(); });
             const allImages = Array.from(root.querySelectorAll('img'));
             if (cleanupLevel === 2) {
                 allImages.forEach((img, index) => {
@@ -1711,7 +1531,6 @@
                 allImages.forEach(img => (img.closest('figure') || img).remove());
             }
             contentArea.innerHTML = sanitizeContentHTML(root.innerHTML);
-            applyTraditionalConversion(false);
             normalizeMediaSources(contentArea, document.baseURI);
             promoteLinkedImageTargets(contentArea, document.baseURI);
             const record = ensureCurrentEditRecord();
@@ -1738,7 +1557,6 @@
             if (!cleanupPreviewHTML) return;
             cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
             contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
-            applyTraditionalConversion(false);
             normalizeMediaSources(contentArea, document.baseURI);
             const record = ensureCurrentEditRecord();
             if (record) record.cleanupApplied = false;
@@ -1760,85 +1578,7 @@
         }
 
         function getSelectableElements() {
-            const items = [];
-            const excluded = 'script, style, template, svg, [hidden], [aria-hidden="true"], .util-copy-btn';
-            const media = 'img, picture, figure, table, video, iframe, canvas, object, embed';
-            // 先清走舊有標記，確保切換細緻度之後，區塊邊界會跟隨新設定重新計算。
-            contentArea.querySelectorAll('.keep-selectable-item').forEach(el => el.classList.remove('keep-selectable-item', 'keep-empty-item'));
-            const add = (el) => {
-                if (!el || el === contentArea || el.matches(excluded) || el.closest('.util-copy-btn')) return;
-                el.classList.add('keep-selectable-item');
-                // 空白區塊（冇文字又冇圖片）：加標示 class，等佢喺選擇模式下有虛線框可以睇到、點到。
-                const isEmpty = !el.textContent.trim() && !el.matches(media) && !el.querySelector(media);
-                el.classList.toggle('keep-empty-item', isEmpty);
-                items.push(el);
-            };
-
-            if (keepGranularity === 'coarse') {
-                // 大段（最粗）：contentArea 每個頂層子元素當一個單位，唔再向下拆。
-                Array.from(contentArea.children).forEach(el => {
-                    if (el.matches(excluded)) return;
-                    add(el);
-                });
-                return items;
-            }
-
-            if (keepGranularity === 'medium') {
-                // 中等（逐段）：一段文字／一個標題／成個列表／一張圖各自係一個單位；
-                // 純容器（div、section 等）就繼續向下行，唔會又選容器又選入面嘅嘢。
-                const unit = 'p, h1, h2, h3, h4, h5, h6, ul, ol, dl, table, blockquote, pre, figure, hr, img, picture, video, iframe, canvas, object, embed';
-                const walkMedium = (parent) => {
-                    Array.from(parent.children).forEach(el => {
-                        if (el.matches(excluded)) return;
-                        if (el.matches(unit)) { add(el); return; }
-                        const children = Array.from(el.children).filter(child => !child.matches(excluded));
-                        const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-                        const hasRenderableChildren = children.some(child => child.tagName !== 'BR');
-                        if (!hasRenderableChildren || hasDirectText) { add(el); return; }
-                        walkMedium(el);
-                    });
-                };
-                walkMedium(contentArea);
-                return items;
-            }
-
-            // 細碎（最細）：原有行為，逐句逐項逐張圖咁拆。
-            const walk = (parent) => {
-                Array.from(parent.children).forEach(el => {
-                    if (el.matches(excluded)) return;
-                    const children = Array.from(el.children).filter(child => !child.matches(excluded));
-                    const hasText = Boolean(el.textContent.trim());
-                    const hasMedia = Boolean(el.querySelector(media));
-                    const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-                    const hasRenderableChildren = children.some(child => child.tagName !== 'BR');
-                    if (!hasText && !hasMedia && !hasRenderableChildren) {
-                        add(el);
-                        return;
-                    }
-                    if (!children.length || hasDirectText || el.matches(media)) add(el);
-                    if (children.length) walk(el);
-                });
-            };
-            walk(contentArea);
-            return items;
-        }
-
-        function changeKeepGranularity() {
-            const sel = document.getElementById('keepGranularity');
-            if (!sel) return;
-            keepGranularity = sel.value;
-            SafeStorage.set(KEEP_GRANULARITY_KEY, keepGranularity);
-            const note = document.getElementById('keepSelectionNote');
-            if (isKeepMode && markedElements.size > 0) {
-                // 已經開始咗選擇流程 → 按新細緻度重新全選（之前嘅反選擇會重置）。
-                contentArea.querySelectorAll('.selected-for-keep').forEach(el => el.classList.remove('selected-for-keep'));
-                contentArea.querySelectorAll('.marked-for-removal').forEach(el => el.classList.remove('marked-for-removal'));
-                markedElements.clear();
-                selectAllKeepSelection();
-                if (note) note.textContent = `已按新細緻度重新選擇全部（共 ${markedElements.size} 個區塊）；之前嘅反選擇需要重新點選。`;
-            } else if (note) {
-                note.textContent = '已更新選取細緻度；撳第 1 步「選擇全部」就會按新設定分區。';
-            }
+            return Array.from(contentArea.children).filter(el => el.textContent.trim() || el.querySelector('img, picture, figure, table'));
         }
 
         function syncDeleteButtons() {
@@ -1865,21 +1605,16 @@
                 el.classList.add('marked-for-removal');
                 el.classList.remove('selected-for-keep');
             });
-            const selectAllBtn = document.getElementById('keepSelectAllBtn');
-            if (selectAllBtn) {
-                selectAllBtn.textContent = '✅ 已全選（逐件揀要保留）';
-                selectAllBtn.className = 'rounded-lg border border-amber-700 bg-amber-300 px-3 py-2 font-bold text-amber-950 shadow-sm hover:bg-amber-400';
-            }
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已選擇 ${markedElements.size} 個細小區塊（黃色＝將被刪除）。第 2 步：逐件點擊你想保留嘅區塊，佢會變綠色；最後撳第 3 步刪除其餘黃色內容。`;
+            if (note) note.textContent = `已全選 ${markedElements.size} 個區塊（黃色＝將被刪除）。第 2 步：點擊你想「保留」嘅區塊做反選擇，佢會變綠色；最後撳第 3 步刪除其餘黃色內容。`;
             syncDeleteButtons();
             updateCleanupPanels();
         }
 
         function toggleKeepElement(e) {
             if (!isKeepMode) return;
-            const target = e.target.closest('.keep-selectable-item');
-            if (!target || !contentArea.contains(target)) return;
+            const target = e.target.closest('#content-wrapper > *');
+            if (!target) return;
             e.preventDefault();
             e.stopPropagation();
             if (markedElements.has(target)) {
@@ -1896,7 +1631,7 @@
             const selectable = getSelectableElements();
             const keepCount = selectable.length - markedElements.size;
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已反選擇（保留）${keepCount} 個細小區塊（綠色）；仍有 ${markedElements.size} 個區塊處於選中狀態（黃色），撳第 3 步就會刪除呢批。`;
+            if (note) note.textContent = `已反選擇（保留）${keepCount} 個區塊（綠色）；仍有 ${markedElements.size} 個區塊處於選中狀態（黃色），撳第 3 步就會刪除呢批。`;
             syncDeleteButtons();
         }
 
@@ -1907,11 +1642,6 @@
             contentArea.removeEventListener('click', toggleKeepElement);
             contentArea.querySelectorAll('.selected-for-keep').forEach(el => el.classList.remove('selected-for-keep'));
             contentArea.querySelectorAll('.marked-for-removal').forEach(el => el.classList.remove('marked-for-removal'));
-            const selectAllBtn = document.getElementById('keepSelectAllBtn');
-            if (selectAllBtn) {
-                selectAllBtn.textContent = '1️⃣ 選擇全部';
-                selectAllBtn.className = 'rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700';
-            }
             const note = document.getElementById('keepSelectionNote');
             if (note) note.textContent = '已取消所有選擇；如要開始，請撳第 1 步「選擇全部」。';
             syncDeleteButtons();
@@ -2100,7 +1830,6 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
-                if (controls.closest('.fab-container')) return;
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
@@ -2141,7 +1870,6 @@
         }
 
         let isPlaying = false, isPaused = false, isManualJump = false;
-        let speechRunToken = 0, activeSpeech = null, selectedTTSVoice = null;
         let utterances = [], currentIndex = parseInt(SafeStorage.get('ttsBookmark_' + document.title)) || 0;
         
         let selectedVoiceName = SafeStorage.get('ttsVoiceName_v18') || ''; 
@@ -2219,197 +1947,94 @@
             if (typeof injectSmartButtons === 'function') injectSmartButtons();
         }
 
-        function getTTSPlainText(el) {
-            const clone = el.cloneNode(true);
-            clone.querySelectorAll('.util-copy-btn, script, style, button, input, textarea, select').forEach(node => node.remove());
-            return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
-        }
-
-        function collectTTSReadableElements(wrapper) {
-            const semanticSelector = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figcaption, dt, dd, td, th, caption';
-            const excludedSelector = 'script, style, button, input, textarea, select, template, svg';
-            const semantic = Array.from(wrapper.querySelectorAll(semanticSelector)).filter(el => {
-                return !el.closest(excludedSelector) && getTTSPlainText(el) && !el.querySelector(semanticSelector);
-            });
-            const fallback = Array.from(wrapper.querySelectorAll('*')).filter(el => {
-                if (el.matches(excludedSelector) || el.closest(semanticSelector)) return false;
-                if (!getTTSPlainText(el)) return false;
-                const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-                if (!hasDirectText) return false;
-                return !Array.from(el.querySelectorAll('*')).some(child => {
-                    if (child.matches(excludedSelector) || child.closest(semanticSelector)) return false;
-                    return Array.from(child.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-                });
-            });
-            return semantic.concat(fallback).sort((a, b) => {
-                if (a === b) return 0;
-                return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-            });
-        }
-
-        function getTTSChunkLimit(text) {
-            const value = String(text || '');
-            const cjkCount = (value.match(/[\u2e80-\u2fff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g) || []).length;
-            return cjkCount / Math.max(value.length, 1) > 0.25 ? 48 : 90;
-        }
-
-        function splitTTSText(text, maxLength = getTTSChunkLimit(text)) {
-            const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-            if (!normalized) return [];
-            const chunks = [];
-            let rest = normalized;
-            while (rest.length > maxLength) {
-                let cut = -1;
-                const preferred = /[。！？!?；;：:，,、]\s*/g;
-                let match;
-                while ((match = preferred.exec(rest)) && match.index < maxLength) cut = match.index + match[0].length;
-                if (cut < Math.floor(maxLength * 0.55)) {
-                    const space = rest.lastIndexOf(' ', maxLength);
-                    cut = space > 0 ? space + 1 : maxLength;
-                }
-                chunks.push(rest.slice(0, cut).trim());
-                rest = rest.slice(cut).trim();
-            }
-            if (rest) chunks.push(rest);
-            return chunks;
-        }
-
         function prepareTTS() {
             utterances = [];
-            const wrapper = document.getElementById('content-wrapper');
-            if (!wrapper) return;
-            const elements = collectTTSReadableElements(wrapper);
+            let allElements = Array.from(document.getElementById('content-wrapper').querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
+            let elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
 
-            const voices = window.speechSynthesis.getVoices();
-            selectedTTSVoice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
-            if (!selectedTTSVoice) selectedTTSVoice = voices.find(v => {
+            let voices = window.speechSynthesis.getVoices();
+            let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
+            if (!voice) voice = voices.find(v => {
                 const lang = v.lang.toLowerCase(), name = v.name.toLowerCase();
                 return lang.includes('hk') || lang.includes('yue') || name.includes('cantonese');
-            }) || voices.find(v => v.lang.toLowerCase().includes('zh')) || null;
+            }) || voices.find(v => v.lang.includes('zh'));
 
             elements.forEach((el) => {
-                const text = getTTSPlainText(el);
-                if (!text) return;
-                el.classList.add('readable-item');
-                const newEl = el.cloneNode(true);
-                el.parentNode.replaceChild(newEl, el);
-                splitTTSText(text).forEach(chunk => utterances.push({ text: chunk, el: newEl }));
-                newEl.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
-                    if (e.target.closest('.util-copy-btn')) return;
-                    if (document.querySelector('.delete-mode-active') !== null || document.body.dataset.clickRead === 'off') return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const firstIndex = utterances.findIndex(item => item.el === newEl);
-                    if (firstIndex < 0) return;
-                    if (isPlaying && utterances[currentIndex]?.el === newEl) {
-                        stopExportTts();
-                        return;
+                let text = el.innerText.trim();
+                if (text) {
+                    el.classList.add('readable-item');
+                    
+                    let newEl = el.cloneNode(true);
+                    el.parentNode.replaceChild(newEl, el);
+
+                    let u = new SpeechSynthesisUtterance(text);
+                    if (voice) {
+                        u.voice = voice;
+                        u.lang = voice.lang; 
                     }
-                    startReadingFrom(firstIndex);
-                });
+                    u.rate = currentRate;
+                    
+                    let uIndex = utterances.length;
+                    u.onstart = () => {
+                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
+                            e.classList.remove('reading-highlight', 'paused-highlight');
+                        });
+                        newEl.classList.add('reading-highlight');
+                        if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        SafeStorage.set('ttsBookmark_' + document.title, uIndex);
+                        currentIndex = uIndex; 
+                    };
+                    u.onend = () => {
+                        newEl.classList.remove('reading-highlight', 'paused-highlight');
+
+                        if (isPlaying && !isPaused && !isManualJump) {
+                            if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
+                        }
+                    };
+                    
+                    utterances.push({ u: u, el: newEl });
+                    
+                    newEl.addEventListener('click', (e) => {
+                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
+                            e.preventDefault();
+                        }
+                        if(e.target.closest('.util-copy-btn')) return;
+                        
+                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
+                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
+                        
+                        e.preventDefault(); e.stopPropagation(); 
+                        
+                        if (uIndex === currentIndex && isPlaying) {
+                            stopExportTts();
+                            return;
+                        }
+
+                        startReadingFrom(uIndex);
+                    });
+                }
             });
         }
 
-        function playUtterance(index, retryCount = 0) {
-            if (!isPlaying || index >= utterances.length) return;
-            const runToken = speechRunToken;
-            const item = utterances[index];
-            const u = new SpeechSynthesisUtterance(item.text);
-            let settled = false;
-            let lastBoundary = -1;
-            let boundarySeen = false;
-            currentIndex = index;
-            if (selectedTTSVoice) {
-                u.voice = selectedTTSVoice;
-                u.lang = selectedTTSVoice.lang;
-            }
-            u.rate = currentRate;
-            activeSpeech = u;
-            const retryCurrentChunk = (reason) => {
-                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
-                settled = true;
-                activeSpeech = null;
-                item.el.classList.add('reading-highlight');
-                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
-                console.warn('[PureRead HK] TTS chunk incomplete:', reason, item.text.slice(0, 80));
-                if (retryCount < 5) {
-                    setTimeout(() => {
-                        if (isPlaying && !isPaused && !isManualJump && currentIndex === index && runToken === speechRunToken) playUtterance(index, retryCount + 1);
-                    }, 300 + retryCount * 200);
-                } else {
-                    isPlaying = false;
-                    console.warn('[PureRead HK] TTS stopped on the same chunk after retries; it was not skipped.');
-                }
-            };
-            const advance = () => {
-                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
-                const expectedTail = Math.max(3, Math.floor(item.text.length * 0.15));
-                if (boundarySeen && lastBoundary < item.text.length - expectedTail) {
-                    retryCurrentChunk('early-end');
-                    return;
-                }
-                settled = true;
-                activeSpeech = null;
-                item.el.classList.remove('reading-highlight', 'paused-highlight');
-                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
-                if (index + 1 < utterances.length) {
-                    setTimeout(() => {
-                        if (runToken === speechRunToken && isPlaying && !isPaused && !isManualJump && currentIndex === index && activeSpeech === null) playUtterance(index + 1);
-                    }, 100);
-                } else {
-                    stopExportTts();
-                }
-            };
-            u.onstart = () => {
-                if (runToken !== speechRunToken || activeSpeech !== u) return;
-                document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
-                item.el.classList.add('reading-highlight');
-                item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                SafeStorage.set('ttsBookmark_' + document.title, index);
-                currentIndex = index;
-            };
-            u.onboundary = (event) => {
-                if (runToken !== speechRunToken || activeSpeech !== u) return;
-                if (typeof event.charIndex === 'number') {
-                    boundarySeen = true;
-                    lastBoundary = Math.max(lastBoundary, event.charIndex);
-                }
-            };
-            u.onend = advance;
-            u.onerror = (event) => {
-                if (event.error === 'canceled' || event.error === 'interrupted') {
-                    if (runToken !== speechRunToken || !isPlaying || isManualJump) return;
-                }
-                retryCurrentChunk(event.error || 'speech-error');
-            };
-            window.speechSynthesis.speak(u);
-        }
-
+        function playUtterance(index) { if (index >= utterances.length) return; currentIndex = index; window.speechSynthesis.speak(utterances[index].u); }
+        
         function startReadingFrom(index) {
-            speechRunToken += 1;
-            activeSpeech = null;
             isManualJump = true;
             window.speechSynthesis.cancel();
             setTimeout(() => {
-                isManualJump = false;
-                isPlaying = true;
-                isPaused = false;
+                isManualJump = false; isPlaying = true; isPaused = false;
                 playUtterance(index);
-            }, 80);
+            }, 50);
         }
 
         function stopExportTts() {
-            speechRunToken += 1;
-            activeSpeech = null;
-            isManualJump = true;
-            window.speechSynthesis.cancel();
-            isPlaying = false;
-            isPaused = false;
-            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
-            setTimeout(() => { isManualJump = false; }, 80);
+            isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
+            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
+                e.classList.remove('reading-highlight', 'paused-highlight');
+            });
+            setTimeout(() => { isManualJump = false; }, 50);
         }
-
+        
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
         /**
@@ -2420,7 +2045,6 @@
          */
         function buildExportHTML() {
             if (isDeleteMode) toggleDeleteMode();
-            applyTraditionalConversion(false);
 
             const currentH1 = contentArea.querySelector('h1');
             if (currentH1 && currentH1.textContent.trim()) {
@@ -2443,7 +2067,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="no-referrer">
     <title>${articleTitle}</title>
     <style>
         :root { --base-font-size: 18px; }
@@ -2524,12 +2147,7 @@
         
         .fab-container { position: fixed; bottom: 16px; right: 12px; display: flex; flex-direction: column-reverse; align-items: center; gap: 10px; z-index: 1000; user-select: none; }
         .fab-container, .fab-container * { box-sizing: border-box; }
-        .fab-menu { display: contents; }
-        .fab-container > .scroll-btn, .fab-container > .trash-btn { display: flex; }
-        .fab-container > .scroll-btn.hidden, .fab-container > .trash-btn.hidden { display: none !important; }
         
-        .fab-toggle { list-style: none; }
-        .fab-toggle::-webkit-details-marker { display: none; }
         .fab-toggle { background: linear-gradient(225deg, #f3e8ff 0%, #a855f7 50%, #7e22ce 100%); color: #fff; border: 1px solid #3b0764; width: 44px !important; height: 44px !important; border-radius: 50%; font-size: 20px !important; cursor: pointer; box-shadow: -4px 4px 0px rgba(76, 29, 149, 0.45); display: flex; align-items: center; justify-content: center; transition: all 0.15s; z-index: 60; }
         .fab-toggle:hover { transform: translate(1px, -1px); box-shadow: -6px 6px 0px rgba(76, 29, 149, 0.35); }
         .fab-toggle:active { transform: translate(-3px, 3px); box-shadow: 0px 0px 0px transparent !important; }
@@ -2551,7 +2169,6 @@
         .action-btn { background: #f3e8ff; border: 1px solid rgba(147, 51, 234, 0.4); border-radius: 8px; width: 36px !important; height: 36px !important; display: flex; align-items: center; justify-content: center; color: #9333ea; font-weight: bold; cursor: pointer; transition: background 0.2s; font-size: 14px !important; }
         .action-btn:hover { background: #e9d5ff; }
         .action-btn.wide { width: auto !important; padding: 0 12px; flex: 1; margin-left: 8px; font-size: 13px !important; }
-        .fab-container > .scroll-btn.hidden, .fab-container > .trash-btn.hidden { display: none !important; }
         .hidden { display: none !important; }
         
         .custom-select { flex: 1; min-width: 0; height: 32px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-left: 12px; background: rgba(243, 232, 255, 0.6); border: 1px solid rgba(216, 180, 254, 0.8); border-radius: 8px; padding: 0 24px 0 10px; color: #6b21a8; font-size: 13px !important; font-weight: 500; outline: none; cursor: pointer; appearance: none; background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%237e22ce" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>'); background-repeat: no-repeat; background-position: right 8px center; }
@@ -2560,12 +2177,19 @@
 <body data-click-read="off">
 
     <div class="fab-container">
-        <details class="fab-menu">
-
-                <summary class="fab-toggle" title="選單">
+        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-        </summary>
-<div class="control-panel" id="readerControls">
+        </button>
+        
+        <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        
+        <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+        </button>
+        
+        <div class="control-panel collapsed" id="readerControls">
             <div class="panel-row">
                 <span class="panel-label">朗讀功能</span>
                 <button id="clickModeBtn" class="action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50" onclick="toggleClickToRead()">🔴 朗讀：關閉</button>
@@ -2591,18 +2215,7 @@
                 </select>
             </div>
         </div>
-        </details>
-
-        
-        <button id="scrollToBottomBtn" onclick="scrollToBottom()" class="scroll-btn hidden" title="捲到最底">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-        </button>
-        
-        <button id="scrollToTopBtn" onclick="scrollToTop()" class="scroll-btn hidden" title="回到頂部">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-        </button>
-        
-            </div>
+    </div>
     
     <div id="content-wrapper">
         ${finalContent}
@@ -2613,38 +2226,6 @@
             get: function(key) { try { return window.localStorage.getItem(key); } catch(e) { return null; } },
             set: function(key, val) { try { window.localStorage.setItem(key, val); } catch(e) { console.warn("Local storage disabled."); } }
         };
-
-        // 【圖片載入失敗自動補救】匯出檔同主程式一樣：先試 fallback 原網址，再經圖片代理
-        document.addEventListener('error', (e) => {
-            const img = e.target;
-            if (!img || img.tagName !== 'IMG') return;
-            const stage = img.getAttribute('data-recover-stage') || '';
-            const currentSrc = img.getAttribute('src') || '';
-            const clearPictureSources = () => {
-                const pic = img.closest('picture');
-                if (pic) pic.querySelectorAll('source').forEach(s => s.remove());
-                img.removeAttribute('srcset');
-            };
-            if (!stage) {
-                const fb = img.getAttribute('data-fallback-src');
-                img.setAttribute('data-recover-stage', 'fallback');
-                if (fb && fb !== currentSrc) { clearPictureSources(); img.setAttribute('src', fb); return; }
-            }
-            if (stage === '' || stage === 'fallback') {
-                const target = img.getAttribute('data-fallback-src') || currentSrc;
-                img.setAttribute('data-recover-stage', 'proxy');
-                if (/^https?:\/\//i.test(target) && !target.startsWith('https://images.weserv.nl')) {
-                    clearPictureSources();
-                    img.setAttribute('src', 'https://images.weserv.nl/?url=' + encodeURIComponent(target));
-                    return;
-                }
-            }
-            if (stage === 'proxy') {
-                img.setAttribute('data-recover-stage', 'gave-up');
-                img.style.minHeight = '40px';
-                img.alt = img.alt || '⚠️ 圖片無法載入';
-            }
-        }, true);
 
         function toggleReaderControls(event) {
             if (event) {
@@ -2659,7 +2240,6 @@
         document.addEventListener('click', function(event) {
             const controls = document.getElementById('readerControls');
             if (controls && !controls.classList.contains('collapsed')) {
-                if (controls.closest('.fab-container')) return;
                 if (!controls.contains(event.target)) {
                     controls.classList.add('collapsed');
                 }
@@ -2700,7 +2280,6 @@
         }
 
         let isPlaying = false, isPaused = false, isManualJump = false;
-        let speechRunToken = 0, activeSpeech = null, selectedTTSVoice = null;
         let utterances = [], currentIndex = parseInt(SafeStorage.get('ttsBookmark_' + document.title)) || 0;
         
         let selectedVoiceName = SafeStorage.get('ttsVoiceName_v18') || '';
@@ -2777,199 +2356,95 @@
             else { prepareTTS(); }
         }
 
-        function getTTSPlainText(el) {
-            const clone = el.cloneNode(true);
-            clone.querySelectorAll('.util-copy-btn, script, style, button, input, textarea, select').forEach(node => node.remove());
-            return (clone.innerText || clone.textContent || '').replace(/\s+/g, ' ').trim();
-        }
-
-        function collectTTSReadableElements(wrapper) {
-            const semanticSelector = 'h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, figcaption, dt, dd, td, th, caption';
-            const excludedSelector = 'script, style, button, input, textarea, select, template, svg';
-            const semantic = Array.from(wrapper.querySelectorAll(semanticSelector)).filter(el => {
-                return !el.closest(excludedSelector) && getTTSPlainText(el) && !el.querySelector(semanticSelector);
-            });
-            const fallback = Array.from(wrapper.querySelectorAll('*')).filter(el => {
-                if (el.matches(excludedSelector) || el.closest(semanticSelector)) return false;
-                if (!getTTSPlainText(el)) return false;
-                const hasDirectText = Array.from(el.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-                if (!hasDirectText) return false;
-                return !Array.from(el.querySelectorAll('*')).some(child => {
-                    if (child.matches(excludedSelector) || child.closest(semanticSelector)) return false;
-                    return Array.from(child.childNodes).some(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
-                });
-            });
-            return semantic.concat(fallback).sort((a, b) => {
-                if (a === b) return 0;
-                return a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
-            });
-        }
-
-        function getTTSChunkLimit(text) {
-            const value = String(text || '');
-            const cjkCount = (value.match(/[\u2e80-\u2fff\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g) || []).length;
-            return cjkCount / Math.max(value.length, 1) > 0.25 ? 48 : 90;
-        }
-
-        function splitTTSText(text, maxLength = getTTSChunkLimit(text)) {
-            const normalized = String(text || '').replace(/\s+/g, ' ').trim();
-            if (!normalized) return [];
-            const chunks = [];
-            let rest = normalized;
-            while (rest.length > maxLength) {
-                let cut = -1;
-                const preferred = /[。！？!?；;：:，,、]\s*/g;
-                let match;
-                while ((match = preferred.exec(rest)) && match.index < maxLength) cut = match.index + match[0].length;
-                if (cut < Math.floor(maxLength * 0.55)) {
-                    const space = rest.lastIndexOf(' ', maxLength);
-                    cut = space > 0 ? space + 1 : maxLength;
-                }
-                chunks.push(rest.slice(0, cut).trim());
-                rest = rest.slice(cut).trim();
-            }
-            if (rest) chunks.push(rest);
-            return chunks;
-        }
-
         function prepareTTS() {
             utterances = [];
-            const wrapper = document.getElementById('content-wrapper');
-            if (!wrapper) return;
-            const elements = collectTTSReadableElements(wrapper);
+            let allElements = Array.from(document.getElementById('content-wrapper').querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
+            let elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
 
-            const voices = window.speechSynthesis.getVoices();
-            selectedTTSVoice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
-            if (!selectedTTSVoice) selectedTTSVoice = voices.find(v => {
+            let voices = window.speechSynthesis.getVoices();
+            let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
+            if (!voice) voice = voices.find(v => {
                 const lang = v.lang.toLowerCase(), name = v.name.toLowerCase();
                 return lang.includes('hk') || lang.includes('yue') || name.includes('cantonese');
-            }) || voices.find(v => v.lang.toLowerCase().includes('zh')) || null;
+            }) || voices.find(v => v.lang.includes('zh'));
 
             elements.forEach((el) => {
-                const text = getTTSPlainText(el);
-                if (!text) return;
-                el.classList.add('readable-item');
-                const newEl = el.cloneNode(true);
-                el.parentNode.replaceChild(newEl, el);
-                splitTTSText(text).forEach(chunk => utterances.push({ text: chunk, el: newEl }));
-                newEl.addEventListener('click', (e) => {
-                    if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
-                    if (e.target.closest('.util-copy-btn')) return;
-                    if (document.querySelector('.delete-mode-active') !== null || document.body.dataset.clickRead === 'off') return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const firstIndex = utterances.findIndex(item => item.el === newEl);
-                    if (firstIndex < 0) return;
-                    if (isPlaying && utterances[currentIndex]?.el === newEl) {
-                        stopExportTts();
-                        return;
+                let text = el.innerText.trim();
+                if (text) {
+                    el.classList.add('readable-item');
+                    
+                    let newEl = el.cloneNode(true);
+                    el.parentNode.replaceChild(newEl, el);
+
+                    let u = new SpeechSynthesisUtterance(text);
+                    if (voice) {
+                        u.voice = voice;
+                        u.lang = voice.lang; 
                     }
-                    startReadingFrom(firstIndex);
-                });
+                    u.rate = currentRate;
+                    
+                    let uIndex = utterances.length;
+                    u.onstart = () => {
+                        document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
+                            e.classList.remove('reading-highlight', 'paused-highlight');
+                        });
+                        newEl.classList.add('reading-highlight');
+                        if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        SafeStorage.set('ttsBookmark_' + document.title, uIndex);
+                        currentIndex = uIndex; 
+                    };
+                    u.onend = () => {
+                        newEl.classList.remove('reading-highlight', 'paused-highlight');
+
+                        if (isPlaying && !isPaused && !isManualJump) {
+                            if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
+                        }
+                    };
+                    
+                    utterances.push({ u: u, el: newEl });
+                    
+                    newEl.addEventListener('click', (e) => {
+                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
+                            e.preventDefault();
+                        }
+                        if(e.target.closest('.util-copy-btn')) return;
+                        
+                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
+                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
+                        
+                        e.preventDefault(); e.stopPropagation(); 
+                        
+                        if (uIndex === currentIndex && isPlaying) {
+                            stopExportTts();
+                            return;
+                        }
+
+                        startReadingFrom(uIndex);
+                    });
+                }
             });
         }
 
-        function playUtterance(index, retryCount = 0) {
-            if (!isPlaying || index >= utterances.length) return;
-            const runToken = speechRunToken;
-            const item = utterances[index];
-            const u = new SpeechSynthesisUtterance(item.text);
-            let settled = false;
-            let lastBoundary = -1;
-            let boundarySeen = false;
-            currentIndex = index;
-            if (selectedTTSVoice) {
-                u.voice = selectedTTSVoice;
-                u.lang = selectedTTSVoice.lang;
-            }
-            u.rate = currentRate;
-            activeSpeech = u;
-            const retryCurrentChunk = (reason) => {
-                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
-                settled = true;
-                activeSpeech = null;
-                item.el.classList.add('reading-highlight');
-                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
-                console.warn('[PureRead HK] TTS chunk incomplete:', reason, item.text.slice(0, 80));
-                if (retryCount < 5) {
-                    setTimeout(() => {
-                        if (isPlaying && !isPaused && !isManualJump && currentIndex === index && runToken === speechRunToken) playUtterance(index, retryCount + 1);
-                    }, 300 + retryCount * 200);
-                } else {
-                    isPlaying = false;
-                    console.warn('[PureRead HK] TTS stopped on the same chunk after retries; it was not skipped.');
-                }
-            };
-            const advance = () => {
-                if (settled || runToken !== speechRunToken || activeSpeech !== u) return;
-                const expectedTail = Math.max(3, Math.floor(item.text.length * 0.15));
-                if (boundarySeen && lastBoundary < item.text.length - expectedTail) {
-                    retryCurrentChunk('early-end');
-                    return;
-                }
-                settled = true;
-                activeSpeech = null;
-                item.el.classList.remove('reading-highlight', 'paused-highlight');
-                if (!isPlaying || isPaused || isManualJump || currentIndex !== index) return;
-                if (index + 1 < utterances.length) {
-                    setTimeout(() => {
-                        if (runToken === speechRunToken && isPlaying && !isPaused && !isManualJump && currentIndex === index && activeSpeech === null) playUtterance(index + 1);
-                    }, 100);
-                } else {
-                    stopExportTts();
-                }
-            };
-            u.onstart = () => {
-                if (runToken !== speechRunToken || activeSpeech !== u) return;
-                document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
-                item.el.classList.add('reading-highlight');
-                item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                SafeStorage.set('ttsBookmark_' + document.title, index);
-                currentIndex = index;
-            };
-            u.onboundary = (event) => {
-                if (runToken !== speechRunToken || activeSpeech !== u) return;
-                if (typeof event.charIndex === 'number') {
-                    boundarySeen = true;
-                    lastBoundary = Math.max(lastBoundary, event.charIndex);
-                }
-            };
-            u.onend = advance;
-            u.onerror = (event) => {
-                if (event.error === 'canceled' || event.error === 'interrupted') {
-                    if (runToken !== speechRunToken || !isPlaying || isManualJump) return;
-                }
-                retryCurrentChunk(event.error || 'speech-error');
-            };
-            window.speechSynthesis.speak(u);
-        }
-
+        function playUtterance(index) { if (index >= utterances.length) return; currentIndex = index; window.speechSynthesis.speak(utterances[index].u); }
+        
         function startReadingFrom(index) {
-            speechRunToken += 1;
-            activeSpeech = null;
             isManualJump = true;
             window.speechSynthesis.cancel();
             setTimeout(() => {
-                isManualJump = false;
-                isPlaying = true;
-                isPaused = false;
+                isManualJump = false; isPlaying = true; isPaused = false;
                 playUtterance(index);
-            }, 80);
+            }, 50);
         }
 
         function stopExportTts() {
-            speechRunToken += 1;
-            activeSpeech = null;
-            isManualJump = true;
-            window.speechSynthesis.cancel();
-            isPlaying = false;
-            isPaused = false;
-            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => e.classList.remove('reading-highlight', 'paused-highlight'));
-            setTimeout(() => { isManualJump = false; }, 80);
+            isManualJump = true; window.speechSynthesis.cancel(); isPlaying = false; isPaused = false;
+            document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
+                e.classList.remove('reading-highlight', 'paused-highlight');
+            });
+            setTimeout(() => { isManualJump = false; }, 50);
         }
-
+        
         window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
-
 
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
@@ -3139,6 +2614,5 @@
         });
     </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"f7a3268ea56841db8cf028773ac41ab7","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon='{"version":"2024.11.0","token":"75124c326cb447fe934cde04713ae013","r":1}' crossorigin="anonymous"></script>
 </body>
 </html>
