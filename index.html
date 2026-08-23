@@ -190,6 +190,11 @@
         .marked-for-removal { background-color: #fef08a !important; outline: 3px solid #eab308 !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3) !important; position: relative; z-index: 20; transition: all 0.2s; }
         /* 已反選擇 = 會保留落嚟（綠色確認） */
         .keep-mode-active .selected-for-keep { background-color: #bbf7d0 !important; outline: 3px solid #16a34a !important; border-radius: 6px; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important; position: relative; z-index: 20; }
+        /* 單元現在可以有父子關係：內層畫實色少少，
+           令用戶睇得出自己而家揀中嘅係邊一層。 */
+        .keep-mode-active .marked-for-removal .marked-for-removal { background-color: #fde68a !important; outline-width: 2px !important; }
+        .keep-mode-active .selected-for-keep .selected-for-keep { background-color: #86efac !important; outline-width: 2px !important; }
+        .keep-mode-active [data-unit="1"]:hover { outline: 3px dashed #4f46e5 !important; outline-offset: 1px; }
         #cleanupLevelPanel.visible, #keepSelectionPanel.visible { display: block; }
 
         .util-copy-btn { user-select: none; }
@@ -277,7 +282,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.2</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.3</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -350,13 +355,13 @@
                         <option value="0">第 0 級・完全不攔截（全手動）</option>
                         <option value="1">第 1 級・保守</option>
                         <option value="2">第 2 級・輕度</option>
-                        <option value="3" selected>第 3 級・中度</option>
+                        <option value="3">第 3 級・中度</option>
                         <option value="4">第 4 級・高度</option>
                         <option value="5">第 5 級・純文字</option>
                     </select>
                     <button onclick="restoreCleanupPreview()" class="rounded-lg border border-indigo-300 bg-white px-3 py-2 font-bold text-indigo-800 hover:bg-indigo-100">復原</button>
                 </div>
-                <p id="cleanupLevelNote" class="mt-2 text-xs text-indigo-700">先提取文章，再選擇清理級別；不同級別會按比例過濾圖片。</p>
+                <p id="cleanupLevelNote" class="mt-2 text-xs text-indigo-700">先提取文章，再選擇清理級別。提取後預設為第 0 級（未過濾）；每次切換都會顯示實際移除咗幾多內容。</p>
             </div>
             <div id="keepSelectionPanel" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -436,7 +441,8 @@
         // 精準保留模式：markedElements = 目前仍被「選中」、按第 3 步時會被刪除的區塊。
         // 第 1 步全選 → 全部進入此集合；第 2 步點擊（反選擇）→ 從集合移除，即成為保留項目。
         let markedElements = new Set();
-        let cleanupLevel = 3;
+        // 【修正 1】預設 0：提取後畫面確實係未過濾，變數要同畫面一致。
+        let cleanupLevel = 0;
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
         const URL_HISTORY_KEY = 'pureReadUrlHistory_v1';
@@ -571,9 +577,14 @@
             if (hasSavedHTML && record.baseHTML) {
                 isApplyingEditRecord = true;
                 contentArea.innerHTML = sanitizeContentHTML(record.currentHTML);
-                normalizeMediaSources(contentArea, document.baseURI);
+                normalizeMediaSources(contentArea, currentArticleUrl || document.baseURI);
                 processLongURLs(contentArea);
                 isApplyingEditRecord = false;
+                /* 【修正 1】還原上次儲存嘅內容時，下拉選單亦要還原到當時嘅級別，
+                 * 否則畫面係「已過濾」但選單顯示 0 級，又會出現選單同實況不符。 */
+                cleanupLevel = Number(record.cleanupLevel) || 0;
+                const savedSelect = document.getElementById('cleanupLevel');
+                if (savedSelect) savedSelect.value = String(cleanupLevel);
                 prepareTTS();
                 injectSmartButtons();
                 updateCleanupPanels();
@@ -1171,6 +1182,13 @@
                     el.style.height = 'auto';
                     return;
                 }
+                /* 【修正 2】原本喺呢度直接剷走 class，令之後所有清理級別
+                 * （靠 class 認廣告／推薦位嘅選擇器）永遠配唔中，各級實際
+                 * 只差圖片數量。但 class 又唔可以照留 —— 來源站嘅 class
+                 * 會撞到本 App 自己嘅 CSS（例如 hidden）。
+                 * 解決：搬去 data-prc，保住過濾線索，又唔影響樣式。 */
+                const originalClass = el.getAttribute('class');
+                if (originalClass) el.setAttribute('data-prc', originalClass);
                 el.removeAttribute('class');
                 el.removeAttribute('width');
                 el.removeAttribute('height');
@@ -1581,6 +1599,14 @@
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
             contentArea.innerHTML = cleanHTML;
+            /* 【修正 1】提取流程由頭到尾都冇叫過 applyCleanupLevel()，所以此刻
+             * 畫面上係「完全未按級別過濾」嘅內容。但下拉選單寫死 selected="3"，
+             * 於是用戶揀「第 0 級」時，程式只係再畫一次同樣嘅未過濾內容，
+             * 感覺就好似「毫無反應」。呢度將選單校正到真實狀態（0 級），
+             * 令之後每次揀級別都一定同畫面有對應關係。 */
+            cleanupLevel = 0;
+            const levelSelect = document.getElementById('cleanupLevel');
+            if (levelSelect) levelSelect.value = '0';
             // 【修正】base 要用「文章來源網址」，唔係 App 自己的 document.baseURI，
             // 否則相對路徑圖片會被解析到 App 網域，變成 404。
             const mediaBase = currentArticleUrl || document.baseURI;
@@ -1616,21 +1642,48 @@
         }
 
         function cleanupSelectorsForLevel(level) {
-            const selectors = [
-                '[class~="ad"], [class*="adbox"], [class*="advert"], [class*="adsbygoogle"], [class*="ad-container"], [class*="ad-slot"], [data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]',
-                '[class*="recommend"], [class*="related"], [class*="recommended"], [class*="share"], [class*="social"], [class*="newsletter"], [class*="subscribe"], [class*="popup"], [class*="modal"]',
-                'aside, nav, footer, [class*="sidebar"], [class*="side-bar"], [class*="widget"], [class*="trending"], [class*="popular"], [class*="most-read"]',
-                '[class*="more-article"], [class*="related-post"], [class*="outbrain"], [class*="taboola"], [class*="infinite"], [class*="recommendation"]',
-                '[class*="promo"], [class*="promotion"], [class*="sponsor"], [class*="affiliate"], [class*="native-ad"], [class*="adunit"]'
+            /* 【修正 2】提取階段已把 class 搬去 data-prc，所以每個 class 選擇器
+             * 都要有一個對應嘅 data-prc 版本，否則永遠一個都配唔中。 */
+            const groups = [
+                ['ad~', 'adbox', 'advert', 'adsbygoogle', 'ad-container', 'ad-slot'],
+                ['recommend', 'related', 'recommended', 'share', 'social', 'newsletter', 'subscribe', 'popup', 'modal'],
+                ['sidebar', 'side-bar', 'widget', 'trending', 'popular', 'most-read'],
+                ['more-article', 'related-post', 'outbrain', 'taboola', 'infinite', 'recommendation'],
+                ['promo', 'promotion', 'sponsor', 'affiliate', 'native-ad', 'adunit']
             ];
-            return selectors.slice(0, Math.max(0, Math.min(5, Number(level) || 1))).join(', ');
+            const extras = [
+                '[data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]',
+                '',
+                'aside, nav, footer',
+                '',
+                ''
+            ];
+            const selectors = groups.map((words, i) => {
+                const parts = [];
+                words.forEach(w => {
+                    if (w.endsWith('~')) {
+                        const base = w.slice(0, -1);
+                        parts.push(`[class~="${base}"]`, `[data-prc~="${base}"]`);
+                    } else {
+                        parts.push(`[class*="${w}"]`, `[data-prc*="${w}"]`);
+                    }
+                });
+                if (extras[i]) parts.push(extras[i]);
+                return parts.join(', ');
+            });
+            /* 【修正 4】原本 `Number(level) || 1` 會把 0 當成 1。
+             * 0 級必須真係 0 個選擇器。 */
+            const n = Number(level);
+            const count = Number.isFinite(n) ? Math.max(0, Math.min(5, n)) : 1;
+            if (count === 0) return '';
+            return selectors.slice(0, count).join(', ');
         }
 
         function removeMarkedNonArticleContent(root, level) {
             const marker = /廣告|推薦|相關文章|熱門文章|你可能感興趣|advert|sponsor|promot|related|recommend|banner|sidebar|native[-_ ]?ad|outbrain|taboola/i;
             const removable = Array.from(root.querySelectorAll('*')).filter(el => {
                 if (el === root || el.closest('figure')?.querySelector('img') === el) return false;
-                const meta = `${el.id || ''} ${el.className || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-label') || ''}`;
+                const meta = `${el.id || ''} ${el.className || ''} ${el.getAttribute('data-prc') || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-label') || ''}`;
                 return marker.test(meta) && el.querySelectorAll('p, h1, h2, h3, h4, h5, h6, img').length < 4;
             });
             removable.sort((a, b) => b.querySelectorAll('*').length - a.querySelectorAll('*').length).forEach(el => el.remove());
@@ -1689,20 +1742,43 @@
             }
         }
 
+        /* 【修正 3】切換清理級別會由 baseline 重畫，會令用戶手動刪過嘅區塊
+         * 死而復生。呢個 helper 喺重畫之後，按 record.removed 重播一次手動刪除，
+         * 令「自動過濾」同「手動清理」可以並存。 */
+        function replayManualRemovals() {
+            const record = currentEditRecord;
+            const removed = record && Array.isArray(record.removed) ? record.removed : [];
+            if (!removed.length) return 0;
+            let count = 0;
+            removed.forEach(item => {
+                const el = findRecordElement(contentArea, item);
+                if (el) { el.remove(); count++; }
+            });
+            return count;
+        }
+
         function applyCleanupLevel(persist = true) {
             if (!cleanupPreviewHTML) return;
             cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
-            cleanupLevel = Number(document.getElementById('cleanupLevel')?.value || cleanupLevel);
-            
+            cleanupLevel = Number(document.getElementById('cleanupLevel')?.value ?? cleanupLevel);
+            /* 圖片 base 必須用文章來源網址，唔係 App 自己嘅 document.baseURI，
+             * 否則相對路徑圖片會解析到 App 網域變 404。 */
+            const mediaBase = currentArticleUrl || document.baseURI;
+
             if (cleanupLevel === 0) {
                 contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
-                normalizeMediaSources(contentArea, document.baseURI);
-                promoteLinkedImageTargets(contentArea, document.baseURI);
+                normalizeMediaSources(contentArea, mediaBase);
+                promoteLinkedImageTargets(contentArea, mediaBase);
+                const restored = replayManualRemovals();
+                const record0 = ensureCurrentEditRecord();
+                if (record0) record0.cleanupApplied = false;
                 processLongURLs(contentArea);
                 prepareTTS();
                 injectSmartButtons();
                 const note = document.getElementById('cleanupLevelNote');
-                if (note) note.textContent = '已套用第 0 級：完全不進行自動過濾，100% 保留原文內容，可搭配手動清理或精準保留。';
+                if (note) note.textContent = '已套用第 0 級：完全不自動過濾，100% 保留原文內容'
+                    + (restored ? `（已保留你手動刪除嘅 ${restored} 個區塊）` : '')
+                    + '。如提取結果本身已經好乾淨，畫面可能同之前一樣。';
                 updateCleanupPanels();
                 if (persist) saveCurrentEditRecord();
                 return;
@@ -1711,7 +1787,10 @@
             const doc = new DOMParser().parseFromString(`<div id="cleanup-root">${cleanupPreviewHTML}</div>`, 'text/html');
             const root = doc.getElementById('cleanup-root');
             if (!root) return;
-            root.querySelectorAll(cleanupSelectorsForLevel(cleanupLevel)).forEach(el => el.remove());
+            const blocksBefore = root.children.length;
+            const imagesBefore = root.querySelectorAll('img').length;
+            const levelSelector = cleanupSelectorsForLevel(cleanupLevel);
+            if (levelSelector) root.querySelectorAll(levelSelector).forEach(el => el.remove());
             removeMarkedNonArticleContent(root, cleanupLevel);
             root.querySelectorAll('a').forEach(a => {
                 const href = a.getAttribute('href') || '';
@@ -1733,9 +1812,12 @@
             } else if (cleanupLevel === 5) {
                 allImages.forEach(img => (img.closest('figure') || img).remove());
             }
+            const blocksAfter = root.children.length;
+            const imagesAfter = root.querySelectorAll('img').length;
             contentArea.innerHTML = sanitizeContentHTML(root.innerHTML);
-            normalizeMediaSources(contentArea, document.baseURI);
-            promoteLinkedImageTargets(contentArea, document.baseURI);
+            normalizeMediaSources(contentArea, mediaBase);
+            promoteLinkedImageTargets(contentArea, mediaBase);
+            const manualRestored = replayManualRemovals();
             const record = ensureCurrentEditRecord();
             if (record) record.cleanupApplied = true;
             processLongURLs(contentArea);
@@ -1744,12 +1826,21 @@
             const note = document.getElementById('cleanupLevelNote');
             if (note) {
                 let noteText = `已套用第 ${cleanupLevel} 級；`;
-                if (cleanupLevel === 0) noteText += "完全不進行自動過濾，保留原文所有內容。";
-                else if (cleanupLevel === 1) noteText += "盡量保留所有圖片。";
+                if (cleanupLevel === 1) noteText += "盡量保留所有圖片。";
                 else if (cleanupLevel === 2) noteText += "圖片減少約 50%。";
                 else if (cleanupLevel === 3) noteText += "圖片減少約 75%。";
                 else if (cleanupLevel === 4) noteText += "只保留首張主要圖片。";
                 else if (cleanupLevel === 5) noteText += "移除所有圖片，僅顯示純文字。";
+                /* 【修正 1】明確講出今次實際改動咗幾多，令用戶唔會再面對
+                 * 「揀完好似冇反應」而唔知係成功定失敗。 */
+                const blockDiff = blocksBefore - blocksAfter;
+                const imageDiff = imagesBefore - imagesAfter;
+                if (blockDiff > 0 || imageDiff > 0) {
+                    noteText += `（本次移除 ${blockDiff} 個區塊、${imageDiff} 張圖片）`;
+                } else {
+                    noteText += '（本次冇任何內容符合過濾條件，畫面不變）';
+                }
+                if (manualRestored) noteText += `（已保留你手動刪除嘅 ${manualRestored} 個區塊）`;
                 note.textContent = noteText;
             }
             updateCleanupPanels();
@@ -1760,14 +1851,22 @@
             if (!cleanupPreviewHTML) return;
             cleanupPreviewHTML = cleanupBaselineHTML || cleanupPreviewHTML;
             contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
-            normalizeMediaSources(contentArea, document.baseURI);
+            const mediaBase = currentArticleUrl || document.baseURI;
+            normalizeMediaSources(contentArea, mediaBase);
+            promoteLinkedImageTargets(contentArea, mediaBase);
             const record = ensureCurrentEditRecord();
             if (record) record.cleanupApplied = false;
+            /* 「復原」係真正嘅完整還原：連手動刪除都一併撤銷，
+             * 所以要清空 removed 記錄，否則下次揀級別會又刪返。 */
+            if (record) record.removed = [];
+            cleanupLevel = 0;
+            const restoreSelect = document.getElementById('cleanupLevel');
+            if (restoreSelect) restoreSelect.value = '0';
             processLongURLs(contentArea);
             prepareTTS();
             injectSmartButtons();
             const note = document.getElementById('cleanupLevelNote');
-            if (note) note.textContent = '已復原到提取後內容，尚未套用額外清理級別。';
+            if (note) note.textContent = '已復原到提取後內容（包括撤銷手動刪除），級別已重設為第 0 級。';
             updateCleanupPanels();
             saveCurrentEditRecord();
         }
@@ -1780,8 +1879,76 @@
             if (keepPanel) keepPanel.classList.toggle('hidden', !hasContent);
         }
 
+        /* ═══════════════════════════════════════════════════════════════
+         * 【內容單元】朗讀同選擇共用嘅切塊邏輯。
+         *
+         * 舊版兩處都出錯：
+         *  · 朗讀只收 h1-h6, p, li，所以 <div> 當段落、blockquote、
+         *    figcaption、表格、section 一律讀唔到（成段跳過）。而且
+         *    「有子塊就整個唔要」嘅過濾，令 <li> 自己嘅文字亦一併消失。
+         *  · 選擇用 contentArea.children，好多網站整篇文章包喺一個
+         *    <div> 裏面，於是「全選」只得 1 個區塊，反選擇一撳就中全部。
+         *
+         * 現在兩者都改用同一套「內容單元」定義。
+         * ═══════════════════════════════════════════════════════════════ */
+
+        // 會自成一個段落／區塊嘅標籤
+        const BLOCK_TAGS = new Set(['p', 'div', 'section', 'article', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'li', 'ul', 'ol', 'dl', 'dt', 'dd', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr', 'td', 'th',
+            'pre', 'address', 'details', 'summary', 'main', 'header', 'footer', 'aside', 'hr', 'video', 'audio', 'iframe']);
+        // 唔應該再拆散嘅整體（圖文一組、表格、程式碼）
+        const ATOMIC_TAGS = new Set(['figure', 'table', 'pre', 'video', 'audio', 'iframe', 'img']);
+        const BLOCK_SELECTOR = Array.from(BLOCK_TAGS).join(', ');
+
+        function isSkippableNode(el) {
+            return el.classList && (el.classList.contains('util-copy-btn') || el.tagName === 'BUTTON' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE');
+        }
+
+        /* 只取「屬於自己」嘅文字：直接子文字節點 + 行內元素（a/strong/span…），
+         * 唔會計入嵌套區塊嘅文字，所以父子都成為單元時唔會重複朗讀。 */
+        function ownBlockText(el) {
+            let out = '';
+            Array.from(el.childNodes).forEach(node => {
+                if (node.nodeType === 3) {
+                    out += node.nodeValue;
+                } else if (node.nodeType === 1) {
+                    if (isSkippableNode(node)) return;
+                    if (BLOCK_TAGS.has(node.tagName.toLowerCase())) return;
+                    out += node.textContent || '';
+                }
+            });
+            return out.replace(/\s+/g, ' ').trim();
+        }
+
+        function hasOwnMedia(el) {
+            return Array.from(el.children).some(c => ['IMG', 'PICTURE', 'SVG', 'CANVAS'].includes(c.tagName));
+        }
+
+        /* 由 contentArea 遞歸向下切出細粒度單元。
+         * 規則：figure/table/pre 等整體唔再拆；有嵌套區塊就繼續向下走，
+         * 令用戶可以逐段逐段反選擇，而唔係一嘢中全篇。 */
+        function getContentUnits(root = contentArea) {
+            const units = [];
+            const walk = (parent) => {
+                Array.from(parent.children).forEach(el => {
+                    if (isSkippableNode(el)) return;
+                    const tag = el.tagName.toLowerCase();
+                    if (ATOMIC_TAGS.has(tag)) {
+                        if (el.textContent.trim() || el.querySelector('img, picture, video, iframe, canvas') || tag === 'img') units.push(el);
+                        return;
+                    }
+                    const own = ownBlockText(el);
+                    const nested = el.querySelector(BLOCK_SELECTOR);
+                    if (own || hasOwnMedia(el)) units.push(el);
+                    if (nested) walk(el);
+                });
+            };
+            walk(root);
+            return units;
+        }
+
         function getSelectableElements() {
-            return Array.from(contentArea.children).filter(el => el.textContent.trim() || el.querySelector('img, picture, figure, table'));
+            return getContentUnits();
         }
 
         function syncDeleteButtons() {
@@ -1794,6 +1961,18 @@
             if (fabExecuteBtn) fabExecuteBtn.classList.toggle('hidden', !hasDeleteSelection);
         }
 
+        /* 命中最內層可選單元：點極細粒度嘅段落都揀得中，
+         * 唔會再跳去最外層而一嘢中全篇。 */
+        function getKeepTarget(node) {
+            if (!node || node.closest?.('.util-copy-btn')) return null;
+            let el = node.nodeType === 3 ? node.parentElement : node;
+            if (!el || !contentArea.contains(el) || el === contentArea) return null;
+            // 由點擊位置向上找第一個「已登記為單元」嘅元素
+            const unit = el.closest('[data-unit="1"]');
+            if (unit && contentArea.contains(unit)) return unit;
+            return null;
+        }
+
         function selectAllKeepSelection() {
             if (!isKeepMode) {
                 isKeepMode = true;
@@ -1802,21 +1981,29 @@
                 contentArea.addEventListener('click', toggleKeepElement);
             }
             const selectable = getSelectableElements();
-            // 第 1 步：全選 → 全部區塊都處於「已選中 / 將被刪除」狀態（黃色）。
+            /* 標記每個單元，令點擊時可以就近命中最內層單元。
+             * 呢個係「逐個逐個反選擇」得以成立嘅關鍵。 */
+            contentArea.querySelectorAll('[data-unit]').forEach(el => el.removeAttribute('data-unit'));
+            selectable.forEach(el => el.setAttribute('data-unit', '1'));
+            // 第 1 步：全選 → 全部單元都處於「已選中 / 將被刪除」狀態（黃色）。
             markedElements = new Set(selectable);
             selectable.forEach(el => {
                 el.classList.add('marked-for-removal');
                 el.classList.remove('selected-for-keep');
             });
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已全選 ${markedElements.size} 個區塊（黃色＝將被刪除）。第 2 步：點擊你想「保留」嘅區塊做反選擇，佢會變綠色；最後撳第 3 步刪除其餘黃色內容。`;
+            if (note) note.textContent = `已全選 ${markedElements.size} 個區塊（黃色＝將被刪除）。第 2 步：逐個點擊你想「保留」嘅段落做反選擇，佢會變綠色（可以點細至單一段落、標題、圖片或列表項）；最後撳第 3 步刪除其餘黃色內容。`;
             syncDeleteButtons();
             updateCleanupPanels();
         }
 
         function toggleKeepElement(e) {
             if (!isKeepMode) return;
-            const target = e.target.closest('#content-wrapper > *');
+            /* 【修正】舊版用 closest('#content-wrapper > *')，即係一律跳到
+             * 最外層子元素。好多網站整篇文章包喺一個 <div>，於是無論點邊段
+             * 都會選中／反選中全篇，根本做唔到逐段反選擇。
+             * 現在改為命中最內層嘅「已標記單元」。 */
+            const target = getKeepTarget(e.target);
             if (!target) return;
             e.preventDefault();
             e.stopPropagation();
@@ -1825,14 +2012,19 @@
                 markedElements.delete(target);
                 target.classList.remove('marked-for-removal');
                 target.classList.add('selected-for-keep');
+                /* 注意：外層容器故意「維持選中」。executeKeepSelection() 會偵測到
+                 * 佢內部有要保留嘅段落，於是只清走容器自己嘅文字（例如廣告標語），
+                 * 但保住容器結構，令呢段唔會被連帶刪走。
+                 * （唔可以喺呢度直接把父層改為保留，否則父層自己嘅廣告文字會留低。） */
+                target.classList.add('keep-anchor');
             } else {
                 // 再次點擊：取消反選擇，重新變回「選中／將刪除」。
                 markedElements.add(target);
                 target.classList.add('marked-for-removal');
-                target.classList.remove('selected-for-keep');
+                target.classList.remove('selected-for-keep', 'keep-anchor');
             }
             const selectable = getSelectableElements();
-            const keepCount = selectable.length - markedElements.size;
+            const keepCount = selectable.filter(el => !markedElements.has(el)).length;
             const note = document.getElementById('keepSelectionNote');
             if (note) note.textContent = `已反選擇（保留）${keepCount} 個區塊（綠色）；仍有 ${markedElements.size} 個區塊處於選中狀態（黃色），撳第 3 步就會刪除呢批。`;
             syncDeleteButtons();
@@ -1845,6 +2037,7 @@
             contentArea.removeEventListener('click', toggleKeepElement);
             contentArea.querySelectorAll('.selected-for-keep').forEach(el => el.classList.remove('selected-for-keep'));
             contentArea.querySelectorAll('.marked-for-removal').forEach(el => el.classList.remove('marked-for-removal'));
+            contentArea.querySelectorAll('[data-unit]').forEach(el => el.removeAttribute('data-unit'));
             const note = document.getElementById('keepSelectionNote');
             if (note) note.textContent = '已取消所有選擇；如要開始，請撳第 1 步「選擇全部」。';
             syncDeleteButtons();
@@ -1854,7 +2047,7 @@
         function executeKeepSelection() {
             const selectable = getSelectableElements();
             // 第 3 步：刪除仍然處於選中狀態（黃色）的區塊；已反選擇（綠色）的一律保留。
-            const toRemove = selectable.filter(el => markedElements.has(el));
+            let toRemove = selectable.filter(el => markedElements.has(el));
             if (toRemove.length === 0) {
                 showError('⚠️ 目前冇任何區塊處於選中狀態，冇內容需要刪除。請先撳第 1 步「選擇全部」。');
                 return;
@@ -1863,7 +2056,22 @@
                 showError('⚠️ 全部區塊都仍處於選中狀態，咁樣會刪除整篇文章。請先於第 2 步點選你想保留嘅區塊（變綠色）。');
                 return;
             }
-            const keepCount = selectable.length - toRemove.length;
+            /* 【安全】單元現在有父子關係：
+             *  1) 若某個「將刪除」嘅容器內部仲有要保留嘅段落，唔可以整個刪，
+             *     否則會誤刪用戶明確保留嘅內容 —— 改為只刪佢自己嘅文字節點。
+             *  2) 已被祖先覆蓋嘅單元唔需要重複刪。 */
+            const keepSet = selectable.filter(el => !markedElements.has(el));
+            const guarded = toRemove.filter(el => keepSet.some(k => el.contains(k)));
+            toRemove = toRemove.filter(el => !guarded.includes(el));
+            toRemove = toRemove.filter(el => !toRemove.some(other => other !== el && other.contains(el)));
+            // 容器要保住，但佢自己嘅文字（例如廣告標語）仍然要清走。
+            guarded.forEach(container => {
+                Array.from(container.childNodes).forEach(node => {
+                    if (node.nodeType === 3 && node.nodeValue.trim()) node.nodeValue = '';
+                });
+                container.classList.remove('marked-for-removal');
+            });
+            const keepCount = keepSet.length;
             recordRemovedElements(toRemove, 'keep-delete');
             toRemove.forEach(el => el.remove());
             clearKeepSelection();
@@ -1928,8 +2136,10 @@
 
         function getValidTarget(el) {
             if (el === contentArea || el.closest('.util-copy-btn')) return null;
-            const readable = el.closest('.readable-item') || el;
-            if (contentArea.contains(readable)) return readable;
+            /* 手動清理亦要細粒度：優先命中最內層朗讀單元／內容單元，
+             * 而唔係一嘢跳到最外層容器。 */
+            const readable = el.closest('.readable-item, [data-tts-index], [data-unit="1"]') || el;
+            if (contentArea.contains(readable) && readable !== contentArea) return readable;
             return null;
         }
 
@@ -1975,8 +2185,11 @@
                 executeKeepSelection();
                 return;
             } else if (selectedElements.size > 0) {
-                recordRemovedElements(Array.from(selectedElements), 'delete');
-                selectedElements.forEach(el => el.remove());
+                // 若同時選咗父同子，只刪父層就夠，避免重複記錄。
+                let list = Array.from(selectedElements);
+                list = list.filter(el => !list.some(other => other !== el && other.contains(el)));
+                recordRemovedElements(list, 'delete');
+                list.forEach(el => el.remove());
                 selectedElements.clear();
             }
             
@@ -2152,8 +2365,15 @@
 
         function prepareTTS() {
             utterances = [];
-            let allElements = Array.from(document.getElementById('content-wrapper').querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
-            let elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
+            /* 【修正】舊版只揀 h1-h6, p, li，再剔走「內含子塊」嘅元素，結果：
+             *   · <div> 當段落 → 完全讀唔到（好多網站都係咁排版）
+             *   · blockquote / figcaption / 表格 / section → 讀唔到
+             *   · <li> 自己有文字但又有嵌套 <ul> → 連自己嗰句都被剔走
+             * 呢個就係「成段讀唔到」嘅原因。現改用 getContentUnits()，
+             * 並以 ownBlockText() 只讀屬於自己嘅文字，父子同為單元亦唔會重複。 */
+            // 清走上一輪嘅索引，避免內容變咗之後仲留住舊 index 指向錯段落。
+            contentArea.querySelectorAll('[data-tts-index]').forEach(el => el.removeAttribute('data-tts-index'));
+            const units = getContentUnits();
 
             let voices = window.speechSynthesis.getVoices();
             let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
@@ -2162,60 +2382,74 @@
                 return lang.includes('hk') || lang.includes('yue') || name.includes('cantonese');
             }) || voices.find(v => v.lang.includes('zh'));
 
-            elements.forEach((el) => {
-                let text = el.innerText.trim();
+            units.forEach((el) => {
+                // figure/table/pre 等整體單元連內部文字一齊讀；其餘只讀自己嘅文字。
+                const unitTag = el.tagName.toLowerCase();
+                let text = ATOMIC_TAGS.has(unitTag)
+                    ? (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim()
+                    : ownBlockText(el);
                 if (text) {
                     el.classList.add('readable-item');
-                    
-                    let newEl = el.cloneNode(true);
-                    el.parentNode.replaceChild(newEl, el);
+                    /* 舊版用 cloneNode + replaceChild 嚟清舊 listener。但單元
+                     * 現在可以有父子關係，複製父層會令跟住嘅子單元變成
+                     * 脫離 DOM 嘅舊節點（點擊、高亮全部失效）。
+                     * 改用單一委派 listener，唔再複製節點。 */
+                    const uIndex = utterances.length;
+                    el.dataset.ttsIndex = String(uIndex);
 
                     let u = new SpeechSynthesisUtterance(text);
                     if (voice) {
                         u.voice = voice;
-                        u.lang = voice.lang; 
+                        u.lang = voice.lang;
                     }
                     u.rate = currentRate;
-                    
-                    let uIndex = utterances.length;
+
                     u.onstart = () => {
                         document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
                             e.classList.remove('reading-highlight', 'paused-highlight');
                         });
-                        newEl.classList.add('reading-highlight');
-                        if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.classList.add('reading-highlight');
+                        if(isPlaying) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         SafeStorage.set('ttsBookmark_' + document.title, uIndex);
-                        currentIndex = uIndex; 
+                        currentIndex = uIndex;
                     };
                     u.onend = () => {
-                        newEl.classList.remove('reading-highlight', 'paused-highlight');
+                        el.classList.remove('reading-highlight', 'paused-highlight');
 
                         if (isPlaying && !isPaused && !isManualJump) {
                             if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
                         }
                     };
-                    
-                    utterances.push({ u: u, el: newEl });
-                    
-                    newEl.addEventListener('click', (e) => {
-                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
-                            e.preventDefault();
-                        }
-                        if(e.target.closest('.util-copy-btn')) return;
-                        
-                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
-                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
-                        
-                        e.preventDefault(); e.stopPropagation(); 
-                        
-                        if (uIndex === currentIndex && isPlaying) {
-                            stopExportTts();
-                            return;
-                        }
 
-                        startReadingFrom(uIndex);
-                    });
+                    utterances.push({ u: u, el: el });
                 }
+            });
+            ensureReadClickDelegate();
+        }
+
+        /* 點擊朗讀：整個 contentArea 只裝一次委派 listener，
+         * 避免每次 prepareTTS() 疊加重複 listener。
+         * 點擊會就近命中最內層單元，所以嵌套段落都可以逐段點讀。 */
+        let readClickDelegateBound = false;
+        function ensureReadClickDelegate() {
+            if (readClickDelegateBound || !contentArea) return;
+            readClickDelegateBound = true;
+            contentArea.addEventListener('click', (e) => {
+                if (e.target.closest('.util-copy-btn')) return;
+                const hit = e.target.closest('[data-tts-index]');
+                if (!hit || !contentArea.contains(hit)) return;
+                if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
+
+                const isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
+                const isKeepModeActive = document.querySelector('.keep-mode-active') !== null;
+                if (document.body.dataset.clickRead === 'off' || isDeleteModeActive || isKeepModeActive) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                const idx = Number(hit.dataset.ttsIndex);
+                if (!Number.isInteger(idx) || !utterances[idx]) return;
+                if (idx === currentIndex && isPlaying) { stopExportTts(); return; }
+                startReadingFrom(idx);
             });
         }
 
@@ -2559,10 +2793,60 @@
             else { prepareTTS(); }
         }
 
+        /* 匯出檔亦要有同 App 一致嘅切塊邏輯，否則下載返嚟嘅文章
+         * 一樣會「有啲段落讀唔到」。 */
+        const BLOCK_TAGS = new Set(['p', 'div', 'section', 'article', 'blockquote', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'li', 'ul', 'ol', 'dl', 'dt', 'dd', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tr', 'td', 'th',
+            'pre', 'address', 'details', 'summary', 'main', 'header', 'footer', 'aside', 'video', 'audio', 'iframe']);
+        const ATOMIC_TAGS = new Set(['figure', 'table', 'pre', 'video', 'audio', 'iframe', 'img']);
+        const BLOCK_SELECTOR = Array.from(BLOCK_TAGS).join(', ');
+
+        function isSkippableNode(el) {
+            return el.classList && (el.classList.contains('util-copy-btn') || el.tagName === 'BUTTON' || el.tagName === 'SCRIPT' || el.tagName === 'STYLE');
+        }
+
+        function ownBlockText(el) {
+            let out = '';
+            Array.from(el.childNodes).forEach(node => {
+                if (node.nodeType === 3) out += node.nodeValue;
+                else if (node.nodeType === 1) {
+                    if (isSkippableNode(node)) return;
+                    if (BLOCK_TAGS.has(node.tagName.toLowerCase())) return;
+                    out += node.textContent || '';
+                }
+            });
+            return out.replace(/\\s+/g, ' ').trim();
+        }
+
+        function hasOwnMedia(el) {
+            return Array.from(el.children).some(c => ['IMG', 'PICTURE', 'SVG', 'CANVAS'].includes(c.tagName));
+        }
+
+        function getContentUnits(root) {
+            const units = [];
+            const walk = (parent) => {
+                Array.from(parent.children).forEach(el => {
+                    if (isSkippableNode(el)) return;
+                    const tag = el.tagName.toLowerCase();
+                    if (ATOMIC_TAGS.has(tag)) {
+                        if (el.textContent.trim() || el.querySelector('img, picture, video, iframe, canvas') || tag === 'img') units.push(el);
+                        return;
+                    }
+                    const own = ownBlockText(el);
+                    const nested = el.querySelector(BLOCK_SELECTOR);
+                    if (own || hasOwnMedia(el)) units.push(el);
+                    if (nested) walk(el);
+                });
+            };
+            walk(root);
+            return units;
+        }
+
         function prepareTTS() {
             utterances = [];
-            let allElements = Array.from(document.getElementById('content-wrapper').querySelectorAll('h1, h2, h3, h4, h5, h6, p, li'));
-            let elements = allElements.filter(el => !el.querySelector('h1, h2, h3, h4, h5, h6, p, li'));
+            const wrapper = document.getElementById('content-wrapper');
+            wrapper.querySelectorAll('[data-tts-index]').forEach(el => el.removeAttribute('data-tts-index'));
+            const elements = getContentUnits(wrapper);
 
             let voices = window.speechSynthesis.getVoices();
             let voice = selectedVoiceName ? voices.find(v => v.name === selectedVoiceName) : null;
@@ -2572,59 +2856,61 @@
             }) || voices.find(v => v.lang.includes('zh'));
 
             elements.forEach((el) => {
-                let text = el.innerText.trim();
+                const unitTag = el.tagName.toLowerCase();
+                let text = ATOMIC_TAGS.has(unitTag)
+                    ? (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim()
+                    : ownBlockText(el);
                 if (text) {
                     el.classList.add('readable-item');
-                    
-                    let newEl = el.cloneNode(true);
-                    el.parentNode.replaceChild(newEl, el);
+                    const uIndex = utterances.length;
+                    el.dataset.ttsIndex = String(uIndex);
 
                     let u = new SpeechSynthesisUtterance(text);
                     if (voice) {
                         u.voice = voice;
-                        u.lang = voice.lang; 
+                        u.lang = voice.lang;
                     }
                     u.rate = currentRate;
-                    
-                    let uIndex = utterances.length;
+
                     u.onstart = () => {
                         document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
                             e.classList.remove('reading-highlight', 'paused-highlight');
                         });
-                        newEl.classList.add('reading-highlight');
-                        if(isPlaying) newEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        el.classList.add('reading-highlight');
+                        if(isPlaying) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                         SafeStorage.set('ttsBookmark_' + document.title, uIndex);
-                        currentIndex = uIndex; 
+                        currentIndex = uIndex;
                     };
                     u.onend = () => {
-                        newEl.classList.remove('reading-highlight', 'paused-highlight');
+                        el.classList.remove('reading-highlight', 'paused-highlight');
 
                         if (isPlaying && !isPaused && !isManualJump) {
                             if (currentIndex + 1 < utterances.length) playUtterance(currentIndex + 1); else stopExportTts();
                         }
                     };
-                    
-                    utterances.push({ u: u, el: newEl });
-                    
-                    newEl.addEventListener('click', (e) => {
-                        if(e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') {
-                            e.preventDefault();
-                        }
-                        if(e.target.closest('.util-copy-btn')) return;
-                        
-                        let isDeleteModeActive = document.querySelector('.delete-mode-active') !== null;
-                        if (document.body.dataset.clickRead === 'off' || isDeleteModeActive) return; 
-                        
-                        e.preventDefault(); e.stopPropagation(); 
-                        
-                        if (uIndex === currentIndex && isPlaying) {
-                            stopExportTts();
-                            return;
-                        }
 
-                        startReadingFrom(uIndex);
-                    });
+                    utterances.push({ u: u, el: el });
                 }
+            });
+            ensureReadClickDelegate();
+        }
+
+        let readClickDelegateBound = false;
+        function ensureReadClickDelegate() {
+            const wrapper = document.getElementById('content-wrapper');
+            if (readClickDelegateBound || !wrapper) return;
+            readClickDelegateBound = true;
+            wrapper.addEventListener('click', (e) => {
+                if (e.target.closest('.util-copy-btn')) return;
+                const hit = e.target.closest('[data-tts-index]');
+                if (!hit || !wrapper.contains(hit)) return;
+                if (e.target.tagName === 'A' && document.body.dataset.clickRead !== 'off') e.preventDefault();
+                if (document.body.dataset.clickRead === 'off') return;
+                e.preventDefault(); e.stopPropagation();
+                const idx = Number(hit.dataset.ttsIndex);
+                if (!Number.isInteger(idx) || !utterances[idx]) return;
+                if (idx === currentIndex && isPlaying) { stopExportTts(); return; }
+                startReadingFrom(idx);
             });
         }
 

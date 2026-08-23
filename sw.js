@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pureread-hk-v1.2';
+const CACHE_NAME = 'pureread-hk-v1.3';
 const APP_SHELL = [
   './', './index.html', './manifest.json', './favicon.ico',
   './assets/icon.jpeg', './assets/icon-192.png', './assets/icon-512.png',
