@@ -2942,7 +2942,7 @@
                 btn.innerHTML = '🔴 朗讀：關閉';
                 btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50';
                 
-                window.speechSynthesis.cancel();
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
                 isPlaying = false; 
                 isPaused = false;
                 document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
@@ -2973,6 +2973,7 @@
         let currentRate = parseFloat(SafeStorage.get('ttsRate_' + document.title)) || 1.0;
 
         function populateVoices() {
+            if (!window.speechSynthesis) return;
             let voices = window.speechSynthesis.getVoices();
             let voiceSelect = document.getElementById('voiceSelect');
             if(!voiceSelect) return;
@@ -3046,6 +3047,7 @@
 
         function prepareTTS() {
             utterances = [];
+            if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
             /* 【修正】舊版只揀 h1-h6, p, li，再剔走「內含子塊」嘅元素，結果：
              *   · <div> 當段落 → 完全讀唔到（好多網站都係咁排版）
              *   · blockquote / figcaption / 表格 / section → 讀唔到
@@ -3153,7 +3155,7 @@
             setTimeout(() => { isManualJump = false; }, 50);
         }
         
-        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
+        if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
         /**
          * 產生匯出用嘅獨立 HTML 檔內容。
@@ -3373,7 +3375,7 @@
                 btn.innerHTML = '🔴 朗讀：關閉';
                 btn.className = 'action-btn wide bg-red-100 text-red-700 hover:bg-red-200 border border-red-700/50';
                 
-                window.speechSynthesis.cancel();
+                if (window.speechSynthesis) window.speechSynthesis.cancel();
                 isPlaying = false; 
                 isPaused = false;
                 document.querySelectorAll('.reading-highlight, .paused-highlight').forEach(e => {
@@ -3404,6 +3406,7 @@
         let currentRate = parseFloat(SafeStorage.get('ttsRate_' + document.title)) || 1.0;
 
         function populateVoices() {
+            if (!window.speechSynthesis) return;
             let voices = window.speechSynthesis.getVoices();
             let voiceSelect = document.getElementById('voiceSelect');
             if(!voiceSelect) return;
@@ -3486,21 +3489,21 @@
         // 所以朗讀前先按自然停頓切段，並移除 Markdown 及會被讀出的符號。
         function cleanSpeechText(raw) {
             let text = String(raw || '')
-                .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-                .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-                .replace(/^\s{0,3}#{1,6}\s*/gm, '')
+                .replace(/!\\[([^\\]]*)\\]\\([^)]*\\)/g, '$1')
+                .replace(/\\[([^\\]]+)\\]\\([^)]*\\)/g, '$1')
+                .replace(/^\\s{0,3}#{1,6}\\s*/gm, '')
                 .replace(/[*_~]+/g, '')
-                .replace(/https?:\/\/\S+/gi, '')
-                .replace(/[\p{P}\p{S}]+/gu, '\n');
-            text = text.replace(/[^\p{L}\p{N}\s]/gu, ' ');
-            return text.replace(/[ \t]+/g, ' ').replace(/ *\n+ */g, '\n').trim();
+                .replace(/https?:\\/\\/\\S+/gi, '')
+                .replace(/[\\p{P}\\p{S}]+/gu, '\\n');
+            text = text.replace(/[^\\p{L}\\p{N}\\s]/gu, ' ');
+            return text.replace(/[ \\t]+/g, ' ').replace(/ *\\n+ */g, '\\n').trim();
         }
 
         function splitSpeechText(raw, maxLength = 72) {
             const cleaned = cleanSpeechText(raw);
             if (!cleaned) return [];
             const parts = [];
-            cleaned.split(/\n+/).forEach(line => {
+            cleaned.split(/\\n+/).forEach(line => {
                 line = line.trim();
                 while (line.length > maxLength) {
                     let cut = line.lastIndexOf(' ', maxLength);
@@ -3556,6 +3559,7 @@
 
         function prepareTTS() {
             utterances = [];
+            if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') return;
             const wrapper = document.getElementById('content-wrapper');
             wrapper.querySelectorAll('[data-tts-index]').forEach(el => el.removeAttribute('data-tts-index'));
             const elements = getContentUnits(wrapper);
@@ -3646,7 +3650,7 @@
             setTimeout(() => { isManualJump = false; }, 50);
         }
         
-        window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
+        if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { populateVoices(); if(utterances.length === 0) { prepareTTS(); if (typeof injectSmartButtons === 'function') injectSmartButtons(); } };
 
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
