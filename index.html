@@ -282,7 +282,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.3</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.4</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -290,7 +290,7 @@
                 </button>
             </div>
             
-            <p class="text-slate-600 font-medium text-sm mb-6">實體檔案將支援「同段暫停」、「強制開關」及「連續點擊刪除」功能。</p>
+            <p class="text-slate-600 font-medium text-sm mb-6">可用網址提取、上傳檔案，或直接<b>貼上文字</b>產生文章（可加壓縮標題圖）。實體檔案將支援「同段暫停」、「強制開關」及「連續點擊刪除」功能。</p>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
@@ -306,8 +306,53 @@
                     上傳檔案
                     <input type="file" id="fileInput" accept=".html,.htm,.md,.txt" class="hidden" onchange="handleFileUpload(event)">
                 </label>
+                <button id="pasteToggleBtn" type="button" onclick="togglePastePanel()" data-title="或者：貼上文字" data-intro="直接貼上文字內容，即時整理成文章。" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold px-6 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+                    貼上文字
+                </button>
             </div>
             <div id="errorMessage" class="mt-4 p-4 bg-red-50 text-red-700 font-bold rounded-xl text-sm hidden border border-red-300"></div>
+
+            <!-- ══════════════════════════════════════════════════════════
+             * 【貼上文字產生文章 v1】
+             * 用途：唔使網址、唔使檔案，直接貼文字就整理成文章；
+             *       另可貼一張標題圖，壓縮後內嵌喺文章最頂做主題圖。
+             * 圖片一定要壓縮：匯出 HTML 用 base64 內嵌，base64 本身
+             * 已令體積脹大約 33%，原圖幾 MB 會令匯出檔唔實用。
+             * ══════════════════════════════════════════════════════════ -->
+            <div id="pastePanel" class="hidden mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <span class="text-sm font-black text-amber-900">✍️ 貼上文字產生文章</span>
+                    <button type="button" onclick="togglePastePanel()" aria-label="收起" title="收起" class="text-xl font-black leading-none text-amber-700 hover:text-amber-900">×</button>
+                </div>
+
+                <!-- 標題圖區：支援貼上（Ctrl/⌘+V）、揀檔、拖放 -->
+                <div id="pasteImageZone" tabindex="0" class="mb-3 cursor-pointer rounded-xl border-2 border-dashed border-amber-400 bg-white p-4 text-center transition-colors hover:bg-amber-100/60">
+                    <div id="pasteImageEmpty">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-7 w-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <p class="mt-2 text-sm font-bold text-amber-900">標題圖（可選）：喺呢度貼上圖片、撳一下揀檔、或者拖入嚟</p>
+                        <p class="mt-1 text-xs text-amber-700">系統會自動壓縮至闊 1200px、約 150KB 以內，內嵌落文章最頂做主題圖。</p>
+                    </div>
+                    <div id="pasteImageResult" class="hidden">
+                        <img id="pasteImagePreview" alt="標題圖預覽" class="mx-auto max-h-48 w-auto rounded-lg shadow-sm">
+                        <p id="pasteImageInfo" class="mt-2 text-xs font-bold text-emerald-800"></p>
+                        <button type="button" onclick="clearCoverImage(event)" class="mt-2 rounded-lg border border-red-300 bg-white px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50">移除標題圖</button>
+                    </div>
+                    <input type="file" id="pasteImageInput" accept="image/*" class="hidden" onchange="handleCoverImagePick(event)">
+                </div>
+
+                <textarea id="pasteTextInput" rows="10" placeholder="喺度貼上文章文字…&#10;&#10;第一行會自動做大標題，其餘就係正文。&#10;如果貼上嘅係 Markdown（# 標題、**粗體**、- 列表），系統會自動辨識並套用格式。" class="w-full resize-y rounded-xl border border-amber-400 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-400" style="font-size:16px; line-height:1.7;"></textarea>
+
+                <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+                    <span id="pasteTextStats" class="text-xs font-bold text-amber-800">0 字</span>
+                    <span id="pasteFormatHint" class="text-xs font-bold text-amber-700"></span>
+                </div>
+
+                <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <button id="pasteGenerateBtn" type="button" onclick="generateFromPastedText()" class="flex-1 rounded-xl bg-amber-600 px-5 py-3 font-black text-white transition-colors hover:bg-amber-700">📄 產生文章</button>
+                    <button type="button" onclick="clearPasteInput()" class="rounded-xl border border-amber-400 bg-white px-5 py-3 font-bold text-amber-800 transition-colors hover:bg-amber-100">清空</button>
+                </div>
+            </div>
             <div class="mt-4">
                 <button id="historyToggleBtn" onclick="toggleUrlHistory()" class="w-full sm:w-auto rounded-xl border border-slate-300 bg-slate-50 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-100">🕘 瀏覽記錄（0/100）</button>
                 <div id="urlHistoryPanel" class="hidden mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
@@ -761,6 +806,18 @@
                         intro: '<b>或者：上傳檔案</b><br>如果你已經有 .html 或 .md 檔案，可以直接上傳重整排版。'
                     },
                     {
+                        element: document.querySelector('#pasteToggleBtn'),
+                        intro: '<b>或者：貼上文字 (新功能)</b><br>完全唔使網址。撳開之後直接貼文字就產生文章：第一行自動做大標題，Markdown 格式會自動辨識。<br>仲可以貼一張<b>標題圖</b>，系統會自動壓縮（闊 1200px、約 150KB 以內）並擺喺文章最頂第一個位置，令人一睇就知篇文講乜。',
+                        onbeforechange: function() {
+                            togglePastePanel(true);
+                        }
+                    },
+                    {
+                        element: document.querySelector('#pasteImageZone'),
+                        intro: '<b>標題圖三種入圖方法</b><br>① 喺呢格直接貼上（Ctrl / ⌘ + V）② 撳一下揀檔 ③ 用滑鼠拖張圖入嚟。<br>入完會即時顯示壓縮後嘅尺寸同容量。',
+                        position: 'bottom'
+                    },
+                    {
                         element: document.querySelector('#articleContainer'),
                         intro: '<b>第三步：清理級別 (新功能)</b><br>提取後可以喺度揀「清理級別」，自動幫你掃走側欄同推薦內容。',
                         onbeforechange: function() {
@@ -801,18 +858,27 @@
                     controls.classList.add('collapsed');
                 }
 
+                /* 【索引已更新】新增「貼上文字」同「標題圖」兩步（原 index 3 起），
+                 * 所以要展開文章區嘅步驟由原本 3–5 順移為 5–7。
+                 * 用 id 判斷會更耐改，但保留原作者寫法只調數值，減少改動面。 */
                 const stepIndex = this._currentStep;
-                if (stepIndex >= 3 && stepIndex <= 5) {
+                if (stepIndex >= 5 && stepIndex <= 7) {
                     articleContainer.classList.remove('hidden');
+                }
+                // 離開貼上相關步驟後收起面板，避免遮住後面嘅示範
+                if (targetElement.id !== 'pasteImageZone' && targetElement.id !== 'pasteToggleBtn') {
+                    togglePastePanel(false);
                 }
             });
 
             intro.oncomplete(function() {
                 document.getElementById('readerControls').classList.add('collapsed');
+                togglePastePanel(false);
             });
 
             intro.onexit(function() {
                 document.getElementById('readerControls').classList.add('collapsed');
+                togglePastePanel(false);
             });
 
             intro.start();
@@ -1270,8 +1336,416 @@
                 document.getElementById('btnText').classList.remove('hidden');
             };
             reader.readAsText(file);
-            event.target.value = ''; 
+            event.target.value = '';
         }
+
+        /* ══════════════════════════════════════════════════════════════
+         * 【貼上文字產生文章模組 v1】
+         *
+         * 兩個新能力：
+         *  (A) 直接貼文字 → 產生同「提取網址」一模一樣嘅文章結構，
+         *      所以清理級別、精準保留、簡轉繁、朗讀、儲存、分享全部即時可用。
+         *  (B) 貼一張標題圖 → 壓縩後放喺文章最頂第一個位置。
+         *
+         * 【為何一定要壓縮】匯出 HTML 係單一檔案，圖片必須 base64 內嵌
+         * （唔可以指向 blob: 或本機路徑，否則換機／過幾日就爛圖）。
+         * base64 編碼本身令體積脹大約 33%，所以手機原相 3–8MB 直接內嵌
+         * 會造出 5–11MB 嘅 HTML，分享同開啟都唔實用。
+         * 目標：長邊 1200px、約 150KB 以內 → 內嵌後約 200KB。
+         * ══════════════════════════════════════════════════════════════ */
+
+        // 壓縮參數：長邊上限同目標體積（bytes，指壓縮後嘅二進位大小）
+        const COVER_MAX_EDGE = 1200;
+        const COVER_TARGET_BYTES = 150 * 1024;
+        const COVER_MIN_QUALITY = 0.45;
+
+        // 目前已備妥嘅標題圖（data URL）同顯示資訊
+        let pastedCoverImage = '';
+        let pastedCoverInfo = '';
+
+        function togglePastePanel(forceOpen) {
+            const panel = document.getElementById('pastePanel');
+            if (!panel) return;
+            const willOpen = typeof forceOpen === 'boolean' ? forceOpen : panel.classList.contains('hidden');
+            panel.classList.toggle('hidden', !willOpen);
+            if (willOpen) {
+                updatePasteStats();
+                const box = document.getElementById('pasteTextInput');
+                if (box) setTimeout(() => box.focus(), 60);
+            }
+        }
+
+        function clearPasteInput() {
+            const box = document.getElementById('pasteTextInput');
+            if (box) box.value = '';
+            clearCoverImage();
+            updatePasteStats();
+            if (box) box.focus();
+        }
+
+        function updatePasteStats() {
+            const box = document.getElementById('pasteTextInput');
+            const stats = document.getElementById('pasteTextStats');
+            const hint = document.getElementById('pasteFormatHint');
+            if (!box || !stats) return;
+            const text = box.value || '';
+            const chars = text.replace(/\s/g, '').length;
+            const lines = text.trim() ? text.trim().split(/\n+/).length : 0;
+            stats.textContent = `${chars} 字・${lines} 段`;
+            if (!hint) return;
+            if (!text.trim()) hint.textContent = '';
+            else hint.textContent = looksLikeMarkdown(text) ? '偵測到 Markdown 格式，會套用格式排版' : '純文字模式，按空行分段';
+        }
+        /**
+         * 自動偵測係唔係 Markdown。
+         * 只認「行首」嘅結構性標記，同至少一個 inline 標記，
+         * 避免普通中文文章（例如講到「*」號或用「-」做破折號）被誤判。
+         */
+        function looksLikeMarkdown(text) {
+            const t = String(text || '');
+            if (!t.trim()) return false;
+            const blockHits = [
+                /^#{1,6}\s+\S/m,            // # 標題
+                /^\s*[-*+]\s+\S/m,          // - 列表
+                /^\s*\d+\.\s+\S/m,          // 1. 列表
+                /^\s*>\s+\S/m,              // > 引用
+                /^\s*```/m,                 // 程式碼區塊
+                /^\s*\|.+\|\s*$/m           // 表格
+            ].filter(re => re.test(t)).length;
+            const inlineHits = [
+                /\*\*[^*\n]+\*\*/,          // **粗體**
+                /\[[^\]\n]+\]\([^)\s]+\)/,  // [連結](url)
+                /!\[[^\]\n]*\]\([^)\s]+\)/, // ![圖片](url)
+                /`[^`\n]+`/                 // `code`
+            ].filter(re => re.test(t)).length;
+            return blockHits > 0 || inlineHits >= 2;
+        }
+
+        function escapeHtmlText(text) {
+            return String(text || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        /**
+         * 純文字轉段落。規則貼近一般人貼文習慣：
+         *  · 空行 = 分段
+         *  · 段內單一換行 = <br>（保留手動排行，例如詩詞、地址）
+         *  · 若通篇冇空行（好多網站複製落嚟就係咁），每行自成一段
+         */
+        function plainTextToHTML(text) {
+            const normalized = String(text || '').replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ');
+            const hasBlankLine = /\n\s*\n/.test(normalized);
+            const blocks = hasBlankLine
+                ? normalized.split(/\n\s*\n+/)
+                : normalized.split(/\n+/);
+            return blocks
+                .map(block => block.replace(/\s+$/g, '').replace(/^\s+/g, ''))
+                .filter(Boolean)
+                .map(block => `<p>${escapeHtmlText(block).replace(/\n/g, '<br>')}</p>`)
+                .join('\n');
+        }
+
+        /**
+         * 把貼上嘅文字組成文章 HTML：
+         *  · 第一行 → <h1> 標題（同時做匯出檔名）
+         *  · 其餘 → Markdown 解析或純文字分段
+         * 回傳 { html, title }；title 已 trim 並限長。
+         */
+        function buildPastedArticleHTML(text) {
+            const normalized = String(text || '').replace(/\r\n?/g, '\n').trim();
+            if (!normalized) return { html: '', title: '' };
+
+            const lines = normalized.split('\n');
+            let titleLine = '';
+            let bodyStart = 0;
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].trim()) { titleLine = lines[i].trim(); bodyStart = i + 1; break; }
+            }
+            // 標題行若本身係 Markdown 標題（# xxx）或列表符號，先剝走記號
+            const cleanTitle = titleLine.replace(/^#{1,6}\s*/, '').replace(/^[-*+]\s+/, '').replace(/\*\*/g, '').trim();
+            const body = lines.slice(bodyStart).join('\n').trim();
+
+            const isMd = looksLikeMarkdown(normalized);
+            let bodyHTML = '';
+            if (body) {
+                bodyHTML = isMd && typeof marked !== 'undefined' && marked.parse
+                    ? marked.parse(body)
+                    : plainTextToHTML(body);
+            }
+
+            const html = `<h1>${escapeHtmlText(cleanTitle)}</h1>\n${bodyHTML}`;
+            return { html, title: cleanTitle.substring(0, 80) };
+        }
+        function blobToDataURL(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = () => reject(new Error('讀取圖片失敗'));
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function loadImageFromFile(file) {
+            return new Promise((resolve, reject) => {
+                const url = URL.createObjectURL(file);
+                const img = new Image();
+                img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('圖片格式無法解讀')); };
+                img.src = url;
+            });
+        }
+
+        function canvasToBlob(canvas, type, quality) {
+            return new Promise(resolve => {
+                if (canvas.toBlob) canvas.toBlob(b => resolve(b), type, quality);
+                else resolve(null);
+            });
+        }
+
+        /**
+         * 標題圖壓縮。策略（實測最穩、又唔會靠彩數）：
+         *  1. 長邊縮到 COVER_MAX_EDGE（1200px）以內，短邊按比例。
+         *  2. 優先出 WebP（同畫質下比 JPEG 細約 25–35%）；
+         *     舊 Safari 唔支援就自動回落 JPEG，用 blob.type 驗證真係得。
+         *  3. 由 quality 0.82 起逐級試到 COVER_MIN_QUALITY，
+         *     第一個達標（≤150KB）即收貨。
+         *  4. 全部品質都仲超標（例如極高細節大圖）→ 再縮尺寸重試一輪。
+         *  5. 最後回落用最細嘅一次結果，唔會失敗收場。
+         * 透明 PNG 會先鋪白底，否則轉 JPEG 會變黑。
+         */
+        async function compressCoverImage(file) {
+            const img = await loadImageFromFile(file);
+            const srcW = img.naturalWidth || img.width;
+            const srcH = img.naturalHeight || img.height;
+            if (!srcW || !srcH) throw new Error('圖片尺寸無效');
+
+            // 先探測瀏覽器支援唔支援 WebP 編碼
+            const probe = document.createElement('canvas');
+            probe.width = probe.height = 1;
+            const supportsWebp = probe.toDataURL('image/webp').startsWith('data:image/webp');
+            const mime = supportsWebp ? 'image/webp' : 'image/jpeg';
+
+            const qualitySteps = [0.82, 0.72, 0.62, 0.55, COVER_MIN_QUALITY];
+            const scaleRounds = [1, 0.8, 0.65];
+            let smallest = null;
+
+            for (const round of scaleRounds) {
+                const maxEdge = Math.round(COVER_MAX_EDGE * round);
+                const ratio = Math.min(1, maxEdge / Math.max(srcW, srcH));
+                const w = Math.max(1, Math.round(srcW * ratio));
+                const h = Math.max(1, Math.round(srcH * ratio));
+
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                // 透明底鋪白，避免 JPEG／WebP 出現黑塊
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+                ctx.drawImage(img, 0, 0, w, h);
+
+                for (const q of qualitySteps) {
+                    let blob = await canvasToBlob(canvas, mime, q);
+                    // 部分瀏覽器會靜靜地回落 PNG（完全冇壓縮效果），要偵測
+                    if (blob && blob.type !== mime && mime === 'image/webp') {
+                        blob = await canvasToBlob(canvas, 'image/jpeg', q);
+                    }
+                    if (!blob) continue;
+                    if (!smallest || blob.size < smallest.blob.size) smallest = { blob, w, h, q };
+                    if (blob.size <= COVER_TARGET_BYTES) {
+                        return { dataUrl: await blobToDataURL(blob), width: w, height: h, bytes: blob.size, type: blob.type };
+                    }
+                }
+            }
+
+            if (!smallest) throw new Error('此瀏覽器無法壓縮圖片');
+            return {
+                dataUrl: await blobToDataURL(smallest.blob),
+                width: smallest.w, height: smallest.h,
+                bytes: smallest.blob.size, type: smallest.blob.type
+            };
+        }
+
+        function formatBytes(bytes) {
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+            return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+        }
+
+        function setCoverImage(dataUrl, info) {
+            pastedCoverImage = dataUrl || '';
+            pastedCoverInfo = info || '';
+            const empty = document.getElementById('pasteImageEmpty');
+            const result = document.getElementById('pasteImageResult');
+            const preview = document.getElementById('pasteImagePreview');
+            const infoEl = document.getElementById('pasteImageInfo');
+            if (!empty || !result || !preview) return;
+            if (pastedCoverImage) {
+                preview.src = pastedCoverImage;
+                if (infoEl) infoEl.textContent = pastedCoverInfo;
+                empty.classList.add('hidden');
+                result.classList.remove('hidden');
+            } else {
+                preview.removeAttribute('src');
+                if (infoEl) infoEl.textContent = '';
+                result.classList.add('hidden');
+                empty.classList.remove('hidden');
+            }
+        }
+
+        function clearCoverImage(event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            setCoverImage('', '');
+            const input = document.getElementById('pasteImageInput');
+            if (input) input.value = '';
+        }
+
+        async function ingestCoverImageFile(file) {
+            if (!file) return;
+            if (!/^image\//i.test(file.type)) {
+                showError('⚠️ 標題圖必須係圖片檔（JPG／PNG／WebP／GIF 等）。');
+                return;
+            }
+            const infoEl = document.getElementById('pasteImageInfo');
+            setCoverImage('', '');
+            const empty = document.getElementById('pasteImageEmpty');
+            if (empty) empty.classList.add('opacity-50');
+            try {
+                const originalBytes = file.size;
+                const out = await compressCoverImage(file);
+                const saved = originalBytes > 0 ? Math.max(0, Math.round((1 - out.bytes / originalBytes) * 100)) : 0;
+                const label = `✅ 已壓縮：${out.width}×${out.height}・${formatBytes(out.bytes)}` +
+                    (originalBytes ? `（原本 ${formatBytes(originalBytes)}，減少 ${saved}%）` : '') +
+                    `・格式 ${out.type.replace('image/', '').toUpperCase()}`;
+                setCoverImage(out.dataUrl, label);
+                document.getElementById('errorMessage').classList.add('hidden');
+            } catch (err) {
+                console.error('壓縮標題圖失敗:', err);
+                showError('⚠️ 無法處理呢張圖片：' + (err.message || '未知錯誤'));
+                setCoverImage('', '');
+            } finally {
+                if (empty) empty.classList.remove('opacity-50');
+            }
+        }
+
+        function handleCoverImagePick(event) {
+            const file = event.target.files && event.target.files[0];
+            ingestCoverImageFile(file);
+            event.target.value = '';
+        }
+        /**
+         * 產生文章。刻意走同「提取網址」完全相同嘅出口（renderContent），
+         * 令清理級別、精準保留、簡轉繁、朗讀、儲存、分享全部照用，
+         * 唔需要為貼文另開一套邏輯。
+         *
+         * 標題圖擺位：插喺 <h1> 之後、正文之前 —— 亦即視覺上文章最頂
+         * 第一張圖，一睇就知篇文講乜。放 <h1> 之後而唔係之前，係因為
+         * buildExportHTML() 靠 contentArea 第一個 <h1> 決定匯出檔名，
+         * 而且標題文字先出現對朗讀順序亦更自然。
+         */
+        function generateFromPastedText() {
+            const box = document.getElementById('pasteTextInput');
+            const text = box ? box.value : '';
+            if (!text.trim() && !pastedCoverImage) {
+                showError('⚠️ 請先貼上文字內容（或至少貼一張標題圖）。');
+                return;
+            }
+
+            const built = buildPastedArticleHTML(text);
+            let innerHTML = built.html;
+
+            // 只有圖冇字：仍然可以產生一篇「純標題圖」文章
+            if (!text.trim() && pastedCoverImage) {
+                innerHTML = `<h1>${escapeHtmlText('未命名文章')}</h1>`;
+            }
+
+            if (pastedCoverImage) {
+                const alt = escapeHtmlText(built.title || '文章標題圖');
+                const coverHTML = `<figure data-pasted-cover="1"><img src="${pastedCoverImage}" alt="${alt}" style="display:block;max-width:100%;height:auto;margin:0 auto;border-radius:10px;"></figure>`;
+                // 插入第一個 </h1> 之後；冇 h1 就擺最前
+                const h1End = innerHTML.indexOf('</h1>');
+                innerHTML = h1End >= 0
+                    ? innerHTML.slice(0, h1End + 5) + '\n' + coverHTML + '\n' + innerHTML.slice(h1End + 5)
+                    : coverHTML + '\n' + innerHTML;
+            }
+
+            resetUI();
+
+            const stamp = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const stampText = `${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(stamp.getDate())}-${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}`;
+            articleTitle = built.title || `貼上文章-${stampText}`;
+
+            /* 【刻意唔入「瀏覽記錄」／唔寫編輯記錄】兩個實際原因：
+             *  1. 瀏覽記錄嘅載入動作係叫 fetchWithAI() 去重新抓網址，
+             *     貼上文章冇來源網址，一按就必定失敗。
+             *  2. 編輯記錄會把整份 innerHTML 寫入 localStorage，而標題圖
+             *     係 base64（約 200KB／篇）。localStorage 通常只有 5MB，
+             *     而 SafeStorage 寫入失敗係靜靜咁 catch 住，用家只會見到
+             *     「記錄無故唔見」。原文文字仍然留喺貼上框，隨時可重新產生。
+             * 所以貼上文章嘅正式保存方式係「儲存檔案」匯出 HTML。 */
+            setCurrentArticleUrl('');
+
+            renderContent(innerHTML);
+            togglePastePanel(false);
+        }
+
+        /* 標題圖區：貼上（Ctrl/⌘+V）、撳一下揀檔、拖放，三種都支援。 */
+        window.addEventListener('DOMContentLoaded', () => {
+            const zone = document.getElementById('pasteImageZone');
+            const box = document.getElementById('pasteTextInput');
+            const fileInput = document.getElementById('pasteImageInput');
+            if (box) {
+                box.addEventListener('input', updatePasteStats);
+                // 貼文字時順手夾帶圖片（例如 Word／網頁複製）亦即時接住做標題圖
+                box.addEventListener('paste', (e) => {
+                    const items = e.clipboardData && e.clipboardData.items;
+                    if (!items) return;
+                    for (const item of items) {
+                        if (item.kind === 'file' && /^image\//i.test(item.type)) {
+                            const file = item.getAsFile();
+                            if (file) { e.preventDefault(); ingestCoverImageFile(file); return; }
+                        }
+                    }
+                });
+            }
+            if (!zone || !fileInput) return;
+
+            zone.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;   // 「移除標題圖」唔應該觸發揀檔
+                fileInput.click();
+            });
+
+            // 貼上：zone 取得 focus 時直接接住剪貼板圖片
+            zone.addEventListener('paste', (e) => {
+                const items = e.clipboardData && e.clipboardData.items;
+                if (!items) return;
+                for (const item of items) {
+                    if (item.kind === 'file' && /^image\//i.test(item.type)) {
+                        const file = item.getAsFile();
+                        if (file) { e.preventDefault(); ingestCoverImageFile(file); return; }
+                    }
+                }
+            });
+
+            ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                zone.classList.add('bg-amber-100', 'border-amber-600');
+            }));
+            ['dragleave', 'drop'].forEach(evt => zone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                zone.classList.remove('bg-amber-100', 'border-amber-600');
+            }));
+            zone.addEventListener('drop', (e) => {
+                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) ingestCoverImageFile(file);
+            });
+        });
 
         /* ══════════════════════════════════════════════════════════════
          * 【自動救援模組 v1】
@@ -1796,7 +2270,14 @@
                 const href = a.getAttribute('href') || '';
                 if (/facebook\.com\/sharer|twitter\.com\/intent|linkedin\.com\/share/i.test(href)) a.remove();
             });
-            const allImages = Array.from(root.querySelectorAll('img'));
+            /* 【標題圖保護】貼上文章嘅標題圖係用家自己揀嘅主題圖，唔屬於
+             * 「網站雜質」，所以第 1–4 級一律唔准當普通內文圖去抽稀。
+             * （原邏輯靠「index 0 一定係封面」偶然保住，但一旦排版變動就會
+             * 靜靜咁刪走標題圖，所以改成明確排除。）
+             * 只有第 5 級「純文字」會連標題圖一齊清走 —— 呢個係該級別嘅定義。 */
+            const coverImages = new Set(Array.from(root.querySelectorAll('[data-pasted-cover] img')));
+            const allImages = Array.from(root.querySelectorAll('img'))
+                .filter(img => cleanupLevel === 5 || !coverImages.has(img));
             if (cleanupLevel === 2) {
                 allImages.forEach((img, index) => {
                     if (index % 2 === 1) (img.closest('figure') || img).remove();
