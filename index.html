@@ -791,7 +791,9 @@
                 prevLabel: '上一步',
                 doneLabel: '明白晒',
                 showStepNumbers: true,
-                disableInteraction: true,
+                // 教學提示不可阻塞主流程；舊版設為 true 會令遮罩攔截
+                // 「提取網址」按鈕，使用者以為按了但 fetchWithAI() 根本沒有執行。
+                disableInteraction: false,
                 steps: [
                     {
                         element: document.querySelector('#urlInput'),
