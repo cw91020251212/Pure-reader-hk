@@ -1185,6 +1185,112 @@
             return m ? m[1] : null;
         }
 
+        /* ══════════════════════════════════════════════════════════════
+         * 【通用內容區評分 v1】
+         *
+         * 【要解決乜】原本揀內容區只靠一條死線：
+         *     #content-wrapper → <article> → <main> → body
+         * 一旦網站唔用 <article>，就會跌落 <main>。但好多香港新聞站
+         * （例：U Travel）嘅 <main> 只係「目的地大選單」，正文其實
+         * 喺 .articleContent / .detail-description-content 等容器內，
+         * 完全喺 <main> 之外。結果：抽到一版全係地區連結、正文 0 字。
+         *
+         * 【做法】唔再靠標籤位置，改為同時評分所有候選容器，揀「真正
+         * 似正文」嘅一個：
+         *   得分 = 文字量 − 連結文字量×1.5 + <p> 數量×8
+         * 連結文字扣重，因為選單／推薦位幾乎全部係連結；<p> 加分，
+         * 因為正文係段落砌成。class/id 命中 nav|footer|related|
+         * recommend… 再乘 0.4，清單遠多過段落乘 0.6。
+         * 最後向下收窄：若某子節點已含九成文字同同等圖片，改用該子
+         * 節點，避免連埋外層殼一齊抽。
+         * ══════════════════════════════════════════════════════════════ */
+
+        // 常見正文容器（各大 CMS／本地新聞站），優先納入候選
+        const CONTENT_HINT_SELECTOR = [
+            '#content-wrapper', '[itemprop="articleBody"]',
+            '.articleContent', '.detail-description-content', '.detail-description',
+            '.content-main', '.article-content', '.article-body', '.articleBody',
+            '.entry-content', '.post-content', '.post-body', '.story-body',
+            '.news-content', '.main-content', 'article', 'main'
+        ].join(', ');
+
+        // class/id 一望就知唔係正文的區塊
+        const JUNK_HINT_RE = /(^|[-_ ])(nav|menu|breadcrumb|header|footer|sidebar|aside|share|social|related|recommend|promote|popular|comment|banner|advert|subscribe|newsletter|pagination|toolbar|widget|destination|tag|login)([-_ ]|$)/i;
+
+        function visibleTextLength(el) {
+            return ((el.textContent || '').replace(/\s+/g, ' ').trim()).length;
+        }
+        function linkTextLength(el) {
+            let n = 0;
+            el.querySelectorAll('a').forEach(a => {
+                n += ((a.textContent || '').replace(/\s+/g, ' ').trim()).length;
+            });
+            return n;
+        }
+        function mediaNodeCount(el) {
+            return el.querySelectorAll('img, picture, source').length;
+        }
+
+        function scoreContentNode(el) {
+            const textLen = visibleTextLength(el);
+            if (textLen < 120) return -1;            // 太短，一定唔係正文
+            let score = textLen - linkTextLength(el) * 1.5;
+            const paras = el.querySelectorAll('p').length;
+            score += Math.min(paras, 30) * 8;
+            const hint = (el.getAttribute('class') || '') + ' ' + (el.getAttribute('id') || '');
+            if (JUNK_HINT_RE.test(hint)) score *= 0.4;
+            if (el.querySelectorAll('li').length > paras * 3 + 10) score *= 0.6;
+            return score;
+        }
+
+        function pickBestContentNode(doc) {
+            // 本 App 自己匯出的檔案有 #content-wrapper，直接信任
+            const own = doc.querySelector('#content-wrapper');
+            if (own) return own;
+            if (!doc.body) return null;
+
+            /* 必須先剷走 script/style：textContent 會連 JS 原始碼一齊計，
+             * 而 U Travel 內嵌廣告 JS 有成千字，會令「含大段 script 嘅
+             * 外殼」評分虛高，甚至令收窄行唔落去。extractNuclear 之後
+             * 一樣會剷，所以喺呢度提早剷走唔會有副作用。 */
+            doc.querySelectorAll('script, style, noscript, template').forEach(el => el.remove());
+
+            const cands = new Set();
+            doc.querySelectorAll(CONTENT_HINT_SELECTOR).forEach(el => cands.add(el));
+            doc.body.querySelectorAll('div, section, td').forEach(el => cands.add(el));
+
+            let best = null, bestScore = 0;
+            cands.forEach(el => {
+                const s = scoreContentNode(el);
+                if (s > bestScore) { bestScore = s; best = el; }
+            });
+            if (!best) return null;
+
+            /* 向下收窄：剝走只係包住正文的外殼。
+             * 圖片數用「九成」而唯獨唔用「全等」—— 外殼通常仲包住頁頭
+             * logo、頁尾圖標，要求子節點圖片數完全等於父節點會永遠唔達標，
+             * 收窄就會一步都行唔到，結果連 header/footer 一齊抽落嚟。 */
+            let node = best;
+            for (let i = 0; i < 8; i++) {
+                const total = visibleTextLength(node);
+                const media = mediaNodeCount(node);
+                const keeper = Array.from(node.children).find(k =>
+                    visibleTextLength(k) >= total * 0.9 && mediaNodeCount(k) >= media * 0.9);
+                if (!keeper) break;
+                node = keeper;
+            }
+            return node;
+        }
+
+        // 量度「真正正文」有幾多字：排除連結同選單，用嚟判斷抽取成功與否
+        function proseTextLength(html) {
+            try {
+                const d = new DOMParser().parseFromString(html, 'text/html');
+                d.querySelectorAll('script, style, a, nav, ul, ol').forEach(el => el.remove());
+                return ((d.body && d.body.textContent) || '').replace(/\s+/g, ' ').trim().length;
+            } catch (e) { return 0; }
+        }
+
         /**
          * 抽出文章內容區。WeekendHK 有兩種版式，必須兩種都覆蓋：
          *  (a) 正文內嵌 <figure> 圖 → 圖在 <article> 內，照舊處理。
@@ -1195,7 +1301,28 @@
          */
         function scopeToArticleHTML(doc, pageUrl) {
             const art = doc.querySelector('article');
-            if (!art || !art.innerHTML || art.innerHTML.length <= 500) return null;
+
+            /* 版式 (c)：完全冇 <article>（或 <article> 係空殼）。
+             * 舊版喺呢個情況回 null，令上層跌落 <main>／body；而 U Travel
+             * 之類嘅 <main> 只有選單，正文因此永久遺失。改為交由評分揀。 */
+            if (!art || !art.innerHTML || art.innerHTML.length <= 500) {
+                const picked = pickBestContentNode(doc);
+                /* 只喺「真係搵到一篇文」時才接管。首頁／列表頁（例：ezone
+                 * 首頁）根本冇正文，評分只會揀到一格標題連結；此時要回
+                 * null，維持舊有 body 流程，唔好剝走原本抽到嘅縮圖。 */
+                if (picked && proseTextLength(picked.innerHTML) >= 200) return picked.innerHTML;
+                return null;
+            }
+
+            /* <article> 存在但可能只係殼（例如佢淨係包住標題／作者，
+             * 正文其實喺另一個 div）。同評分結果比較，取正文較多者。 */
+            const artProse = proseTextLength(art.innerHTML);
+            if (artProse < 200) {
+                const picked = pickBestContentNode(doc);
+                if (picked && proseTextLength(picked.innerHTML) > artProse * 1.5) {
+                    return picked.innerHTML;
+                }
+            }
 
             // 版式 (a)：正文已有圖，直接用 <article>
             if (art.querySelector('img, picture, source')) return art.innerHTML;
@@ -1227,7 +1354,21 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
             const coverUrl = coverOverride || doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image"]')?.getAttribute('content') || doc.querySelector('meta[name="twitter:image:src"]')?.getAttribute('content') || '';
+            /* 【修正】原本硬寫 #content-wrapper → article → main → body。
+             * 遇上正文唔喺 <main> 內嘅版式（U Travel）會抽到選單當正文。
+             * 現改為：先按舊次序，但若揀中嘅節點正文太少，就改用評分結果。
+             * 注意 extractNuclear 亦會收到「已 scope 過」嘅片段，此時
+             * 通常冇 article/main，命中 body，行為同以前一致。 */
             let wrapper = doc.querySelector('#content-wrapper') || doc.querySelector('article') || doc.querySelector('main');
+            if (wrapper && proseTextLength(wrapper.innerHTML) < 200) {
+                const picked = pickBestContentNode(doc);
+                // 同 scopeToArticleHTML 一致：要真係有一篇文才接管，
+                // 否則首頁／列表頁會被剝到只剩一格標題。
+                if (picked && proseTextLength(picked.innerHTML) >= 200
+                    && proseTextLength(picked.innerHTML) > proseTextLength(wrapper.innerHTML)) {
+                    wrapper = picked;
+                }
+            }
             let targetNode = wrapper ? wrapper : doc.body;
 
             const blackList = 'button, script, style, iframe, nav, footer, aside, form, input, textarea, select, .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls';
@@ -2121,9 +2262,15 @@
             const groups = [
                 ['ad~', 'adbox', 'advert', 'adsbygoogle', 'ad-container', 'ad-slot'],
                 ['recommend', 'related', 'recommended', 'share', 'social', 'newsletter', 'subscribe', 'popup', 'modal'],
-                ['sidebar', 'side-bar', 'widget', 'trending', 'popular', 'most-read'],
-                ['more-article', 'related-post', 'outbrain', 'taboola', 'infinite', 'recommendation'],
-                ['promo', 'promotion', 'sponsor', 'affiliate', 'native-ad', 'adunit']
+                /* 補上 hot-topic / side-component：U Travel 等站將「熱門話題」
+                 * 推薦清單放喺正文容器內部，唔屬上面任何一個字眼，
+                 * 所以未補之前第 1–5 級都清唔走。 */
+                ['sidebar', 'side-bar', 'widget', 'trending', 'popular', 'most-read', 'hot-topic', 'side-component'],
+                ['more-article', 'related-post', 'outbrain', 'taboola', 'infinite', 'recommendation', 'next-article'],
+                /* promotionsection（無連字號）同 promote 都要明確列出，
+                 * 因為 'promo' 雖然係前綴，但 promote_signature 類命名
+                 * 靠 [class*="promo"] 已可命中，這裡補齊語意更清楚。 */
+                ['promo', 'promotion', 'promotionsection', 'promote', 'sponsor', 'affiliate', 'native-ad', 'adunit']
             ];
             const extras = [
                 '[data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]',

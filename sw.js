@@ -1,6 +1,6 @@
 /* 版本號一定要跟住 index.html 改動遞增：activate 事件會刪走所有名唔同嘅
  * 舊快取，咁樣新功能（貼上文字產生文章）才唔會被舊快取覆蓋。 */
-const CACHE_NAME = 'pureread-hk-v1.4';
+const CACHE_NAME = 'pureread-hk-v1.5';
 const APP_SHELL = [
   './', './index.html', './manifest.json', './favicon.ico',
   './assets/icon.jpeg', './assets/icon-192.png', './assets/icon-512.png',
