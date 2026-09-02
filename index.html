@@ -176,6 +176,23 @@
             transform: translateY(-1px);
         }
         
+        /* 圖片載入失敗時，不再把長 URL 當作圖片替代文字撐爆版面。 */
+        .pr-image-fallback {
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            width: 100%; box-sizing: border-box; margin: 16px auto; padding: 16px;
+            color: #475569; background: #f8fafc; border: 1px dashed #94a3b8;
+            border-radius: 10px; text-align: center; font-size: 0.9em; line-height: 1.5;
+        }
+        .pr-image-fallback .pr-image-url { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; color: #64748b; font-size: 0.82em; }
+        .pr-image-fallback-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+        .pr-image-fallback button, .pr-image-fallback a {
+            display: inline-flex; align-items: center; justify-content: center; min-height: 34px;
+            padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;
+            color: #3730a3; font: inherit; font-size: 0.9em; text-decoration: none; cursor: pointer;
+        }
+        .pr-image-fallback button:hover, .pr-image-fallback a:hover { background: #eef2ff; }
+        .pr-image-fallback .pr-image-retry { color: #166534; }
+
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -909,6 +926,7 @@
         }
 
         window.addEventListener('DOMContentLoaded', () => {
+            restoreImageReturnPosition();
             window.scrollTo(0, 0);
             if(!SafeStorage.get('tutorialSeen_v7')) {
                 setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v7', 'true'); }, 500);
@@ -1437,6 +1455,47 @@
             });
         }
 
+        /* 外站圖片可能因 hotlink、CDN 或權限規則拒絕嵌入；保留原網址並提供人工開啟。 */
+        function installBrokenImageRecovery(root) {
+            if (!root || root.dataset.prImageRecovery === '1') return;
+            root.dataset.prImageRecovery = '1';
+            root.addEventListener('error', (event) => {
+                const img = event.target;
+                if (!img || img.tagName !== 'IMG' || img.dataset.prFallbackShown === '1') return;
+                const source = img.currentSrc || img.getAttribute('src') || img.getAttribute('data-auto-recovered-src') || '';
+                if (!source || source.startsWith('data:') || source.startsWith('blob:')) return;
+                img.dataset.prFallbackShown = '1';
+                const fallback = document.createElement('div');
+                fallback.className = 'pr-image-fallback';
+                fallback.setAttribute('role', 'status');
+                fallback.innerHTML = '<strong>圖片暫時無法直接顯示</strong><span class="pr-image-url"></span><span class="pr-image-fallback-actions"><button type="button" class="pr-image-retry">重新載入</button><a class="pr-image-open" target="_blank" rel="noopener noreferrer">開啟原圖</a></span>';
+                fallback.querySelector('.pr-image-url').textContent = source;
+                const open = fallback.querySelector('.pr-image-open');
+                open.href = source;
+                open.addEventListener('click', () => {
+                    sessionStorage.setItem('pr-return-scroll-y', String(window.scrollY));
+                    sessionStorage.setItem('pr-return-scroll-key', location.href);
+                });
+                fallback.querySelector('.pr-image-retry').addEventListener('click', () => {
+                    img.dataset.prFallbackShown = '0';
+                    img.src = source + (source.includes('?') ? '&' : '?') + 'pr_retry=' + Date.now();
+                    fallback.replaceWith(img);
+                });
+                img.replaceWith(fallback);
+            }, true);
+            root.querySelectorAll('img').forEach(img => {
+                if (img.complete && img.naturalWidth === 0) img.dispatchEvent(new Event('error'));
+            });
+        }
+        function restoreImageReturnPosition() {
+            const key = sessionStorage.getItem('pr-return-scroll-key');
+            const saved = sessionStorage.getItem('pr-return-scroll-y');
+            if (key !== location.href || saved === null) return;
+            sessionStorage.removeItem('pr-return-scroll-key');
+            sessionStorage.removeItem('pr-return-scroll-y');
+            const y = Number(saved);
+            if (Number.isFinite(y)) requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'auto' })));
+        }
         function handleSharedFile(file) {
             resetUI();
             document.getElementById('loadingIcon').classList.remove('hidden');
@@ -2251,6 +2310,7 @@
             promoteLinkedImageTargets(contentArea, mediaBase);
             
             processLongURLs(contentArea);
+            installBrokenImageRecovery(contentArea);
             updateCleanupPanels();
             
             const articleContainer = document.getElementById('articleContainer');
