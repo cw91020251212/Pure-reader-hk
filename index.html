@@ -185,6 +185,7 @@
         }
         .pr-image-fallback .pr-image-url { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; color: #64748b; font-size: 0.82em; }
         .pr-image-fallback-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+        .pr-image-fallback input[type="file"] { max-width: 100%; font-size: 0.85em; }
         .pr-image-fallback button, .pr-image-fallback a {
             display: inline-flex; align-items: center; justify-content: center; min-height: 34px;
             padding: 6px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff;
@@ -192,6 +193,7 @@
         }
         .pr-image-fallback button:hover, .pr-image-fallback a:hover { background: #eef2ff; }
         .pr-image-fallback .pr-image-retry { color: #166534; }
+        .pr-image-fallback .pr-image-capture { color: #7c2d12; border-color: #fdba74; background: #fff7ed; }
 
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -1468,7 +1470,7 @@
                 const fallback = document.createElement('div');
                 fallback.className = 'pr-image-fallback';
                 fallback.setAttribute('role', 'status');
-                fallback.innerHTML = '<strong>圖片暫時無法直接顯示</strong><span class="pr-image-url"></span><span class="pr-image-fallback-actions"><button type="button" class="pr-image-retry">重新載入</button><a class="pr-image-open" target="_blank" rel="noopener noreferrer">開啟原圖</a></span>';
+                fallback.innerHTML = '<strong>圖片暫時無法直接顯示</strong><span class="pr-image-url"></span><span class="pr-image-fallback-actions"><button type="button" class="pr-image-retry">重新載入</button><button type="button" class="pr-image-capture">Capture 圖片</button><a class="pr-image-open" target="_blank" rel="noopener noreferrer">開啟原圖</a></span><label>或手動保存後放回：<input type="file" accept="image/*" class="pr-image-local"></label>';
                 fallback.querySelector('.pr-image-url').textContent = source;
                 const open = fallback.querySelector('.pr-image-open');
                 open.href = source;
@@ -1480,6 +1482,46 @@
                     img.dataset.prFallbackShown = '0';
                     img.src = source + (source.includes('?') ? '&' : '?') + 'pr_retry=' + Date.now();
                     fallback.replaceWith(img);
+                });
+                fallback.querySelector('.pr-image-capture').addEventListener('click', async () => {
+                    const button = fallback.querySelector('.pr-image-capture');
+                    button.disabled = true;
+                    button.textContent = '正在擷取…';
+                    try {
+                        let blob = null;
+                        // 必須由用戶在系統選擇「開啟原圖」的分頁／視窗；
+                        // 絕不預設擷取 PureRead 的錯誤提示框，避免下載錯畫面。
+                        if (!blob && navigator.mediaDevices?.getDisplayMedia) {
+                            const stream = await navigator.mediaDevices.getDisplayMedia({ video: { preferCurrentTab: false }, audio: false });
+                            const video = document.createElement('video'); video.srcObject = stream; video.muted = true; await video.play();
+                            await new Promise(resolve => requestAnimationFrame(resolve));
+                            const canvas = document.createElement('canvas'); canvas.width = video.videoWidth || 1280; canvas.height = video.videoHeight || 720;
+                            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                            stream.getTracks().forEach(t => t.stop());
+                            blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                        }
+                        if (!blob) throw new Error('瀏覽器未提供畫面擷取權限');
+                        const dataUrl = await blobToDataURL(blob);
+                        img.src = dataUrl; img.removeAttribute('srcset'); img.removeAttribute('data-image-embed-failed'); img.dataset.prFallbackShown = '0';
+                        const link = document.createElement('a'); link.href = dataUrl; link.download = `pureread-capture-${Date.now()}.png`; link.click();
+                        fallback.replaceWith(img);
+                    } catch (error) {
+                        button.disabled = false; button.textContent = 'Capture 圖片';
+                        fallback.querySelector('.pr-image-url').textContent = '擷取取消或不受支援；可按「開啟原圖」後用瀏覽器長按／另存圖片。';
+                    }
+                });
+                fallback.querySelector('.pr-image-local').addEventListener('change', async (event) => {
+                    const file = event.target.files && event.target.files[0];
+                    if (!file) return;
+                    try {
+                        img.src = await blobToDataURL(file);
+                        img.removeAttribute('srcset');
+                        img.removeAttribute('data-image-embed-failed');
+                        img.dataset.prFallbackShown = '0';
+                        fallback.replaceWith(img);
+                    } catch (error) {
+                        fallback.querySelector('.pr-image-url').textContent = '讀取已保存圖片失敗，請再選擇一次。';
+                    }
                 });
                 img.replaceWith(fallback);
             }, true);
@@ -2138,6 +2180,80 @@
             }
         }
 
+        function buildHK01GalleryHTML(urls, captions = []) {
+            const unique = [...new Set((urls || []).filter(Boolean))];
+            if (!unique.length) return '';
+            return `<div class="pr-hk01-gallery" data-auto-gallery="hk01"><h3>圖片</h3>${unique.map((url, index) => {
+                const src = escapeHtmlText(url);
+                const alt = escapeHtmlText(captions[index] || `圖片 ${index + 1}`);
+                return `<figure><img src="${src}" alt="${alt}" loading="eager"><figcaption>${alt}</figcaption></figure>`;
+            }).join('')}</div>`;
+        }
+        function decodeEmbeddedUrl(value) {
+            return String(value || '').replace(/\\\//g, '/').replace(/\\u002F/gi, '/')
+                .replace(/\\u003A/gi, ':').replace(/&amp;/g, '&').replace(/\\u0026/gi, '&')
+                .replace(/[\\"'\s]+$/g, '');
+        }
+
+        // 從 Next/React 狀態及 JSON-LD 撈出相簿原圖。不可只靠 DOM，因為相簿常由 JS
+        // 在頁面載入後才畫出，伺服器 HTML 內的 img 可能永遠只有封面。
+        function extractEmbeddedGalleryImages(sourceHTML) {
+            // 來源常把 __NEXT_DATA__ 再包入 JS 字串，先還原 \\"、\\/、\\u002F，
+            // 再用普通 JSON 形態搜尋，避免在轉義層上做脆弱的複雜正則。
+            const text = String(sourceHTML || '')
+                .replace(/\\(["'])/g, '$1')
+                .replace(/\\u002F/gi, '/')
+                .replace(/\\u003A/gi, ':')
+                .replace(/\\u0026/gi, '&');
+            if (!text) return [];
+            const urls = [];
+            const add = (value) => {
+                const u = decodeEmbeddedUrl(value).replace(/[),.;]+$/, '');
+                const isKnownImageCDN = /https?:\/\/cdn\.hk01\.com\/di\/media\/images\//i.test(u);
+                if (/^https?:\/\//i.test(u) && (isKnownImageCDN || /\.(?:jpe?g|png|gif|webp|avif)(?:[?#]|$)/i.test(u))) urls.push(u);
+            };
+            // 只在 gallery 相鄰資料中取，避免把推薦文章縮圖誤當相簿。
+            const starts = [];
+            for (const re of [/blockType\s*["']?\s*[:=]\s*["']gallery["']/ig]) {
+                let m; while ((m = re.exec(text))) starts.push(m.index);
+            }
+            const chunks = starts.length ? starts.map((start, i) => text.slice(start, starts[i + 1] || start + 250000)) : [];
+            chunks.forEach(chunk => {
+                for (const re of [/(?:cdnUrl|originalUrl|imageUrl|url)\s*["']?\s*[:=]\s*["'](https?:[^"'\\ ]+)/ig,
+                                   /(https?:\/\/[^"'\\ ]*\.(?:jpe?g|png|gif|webp|avif)(?:\?[^"'\\ ]*)?)/ig]) {
+                    let m; while ((m = re.exec(chunk))) add(m[1]);
+                }
+            });
+            return [...new Set(urls)];
+        }
+
+        async function fetchHK01GalleryHTML(articleUrl, sourceHTML = '') {
+            const match = String(articleUrl || '').match(/(?:hk01\.(?:com|com\.hk)|hk01\.com)\/[^/]+\/(\d+)(?:[/?#]|$)/i);
+            if (!match) return '';
+            const localUrls = extractEmbeddedGalleryImages(sourceHTML);
+            if (localUrls.length) return buildHK01GalleryHTML(localUrls);
+            try {
+                const api = `https://web-data-cn-api.hk01.com/v2/articles/${match[1]}`;
+                const response = await fetch(api, { headers: { 'Accept': 'application/json' }, credentials: 'omit' });
+                if (!response.ok) return '';
+                const data = await response.json();
+                const blocks = Array.isArray(data.blocks) ? data.blocks : [];
+                const galleries = blocks.filter(b => b && b.blockType === 'gallery' && Array.isArray(b.images));
+                const images = galleries.flatMap(g => g.images || []).filter(x => x && (x.cdnUrl || x.originalUrl || x.url));
+                if (!images.length) return '';
+                return buildHK01GalleryHTML(images.map(image => image.cdnUrl || image.originalUrl || image.url), images.map(image => image.caption));
+            } catch (error) {
+                console.warn('[PureRead HK] HK01 相簿 API 讀取失敗:', error);
+                return '';
+            }
+        }
+        function insertHK01GalleryHTML(rawHTML, galleryHTML) {
+            if (!galleryHTML) return rawHTML;
+            const galleryPlaceholder = /<div[^>]+id=["']article-photo-gallery["'][^>]*><\/div>/i;
+            if (galleryPlaceholder.test(rawHTML)) return rawHTML.replace(galleryPlaceholder, galleryHTML);
+            const heading = rawHTML.search(/<h2\b/i);
+            return heading >= 0 ? rawHTML.slice(0, heading) + galleryHTML + rawHTML.slice(heading) : rawHTML + galleryHTML;
+        }
         async function fetchWithAI() {
             const urlInput = document.getElementById('urlInput').value.trim();
             if (!urlInput || (!urlInput.startsWith('http') && !urlInput.startsWith('file') && !urlInput.startsWith('hdml') && !urlInput.startsWith('content'))) {
@@ -2172,6 +2288,7 @@
                 let articleData = {};
                 let coverUrl = '';
                 let usedHtmlMode = false;
+                let hk01GalleryHTML = '';
                 const diag = { httpStatus: 0, title: '', content: '', networkError: false };
 
                 try {
@@ -2225,6 +2342,7 @@
                         return;
                     }
                     rawHTML = marked.parse(markdownText);
+                    hk01GalleryHTML = await fetchHK01GalleryHTML(finalUrl);
                 } else {
                     // HTML 模式：自行抽 title 同封面圖
                     const metaDoc = new DOMParser().parseFromString(rawHTML, 'text/html');
@@ -2234,6 +2352,9 @@
                     if (og) coverUrl = toOriginalImageUrl(og.getAttribute('content') || '');
                     // 只保留內容區，剔除頁頭/頁尾/側欄/推薦位。
                     // 注意：部分文章唯一的主題圖在 <article> 之外，需特別處理。
+                    // 先讀完整 HTML，但不要立即插入；extractNuclear 的正文評分器
+                    // 可能把「文字很少、圖片很多」的相簿誤判成推薦區而刪掉。
+                    hk01GalleryHTML = await fetchHK01GalleryHTML(finalUrl, rawHTML);
                     const scoped = scopeToArticleHTML(metaDoc, finalUrl);
                     if (scoped) {
                         rawHTML = scoped;
@@ -2266,7 +2387,9 @@
                     }
                 }
                 
-                const pureHTML = extractNuclear(rawHTML, finalUrl, coverUrl);
+                let pureHTML = extractNuclear(rawHTML, finalUrl, coverUrl);
+                // 相簿最後插入，確保不會再被正文容器評分／清理流程誤刪。
+                if (hk01GalleryHTML) pureHTML = insertHK01GalleryHTML(pureHTML, hk01GalleryHTML);
                 setCurrentArticleUrl(finalUrl);
                 renderContent(pureHTML);
                 const record = ensureCurrentEditRecord();
@@ -2311,6 +2434,8 @@
             
             processLongURLs(contentArea);
             installBrokenImageRecovery(contentArea);
+            // 文章載入後自動收集可讀取的圖片；清理／刪除仍可在之後照常使用。
+            preloadImagesForOffline(contentArea);
             updateCleanupPanels();
             
             const articleContainer = document.getElementById('articleContainer');
@@ -3223,16 +3348,74 @@
          * 用戶點擊手勢內叫 navigator.share()，中間 await 過就會失去
          * transient activation，Android 會直接擲 NotAllowedError。
          */
+        async function preloadImagesForOffline(root) {
+            if (!root) return;
+            const images = Array.from(root.querySelectorAll('img[src]'));
+            await Promise.all(images.map(async (img) => {
+                const src = img.getAttribute('src') || '';
+                if (!src || src.startsWith('data:') || src.startsWith('blob:') || img.dataset.imagePreloaded === '1') return;
+                img.dataset.imagePreloaded = '1';
+                try {
+                    const response = await fetch(src, { mode: 'cors', credentials: 'include', cache: 'force-cache' });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const blob = await response.blob();
+                    if (!blob.type.startsWith('image/')) throw new Error('不是圖片檔案');
+                    if (!img.isConnected) return;
+                    img.setAttribute('data-original-src', src);
+                    img.setAttribute('src', await blobToDataURL(blob));
+                    img.removeAttribute('srcset');
+                    img.removeAttribute('sizes');
+                    img.dataset.imageEmbedded = '1';
+                } catch (error) {
+                    img.dataset.imageEmbedFailed = '1';
+                }
+            }));
+        }
+        async function buildExportHTMLWithImages() {
+            await preloadImagesForOffline(contentArea);
+            const clone = contentArea.cloneNode(true);
+            normalizeMediaSources(clone, currentArticleUrl || document.baseURI);
+            const images = Array.from(clone.querySelectorAll('img[src]'));
+            let embedded = 0;
+            for (const img of images) {
+                const src = img.getAttribute('src') || '';
+                if (!src || src.startsWith('data:') || src.startsWith('blob:')) continue;
+                try {
+                    const response = await fetch(src, { mode: 'cors', credentials: 'include', cache: 'force-cache' });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const blob = await response.blob();
+                    if (!blob.type.startsWith('image/')) throw new Error('不是圖片檔案');
+                    img.setAttribute('src', await blobToDataURL(blob));
+                    img.removeAttribute('srcset');
+                    img.removeAttribute('sizes');
+                    embedded++;
+                } catch (error) {
+                    // 跨來源防盜鏈圖片無法由 fetch 讀取時，保留原網址，避免整個匯出失敗。
+                    img.setAttribute('data-image-embed-failed', '1');
+                }
+            }
+            const html = buildExportHTMLFromContent(clone);
+            if (embedded && typeof showShareToast === 'function') showShareToast(`已內嵌 ${embedded} 張圖片`);
+            return html;
+        }
+                function buildExportHTMLFromContent(sourceContent) {
+            const original = window.__pureReadExportSource;
+            window.__pureReadExportSource = sourceContent;
+            try { return buildExportHTML(); } finally {
+                if (original) window.__pureReadExportSource = original;
+                else delete window.__pureReadExportSource;
+            }
+        }
         function buildExportHTML() {
             if (isDeleteMode) toggleDeleteMode();
-
-            const currentH1 = contentArea.querySelector('h1');
+            const exportSource = window.__pureReadExportSource || contentArea;
+            const currentH1 = exportSource.querySelector('h1');
             if (currentH1 && currentH1.textContent.trim()) {
                 articleTitle = currentH1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
             }
 
-            const cloneContent = contentArea.cloneNode(true);
-            normalizeMediaSources(cloneContent, document.baseURI);
+            const cloneContent = exportSource.cloneNode(true);
+            normalizeMediaSources(cloneContent, currentArticleUrl || document.baseURI);
             promoteLinkedImageTargets(cloneContent, document.baseURI);
             
             cloneContent.querySelectorAll('p, h1, h2, h3, h4, h5, h6, blockquote, li').forEach(el => {
@@ -3755,7 +3938,7 @@
         }
 
         async function downloadHTML() {
-            const downloadContent = buildExportHTML();
+            const downloadContent = await buildExportHTMLWithImages();
             if (!downloadContent) return;
 
             try {
