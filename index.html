@@ -154,6 +154,48 @@
         .markdown-body ul, .markdown-body ol { padding-left: 2em; margin-bottom: 16px; font-size: 1em; }
         .markdown-body li { margin-bottom: 0.25em; font-size: 1em; }
         .markdown-body a { color: #4f46e5; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; }
+        .history-item-row { border-color: #cbd5e1 !important; border-width: 1px !important; gap: 10px !important; }
+        .history-item-row > .history-load { min-height: 52px; padding: 7px 9px; border-radius: 8px; }
+        .history-item-row > .history-load:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+        .history-select-btn, .history-remove-btn { flex: 0 0 38px; width: 38px; height: 38px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1; border-radius: 9px; background: #fff; font-size: 21px; font-weight: 900; line-height: 1; }
+        .history-select-btn { color: #166534; border-color: #cbd5e1; }
+        .history-select-btn:hover { background: #dcfce7; }
+        .history-remove-btn { color: #b91c1c; border-color: #cbd5e1; }
+        .history-remove-btn:hover { background: #fee2e2; }
+        .history-item-row.is-active { border-color: #4f46e5 !important; background: #eef2ff !important; }
+        .history-item-row.is-loading { border-color: #64748b !important; background: #e2e8f0 !important; }
+        .history-item-row.is-loading .history-select-btn { animation: historySpin 0.9s linear infinite; background: #e2e8f0; }
+        .history-item-row.is-loading .history-load { opacity: 0.72; }
+        @keyframes historySpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        /* UI 邊框統一使用淺灰色幼線；不改變 border-width，亦不替正文段落加框。 */
+        .page-shell .border,
+        .page-shell [class^="border-"],
+        .page-shell [class*=" border-"] { border-color: #cbd5e1 !important; }
+        .page-shell input,
+        .page-shell textarea,
+        .page-shell select { border-color: #cbd5e1 !important; }
+        .page-shell input:focus,
+        .page-shell textarea:focus,
+        .page-shell select:focus { border-color: #94a3b8 !important; }
+        /* 灰階介面層次：外層淺灰、卡片霧灰、正文近白，避免整頁純白單調。 */
+        body.bg-slate-50 { background-color: #dfe3e8 !important; }
+        .page-shell > .card-pad { background-color: #e2e5e9 !important; }
+        #errorMessage { text-align: center; }
+        #fetchBtn { background: linear-gradient(90deg, #4338ca 0%, #6366f1 55%, #818cf8 100%) !important; border: 1px solid #64748b !important; }
+        #fetchBtn:hover { background: linear-gradient(90deg, #3730a3 0%, #4f46e5 55%, #6366f1 100%) !important; border-color: #475569 !important; }
+        #articleContainer { background-color: #f8fafc !important; }
+        #urlHistoryPanel { background-color: #e5e7eb !important; border-color: #94a3b8 !important; }
+        .history-item-row { background-color: #f8fafc !important; border-color: #94a3b8 !important; }
+        #content-wrapper { background-color: #ffffff; border-radius: 14px; padding: 18px; }
+        .page-shell [class^="border-"],
+        .page-shell [class*=" border-"] { border-color: #94a3b8 !important; }
+        .page-shell input,
+        .page-shell textarea,
+        .page-shell select { background-color: #f8fafc !important; border-color: #cbd5e1 !important; }
+        .page-shell input:focus,
+        .page-shell textarea:focus,
+        .page-shell select:focus { border-color: #94a3b8 !important; }
+        @media (max-width: 640px) { #content-wrapper { padding: 12px; } }
         
         /* 新增：長網址縮短樣式 */
         .markdown-body a.shortened-url {
@@ -393,19 +435,26 @@
 
         <div id="articleContainer" class="bg-white rounded-2xl shadow-sm p-6 sm:p-10 border border-slate-300 hidden relative overflow-hidden">
             <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 pb-6 border-b border-slate-200 gap-4">
-                <h2 class="text-lg font-bold text-slate-500 whitespace-nowrap">提取結果 (編輯區)</h2>
+                <div class="flex items-center gap-3">
+                    <h2 class="text-lg font-bold text-slate-500 whitespace-nowrap">提取結果 (編輯區)</h2>
+                </div>
                 
                 <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
+                    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 p-2">
+                        <span class="px-1 text-xs font-black text-slate-500">基本操作</span>
                     <button id="executeDeleteBtn" onclick="executeDelete()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl border border-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm hidden" title="刪除所選">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                         <span>刪除所選</span>
                     </button>
-                    <button id="convertToTraditionalBtn" onclick="convertToTraditional()" class="w-full sm:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold px-4 py-3 rounded-xl border border-indigo-200 transition-colors flex items-center justify-center gap-2 shadow-sm" title="將簡體中文轉換為繁體中文">
+                    <button id="convertToTraditionalBtn" onclick="convertToTraditional()" class="advanced-tool hidden w-full sm:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold px-4 py-3 rounded-xl border border-indigo-200 transition-colors flex items-center justify-center gap-2 shadow-sm" title="將簡體中文轉換為繁體中文">
                         <span>🇭🇰 簡轉繁</span>
                     </button>
                     <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <span id="toggleDeleteText">🧹 開始清理</span>
                     </button>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-2">
+                        <span class="px-1 text-xs font-black text-emerald-700">完成文章</span>
                     <button id="downloadBtn" onclick="downloadHTML()" data-title="最後一步：儲存檔案" data-intro="生成獨立檔案。入面會有全新設定同真聲切換功能！" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>儲存檔案</span>
@@ -414,6 +463,8 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342A3 3 0 106.316 10.658m2.368 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684zm0-12.632a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" /></svg>
                         <span>分享</span>
                     </button>
+                    </div>
+                    <button type="button" onclick="toggleAdvancedTools()" class="rounded-xl border border-slate-400 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100" aria-expanded="false" aria-controls="keepSelectionPanel">🧰 更多工具</button>
                 </div>
             </div>
             <div id="cleanupLevelPanel" class="hidden mb-6 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
@@ -431,7 +482,7 @@
                 </div>
                 <p id="cleanupLevelNote" class="mt-2 text-xs text-indigo-700">先提取文章，再選擇清理級別。提取後預設為第 0 級（未過濾）；每次切換都會顯示實際移除咗幾多內容。</p>
             </div>
-            <div id="keepSelectionPanel" class="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <div id="keepSelectionPanel" class="hidden mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
                 <div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <button onclick="selectAllKeepSelection()" class="rounded-lg bg-emerald-600 px-3 py-2 font-bold text-white hover:bg-emerald-700">1️⃣ 選擇全部</button>
                     <div class="flex items-center justify-center rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-bold text-emerald-800">2️⃣ 反選擇要保留嘅項目</div>
@@ -511,6 +562,7 @@
         let markedElements = new Set();
         // 【修正 1】預設 0：提取後畫面確實係未過濾，變數要同畫面一致。
         let cleanupLevel = 0;
+        let advancedToolsOpen = false;
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
         const URL_HISTORY_KEY = 'pureReadUrlHistory_v1';
@@ -750,9 +802,9 @@
             }
             items.forEach((item, index) => {
                 const row = document.createElement('div');
-                row.className = 'history-item-row flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 transition-all duration-200';
+                row.className = 'history-item-row flex items-center rounded-lg bg-white p-2 transition-all duration-200';
                 const load = document.createElement('button');
-                load.className = 'min-w-0 flex-1 rounded p-1 text-left hover:bg-slate-50';
+                load.className = 'history-load min-w-0 flex-1 rounded p-1 text-left hover:bg-slate-50';
                 const title = document.createElement('div');
                 title.className = 'truncate text-sm font-bold text-slate-800 min-w-0';
                 title.textContent = item.title;
@@ -764,24 +816,48 @@
                 time.textContent = `${formatHistoryTime(item.visitedAt)}${readEditRecords()[item.url] ? ' · 已儲存編輯' : ''}`;
                 load.append(title, url, time);
                 load.title = readEditRecords()[item.url] ? '重新提取並套用之前編輯' : '重新提取這個網址';
-                load.onclick = () => {
+                const openItem = async () => {
+                    if (row.classList.contains('is-loading')) return;
                     list.querySelectorAll('.history-item-row').forEach(el => {
-                        el.classList.remove('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
-                        el.classList.add('bg-white', 'border-slate-200');
+                        el.classList.remove('is-active', 'ring-2', 'ring-indigo-200');
                     });
-                    row.classList.remove('bg-white', 'border-slate-200');
-                    row.classList.add('bg-indigo-50', 'border-indigo-300', 'ring-2', 'ring-indigo-200');
+                    row.classList.add('is-active', 'ring-2', 'ring-indigo-200');
+                    row.classList.add('is-loading');
+                    select.disabled = true;
+                    remove.disabled = true;
+                    select.textContent = '⟳';
+                    select.title = '正在重新提取新聞…';
 
                     document.getElementById('urlInput').value = item.url;
                     updateClearUrlButton();
-                    fetchWithAI();
+                    try {
+                        await fetchWithAI();
+                    } finally {
+                        row.classList.remove('is-loading');
+                        select.disabled = false;
+                        remove.disabled = false;
+                        select.textContent = '✓';
+                        select.title = '選取並重新提取這篇新聞';
+                    }
                 };
+                /* 單擊標題只會聚焦，不會載入，避免滑動時誤觸；
+                 * 雙擊仍保留快捷載入方式，主要操作請按右側剔號。 */
+                load.onclick = () => load.focus();
+                load.ondblclick = openItem;
+                const select = document.createElement('button');
+                select.className = 'history-select-btn';
+                select.type = 'button';
+                select.textContent = '✓';
+                select.title = '選取並重新提取這篇新聞';
+                select.setAttribute('aria-label', '選取並重新提取這篇新聞');
+                select.onclick = openItem;
                 const remove = document.createElement('button');
-                remove.className = 'shrink-0 rounded-lg px-2 py-1 text-sm font-bold text-red-600 hover:bg-red-50';
+                remove.className = 'history-remove-btn';
+                remove.type = 'button';
                 remove.textContent = '×';
                 remove.title = '刪除這筆記錄';
                 remove.onclick = () => saveUrlHistory(readUrlHistory().filter((_, itemIndex) => itemIndex !== index));
-                row.append(load, remove);
+                row.append(load, select, remove);
                 list.appendChild(row);
             });
         }
@@ -804,6 +880,20 @@
             const panel = document.getElementById('urlHistoryPanel');
             if (panel) panel.classList.toggle('hidden');
             renderUrlHistory();
+        }
+
+        function toggleAdvancedTools() {
+            const panel = document.getElementById('keepSelectionPanel');
+            const button = document.querySelector('[aria-controls="keepSelectionPanel"]');
+            if (!panel) return;
+            advancedToolsOpen = !advancedToolsOpen;
+            const opening = advancedToolsOpen;
+            panel.classList.toggle('hidden', !opening);
+            document.querySelectorAll('.advanced-tool').forEach(el => el.classList.toggle('hidden', !opening));
+            if (button) {
+                button.setAttribute('aria-expanded', String(opening));
+                button.textContent = opening ? '🧰 收起工具' : '🧰 編輯工具';
+            }
         }
 
         function clearUrlHistory() {
@@ -2889,7 +2979,7 @@
             const keepPanel = document.getElementById('keepSelectionPanel');
             const hasContent = contentArea.children.length > 0;
             if (panel) panel.classList.toggle('hidden', !hasContent);
-            if (keepPanel) keepPanel.classList.toggle('hidden', !hasContent);
+            if (keepPanel) keepPanel.classList.toggle('hidden', !hasContent || !advancedToolsOpen);
         }
 
         /* ═══════════════════════════════════════════════════════════════
