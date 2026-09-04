@@ -4118,19 +4118,44 @@
             return base.endsWith('.html') ? base : base + '.html';
         }
 
+        const EXPORT_NAMES_KEY = 'pureReadExportNames_v1';
+        function exportUrlKey(url) {
+            return url ? normalizeFetchUrl(url) : '';
+        }
+        function readExportNames() {
+            try { return JSON.parse(SafeStorage.get(EXPORT_NAMES_KEY) || '{}') || {}; }
+            catch (e) { return {}; }
+        }
+        function rememberExportName(url, name) {
+            if (!url || !name) return;
+            const names = readExportNames();
+            names[exportUrlKey(url)] = name;
+            SafeStorage.set(EXPORT_NAMES_KEY, JSON.stringify(names));
+        }
+        function confirmReplacingExport() {
+            const url = exportUrlKey(currentArticleUrl || '');
+            const names = readExportNames();
+            const previousName = url ? names[url] : '';
+            if (!previousName) return true;
+            return window.confirm(`呢個網址之前已經儲存過「${previousName}」。\n\n今次內容可能有更多圖片或更新，是否取代之前嗰份？\n\n按「確定」繼續儲存；按「取消」保留舊檔。`);
+        }
+
         async function downloadHTML() {
             const downloadContent = await buildExportHTMLWithImages();
             if (!downloadContent) return;
+            if (!confirmReplacingExport()) return;
+            const suggestedName = readExportNames()[exportUrlKey(currentArticleUrl || '')] || exportFileName();
 
             try {
                 if (window.showSaveFilePicker) {
                     const handle = await window.showSaveFilePicker({
-                        suggestedName: `${articleTitle || '純淨文章'}.html`,
+                        suggestedName,
                         types: [{ description: 'HTML 網頁檔', accept: { 'text/html': ['.html'] } }],
                     });
                     const writable = await handle.createWritable();
                     await writable.write(downloadContent);
                     await writable.close();
+                    rememberExportName(currentArticleUrl, handle.name || suggestedName);
                     return;
                 }
             } catch (error) {
@@ -4151,6 +4176,7 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            rememberExportName(currentArticleUrl, finalName);
         }
 
         /**
