@@ -194,6 +194,10 @@
         .pr-image-fallback button:hover, .pr-image-fallback a:hover { background: #eef2ff; }
         .pr-image-fallback .pr-image-retry { color: #166534; }
         .pr-image-fallback .pr-image-capture { color: #7c2d12; border-color: #fdba74; background: #fff7ed; }
+        .pr-image-move-tools { display: flex; justify-content: center; gap: 8px; margin: -6px auto 12px; }
+        .pr-image-move-tools button { min-height: 30px; padding: 4px 10px; border: 1px solid #c7d2fe; border-radius: 7px; background: #eef2ff; color: #3730a3; font: inherit; font-size: 0.78em; cursor: pointer; }
+        .pr-image-move-tools button:disabled { opacity: .4; cursor: not-allowed; }
+        .pr-image-move-tools button:hover:not(:disabled) { background: #e0e7ff; }
 
         .loader { border: 3px solid #f3f3f3; border-top: 3px solid #6366f1; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -637,12 +641,30 @@
         function applySavedEditRecord() {
             const record = currentEditRecord;
             if (!record || !contentArea || isApplyingEditRecord) return;
+            /* 版本遷移：舊版曾把香港01圖片包成 data-auto-gallery，並追加到
+             * 正文最底。新版本已按 API block 順序重建（data-auto-ordered）。
+             * 如果此時照套用舊 currentHTML，正確的新順序會再次被舊底部圖
+             * 覆蓋，令移動按鈕看似只能在最後幾張圖之間跳。遇到這種舊記錄
+             * 時清掉舊版 HTML，保留新鮮重建的正文順序。 */
+            const savedIsOldHK01Gallery = typeof record.currentHTML === 'string'
+                && /data-auto-gallery=["']hk01["']|pr-hk01-gallery/i.test(record.currentHTML);
+            const freshIsOrderedHK01 = !!contentArea.querySelector('[data-auto-ordered="hk01"]');
+            if (savedIsOldHK01Gallery && freshIsOrderedHK01) {
+                record.currentHTML = '';
+                record.baseHTML = '';
+                record.removed = [];
+                record.cleanupApplied = false;
+                record.cleanupLevel = 0;
+                captureVisibleEditState();
+                return;
+            }
             const hasSavedHTML = typeof record.currentHTML === 'string' && record.currentHTML.trim();
             if (hasSavedHTML && record.baseHTML) {
                 isApplyingEditRecord = true;
                 contentArea.innerHTML = sanitizeContentHTML(record.currentHTML);
                 normalizeMediaSources(contentArea, currentArticleUrl || document.baseURI);
                 processLongURLs(contentArea);
+                installImageMoveControls(contentArea);
                 isApplyingEditRecord = false;
                 /* 【修正 1】還原上次儲存嘅內容時，下拉選單亦要還原到當時嘅級別，
                  * 否則畫面係「已過濾」但選單顯示 0 級，又會出現選單同實況不符。 */
@@ -2189,6 +2211,92 @@
                 return `<figure><img src="${src}" alt="${alt}" loading="eager"><figcaption>${alt}</figcaption></figure>`;
             }).join('')}</div>`;
         }
+        function buildHK01OrderedHTML(blocks = []) {
+            const out = [];
+            const tokenHTML = (tokens = []) => tokens.map(token => {
+                const text = escapeHtmlText(token?.content || '');
+                if (!text) return '';
+                if (token.type === 'link' && token.link) {
+                    return `<a href="${escapeHtmlText(token.link)}">${text}</a>`;
+                }
+                if (token.type === 'boldText') return `<strong>${text}</strong>`;
+                if (token.type === 'italicText') return `<em>${text}</em>`;
+                return text;
+            }).join('');
+            blocks.forEach(block => {
+                if (!block) return;
+                if (block.blockType === 'image' && block.image) {
+                    const image = block.image;
+                    const url = image.cdnUrl || image.originalUrl || image.url;
+                    if (!url) return;
+                    const caption = image.caption || '';
+                    out.push(`<figure data-hk01-block="image"><img src="${escapeHtmlText(url)}" alt="${escapeHtmlText(caption)}" loading="eager">${caption ? `<figcaption>${escapeHtmlText(caption)}</figcaption>` : ''}</figure>`);
+                } else if (block.blockType === 'gallery' && Array.isArray(block.images)) {
+                    const urls = block.images.map(image => image && (image.cdnUrl || image.originalUrl || image.url)).filter(Boolean);
+                    out.push(buildHK01GalleryHTML(urls, block.images.map(image => image?.caption || '')));
+                } else if (block.blockType === 'text' && Array.isArray(block.htmlTokens)) {
+                    block.htmlTokens.forEach(line => {
+                        const html = tokenHTML(Array.isArray(line) ? line : []);
+                        if (!html) return;
+                        const isHeading = Array.isArray(line) && line.length === 1 && ['boldText', 'h1', 'h2', 'h3'].includes(line[0]?.type);
+                        out.push(isHeading ? `<h3>${html}</h3>` : `<p>${html}</p>`);
+                    });
+                } else if (block.blockType === 'quote' && block.message) {
+                    const author = block.author ? `<cite>${escapeHtmlText(block.author)}</cite>` : '';
+                    out.push(`<blockquote>${escapeHtmlText(block.message)}${author}</blockquote>`);
+                }
+            });
+            return out.length ? `<div class="pr-hk01-ordered" data-auto-ordered="hk01">${out.join('')}</div>` : '';
+        }
+        function extractEmbeddedHK01Blocks(sourceHTML) {
+            const scripts = [...String(sourceHTML || '').matchAll(/<script[^>]*>([\s\S]*?)<\/script>/ig)].map(m => m[1]);
+            const findBlocks = value => {
+                if (!value || typeof value !== 'object') return null;
+                if (Array.isArray(value) && value.length && value.every(x => x && typeof x === 'object' && typeof x.blockType === 'string')) return value;
+                if (Array.isArray(value)) {
+                    for (const item of value) { const found = findBlocks(item); if (found) return found; }
+                } else {
+                    for (const key of Object.keys(value)) { const found = findBlocks(value[key]); if (found) return found; }
+                }
+                return null;
+            };
+            for (const script of scripts) {
+                if (!/blockType["']?\s*[:=]/i.test(script)) continue;
+                try {
+                    const parsed = JSON.parse(script.replace(/&quot;/g, '"').replace(/&#x27;/g, "'"));
+                    const blocks = findBlocks(parsed);
+                    if (blocks) return blocks;
+                } catch (e) {}
+            }
+            /* 香港01有時用 Next flight 串流，不是完整 JSON script；直接從
+             * "blocks":[ 開始掃描配對括號，仍可取得保留原順序的 block 陣列。 */
+            const source = String(sourceHTML || '').replace(/\\(["'])/g, '$1').replace(/&quot;/g, '"');
+            const marker = /["']?blocks["']?\s*:\s*\[/ig;
+            let match;
+            while ((match = marker.exec(source))) {
+                const start = source.indexOf('[', match.index);
+                let depth = 0, quote = false, escaped = false, end = -1;
+                for (let i = start; i < source.length; i++) {
+                    const ch = source[i];
+                    if (quote) {
+                        if (escaped) escaped = false;
+                        else if (ch === '\\') escaped = true;
+                        else if (ch === '"') quote = false;
+                        continue;
+                    }
+                    if (ch === '"') { quote = true; continue; }
+                    if (ch === '[') depth++;
+                    else if (ch === ']' && --depth === 0) { end = i + 1; break; }
+                }
+                if (end > start) {
+                    try {
+                        const blocks = JSON.parse(source.slice(start, end));
+                        if (Array.isArray(blocks) && blocks.some(x => x?.blockType === 'image')) return blocks;
+                    } catch (e) {}
+                }
+            }
+            return [];
+        }
         function decodeEmbeddedUrl(value) {
             return String(value || '').replace(/\\\//g, '/').replace(/\\u002F/gi, '/')
                 .replace(/\\u003A/gi, ':').replace(/&amp;/g, '&').replace(/\\u0026/gi, '&')
@@ -2212,9 +2320,9 @@
                 const isKnownImageCDN = /https?:\/\/cdn\.hk01\.com\/di\/media\/images\//i.test(u);
                 if (/^https?:\/\//i.test(u) && (isKnownImageCDN || /\.(?:jpe?g|png|gif|webp|avif)(?:[?#]|$)/i.test(u))) urls.push(u);
             };
-            // 只在 gallery 相鄰資料中取，避免把推薦文章縮圖誤當相簿。
+            // 只在 gallery／image block 相鄰資料中取，避免把推薦文章縮圖誤當相簿。
             const starts = [];
-            for (const re of [/blockType\s*["']?\s*[:=]\s*["']gallery["']/ig]) {
+            for (const re of [/blockType\s*["']?\s*[:=]\s*["'](?:gallery|image)["']/ig]) {
                 let m; while ((m = re.exec(text))) starts.push(m.index);
             }
             const chunks = starts.length ? starts.map((start, i) => text.slice(start, starts[i + 1] || start + 250000)) : [];
@@ -2231,20 +2339,32 @@
             const match = String(articleUrl || '').match(/(?:hk01\.(?:com|com\.hk)|hk01\.com)\/[^/]+\/(\d+)(?:[/?#]|$)/i);
             if (!match) return '';
             const localUrls = extractEmbeddedGalleryImages(sourceHTML);
-            if (localUrls.length) return buildHK01GalleryHTML(localUrls);
+            const localBlocks = extractEmbeddedHK01Blocks(sourceHTML);
+            const localOrdered = buildHK01OrderedHTML(localBlocks);
+            if (localOrdered) return localOrdered;
             try {
                 const api = `https://web-data-cn-api.hk01.com/v2/articles/${match[1]}`;
                 const response = await fetch(api, { headers: { 'Accept': 'application/json' }, credentials: 'omit' });
                 if (!response.ok) return '';
                 const data = await response.json();
                 const blocks = Array.isArray(data.blocks) ? data.blocks : [];
-                const galleries = blocks.filter(b => b && b.blockType === 'gallery' && Array.isArray(b.images));
-                const images = galleries.flatMap(g => g.images || []).filter(x => x && (x.cdnUrl || x.originalUrl || x.url));
-                if (!images.length) return '';
-                return buildHK01GalleryHTML(images.map(image => image.cdnUrl || image.originalUrl || image.url), images.map(image => image.caption));
+                /* 香港01 API 有兩種文章圖片格式：
+                 *   - 舊／相簿格式：{ blockType: 'gallery', images: [...] }
+                 *   - 新文章格式：{ blockType: 'image', image: {...} }
+                 * 只讀 gallery 會令新格式文章（包括 60373241）幾乎沒有內文圖。 */
+                const images = blocks.flatMap(block => {
+                    if (!block) return [];
+                    if (block.blockType === 'gallery' && Array.isArray(block.images)) return block.images;
+                    if (block.blockType === 'image' && block.image) return [block.image];
+                    return [];
+                }).filter(x => x && (x.cdnUrl || x.originalUrl || x.url));
+                const ordered = buildHK01OrderedHTML(blocks);
+                if (ordered) return ordered;
+                if (images.length) return buildHK01GalleryHTML(images.map(image => image.cdnUrl || image.originalUrl || image.url), images.map(image => image.caption));
+                return localUrls.length ? buildHK01GalleryHTML(localUrls) : '';
             } catch (error) {
                 console.warn('[PureRead HK] HK01 相簿 API 讀取失敗:', error);
-                return '';
+                return localUrls.length ? buildHK01GalleryHTML(localUrls) : '';
             }
         }
         function insertHK01GalleryHTML(rawHTML, galleryHTML) {
@@ -2371,6 +2491,13 @@
                     }
                 }
 
+                /* 香港01 API 的 block 順序比 Jina 抽出的 HTML 更可靠：
+                 * image block 會自然落在前後文字之間。若成功重建，就直接
+                 * 使用這份有序內容；舊版會把圖片當 gallery 追加到文章最底。 */
+                if (hk01GalleryHTML && /data-auto-ordered="hk01"/.test(hk01GalleryHTML)) {
+                    rawHTML = hk01GalleryHTML;
+                    hk01GalleryHTML = '';
+                }
                 if (articleData.title) {
                     articleTitle = articleData.title.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
                 } else {
@@ -2388,7 +2515,7 @@
                 }
                 
                 let pureHTML = extractNuclear(rawHTML, finalUrl, coverUrl);
-                // 相簿最後插入，確保不會再被正文容器評分／清理流程誤刪。
+                // 舊格式／無法取得 block 順序時才使用底部 gallery fallback。
                 if (hk01GalleryHTML) pureHTML = insertHK01GalleryHTML(pureHTML, hk01GalleryHTML);
                 setCurrentArticleUrl(finalUrl);
                 renderContent(pureHTML);
@@ -2413,7 +2540,7 @@
         function renderContent(rawHTML) {
             const cleanHTML = DOMPurify.sanitize(rawHTML, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
             });
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
@@ -2434,6 +2561,7 @@
             
             processLongURLs(contentArea);
             installBrokenImageRecovery(contentArea);
+            installImageMoveControls(contentArea);
             // 文章載入後自動收集可讀取的圖片；清理／刪除仍可在之後照常使用。
             preloadImagesForOffline(contentArea);
             updateCleanupPanels();
@@ -2461,6 +2589,53 @@
                 injectSmartButtons(); 
             }, 500);
             setTimeout(checkScrollButtons, 600);
+        }
+
+        function installImageMoveControls(container) {
+            if (!container) return;
+            container.querySelectorAll('figure').forEach(figure => {
+                if (!figure.querySelector('img')) return;
+                /* currentHTML 由 localStorage 用 innerHTML 還原時，舊按鈕的
+                 * click listener 不會一併還原。先移除舊控制列，再重新建立，
+                 * 確保重新開啟文章／切換清理模式後按鈕仍然可用。 */
+                figure.querySelectorAll('.pr-image-move-tools').forEach(el => el.remove());
+                const tools = document.createElement('div');
+                tools.className = 'pr-image-move-tools';
+                tools.setAttribute('aria-label', '調整圖片位置');
+                const up = document.createElement('button');
+                const down = document.createElement('button');
+                up.type = down.type = 'button';
+                up.textContent = '↑ 移上一段';
+                down.textContent = '↓ 移下一段';
+                up.title = '將圖片移到上一個內容區塊之前';
+                down.title = '將圖片移到下一個內容區塊之後';
+                tools.append(up, down);
+                figure.appendChild(tools);
+
+                const refresh = () => {
+                    up.disabled = !figure.previousElementSibling;
+                    down.disabled = !figure.nextElementSibling;
+                };
+                up.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const previous = figure.previousElementSibling;
+                    if (!previous) return;
+                    previous.before(figure);
+                    refresh();
+                    saveCurrentEditRecord();
+                });
+                down.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const next = figure.nextElementSibling;
+                    if (!next) return;
+                    next.after(figure);
+                    refresh();
+                    saveCurrentEditRecord();
+                });
+                refresh();
+            });
         }
 
         function cleanupSelectorsForLevel(level) {
@@ -2530,7 +2705,7 @@
         function sanitizeContentHTML(html) {
             return DOMPurify.sanitize(html, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset']
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
             });
         }
 
@@ -2597,6 +2772,7 @@
                 contentArea.innerHTML = sanitizeContentHTML(cleanupPreviewHTML);
                 normalizeMediaSources(contentArea, mediaBase);
                 promoteLinkedImageTargets(contentArea, mediaBase);
+                installImageMoveControls(contentArea);
                 const restored = replayManualRemovals();
                 const record0 = ensureCurrentEditRecord();
                 if (record0) record0.cleanupApplied = false;
@@ -2652,6 +2828,7 @@
             contentArea.innerHTML = sanitizeContentHTML(root.innerHTML);
             normalizeMediaSources(contentArea, mediaBase);
             promoteLinkedImageTargets(contentArea, mediaBase);
+            installImageMoveControls(contentArea);
             const manualRestored = replayManualRemovals();
             const record = ensureCurrentEditRecord();
             if (record) record.cleanupApplied = true;
@@ -2689,6 +2866,7 @@
             const mediaBase = currentArticleUrl || document.baseURI;
             normalizeMediaSources(contentArea, mediaBase);
             promoteLinkedImageTargets(contentArea, mediaBase);
+            installImageMoveControls(contentArea);
             const record = ensureCurrentEditRecord();
             if (record) record.cleanupApplied = false;
             /* 「復原」係真正嘅完整還原：連手動刪除都一併撤銷，
@@ -3415,6 +3593,9 @@
             }
 
             const cloneContent = exportSource.cloneNode(true);
+            /* 編輯畫面的圖片位置控制只供 PureRead 內部使用；
+             * 匯出／儲存成獨立 HTML 後不應再顯示無作用的按鈕。 */
+            cloneContent.querySelectorAll('.pr-image-move-tools').forEach(el => el.remove());
             normalizeMediaSources(cloneContent, currentArticleUrl || document.baseURI);
             promoteLinkedImageTargets(cloneContent, document.baseURI);
             
