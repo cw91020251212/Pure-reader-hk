@@ -2844,6 +2844,19 @@
             return root;
         }
 
+        function removeImageInteractionHints(root) {
+            if (!root || !root.querySelectorAll) return root;
+            /* 原網站有時會將圖片操作提示一併抽入正文，例如「點擊圖片放大」；
+             * 呢啲係 UI 提示唔係文章內容。只處理短句，避免誤傷正文段落。 */
+            const hintPattern = /(?:點擊|点击|按一下|按下|點按|点击查看|點擊查看|點擊進入|点击进入).{0,12}(?:圖片|图片|大圖|大图|放大|查看大圖|查看大图|zoom)/i;
+            root.querySelectorAll('p, span, small, a, figcaption, div').forEach(el => {
+                if (el.querySelector('img, p, h1, h2, h3, h4, h5, h6, li, blockquote')) return;
+                const text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
+                if (text && text.length <= 50 && hintPattern.test(text)) el.remove();
+            });
+            return root;
+        }
+
         function cleanupSelectorsForLevel(level) {
             /* 【修正 2】提取階段已把 class 搬去 data-prc，所以每個 class 選擇器
              * 都要有一個對應嘅 data-prc 版本，否則永遠一個都配唔中。 */
@@ -2918,6 +2931,7 @@
             const wrapper = document.createElement('div');
             wrapper.innerHTML = clean;
             removeEditorOnlyControls(wrapper);
+            removeImageInteractionHints(wrapper);
             return wrapper.innerHTML;
         }
 
@@ -3649,9 +3663,13 @@
                      * 朗讀時必須從文字來源剔除。 */
                     const speakable = el.cloneNode(true);
                     removeEditorOnlyControls(speakable);
+                    removeImageInteractionHints(speakable);
                     text = (speakable.innerText || speakable.textContent || '').replace(/\s+/g, ' ').trim();
                 } else {
-                    text = ownBlockText(el);
+                    const speakable = el.cloneNode(true);
+                    removeEditorOnlyControls(speakable);
+                    removeImageInteractionHints(speakable);
+                    text = ownBlockText(speakable);
                 }
                 if (text) {
                     el.classList.add('readable-item');
@@ -3815,6 +3833,7 @@
             /* 編輯畫面的圖片位置控制只供 PureRead 內部使用；
              * 匯出／儲存成獨立 HTML 後不應再顯示無作用的按鈕。 */
             cloneContent.querySelectorAll('.pr-image-move-tools').forEach(el => el.remove());
+            removeImageInteractionHints(cloneContent);
             normalizeMediaSources(cloneContent, currentArticleUrl || document.baseURI);
             promoteLinkedImageTargets(cloneContent, document.baseURI);
             
