@@ -351,8 +351,9 @@
         [data-click-read="on"] .readable-item { cursor: pointer; }
         [data-click-read="on"] .readable-item:hover { background-color: #f1f5f9; box-shadow: inset 3px 0 0 #d8b4fe; }
         
-        .reading-highlight { background-color: #f3e8ff !important; border: 2px solid #e9d5ff !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
-        .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
+        .reading-highlight { background-color: var(--reader-highlight-bg, #f3e8ff) !important; color: var(--reader-highlight-text, #312e81) !important; border: 2px solid var(--reader-highlight-border, #e9d5ff) !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
+        .reading-highlight *, .paused-highlight * { color: var(--reader-highlight-text, #312e81) !important; }
+        .paused-highlight { background-color: var(--reader-highlight-bg, #fef08a) !important; color: var(--reader-highlight-text, #422006) !important; border: 2px dashed var(--reader-highlight-border, #eab308) !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="off">
@@ -609,14 +610,14 @@
         const contentArea = document.getElementById('content-wrapper');
         const READER_THEME_KEY = 'pureReadReaderTheme_v1';
         const READER_THEMES = {
-            paper: { bg: '#fffdf8', text: '#242424', link: '#1d4ed8', panel: '#f5f1e8', accent: '#b45309', image: '#cbd5e1', codeBg: '#1e293b', codeText: '#f8fafc' },
-            sky: { bg: '#eaf6ff', text: '#17324d', link: '#075985', panel: '#d9efff', accent: '#0284c7', image: '#7aa6c2', codeBg: '#16324f', codeText: '#f0f9ff' },
-            pink: { bg: '#fff0f6', text: '#4a2030', link: '#9d174d', panel: '#ffe0ec', accent: '#db2777', image: '#b76e8e', codeBg: '#4a2030', codeText: '#fff1f2' },
-            mint: { bg: '#effcf4', text: '#1f3b2a', link: '#047857', panel: '#d9f5e5', accent: '#059669', image: '#72a889', codeBg: '#173b2a', codeText: '#ecfdf5' },
-            lavender: { bg: '#f5f0ff', text: '#34254f', link: '#6d28d9', panel: '#e9ddff', accent: '#7c3aed', image: '#9b83c5', codeBg: '#30204c', codeText: '#faf5ff' },
-            gray: { bg: '#3b414b', text: '#f8fafc', link: '#bfdbfe', panel: '#4b5563', accent: '#93c5fd', image: '#e5e7eb', codeBg: '#111827', codeText: '#f9fafb' },
-            charcoal: { bg: '#252a31', text: '#f8fafc', link: '#bae6fd', panel: '#343b45', accent: '#7dd3fc', image: '#f1f5f9', codeBg: '#0f172a', codeText: '#f8fafc' },
-            black: { bg: '#0b0d10', text: '#ffffff', link: '#93c5fd', panel: '#171a1f', accent: '#bfdbfe', image: '#ffffff', codeBg: '#000000', codeText: '#ffffff' }
+            paper: { bg: '#fffdf8', text: '#242424', link: '#1d4ed8', panel: '#f5f1e8', accent: '#b45309', image: '#cbd5e1', codeBg: '#1e293b', codeText: '#f8fafc', highlightBg: '#f3e8ff', highlightText: '#312e81', highlightBorder: '#c4b5fd' },
+            sky: { bg: '#eaf6ff', text: '#17324d', link: '#075985', panel: '#d9efff', accent: '#0284c7', image: '#7aa6c2', codeBg: '#16324f', codeText: '#f0f9ff', highlightBg: '#dbeafe', highlightText: '#172554', highlightBorder: '#93c5fd' },
+            pink: { bg: '#fff0f6', text: '#4a2030', link: '#9d174d', panel: '#ffe0ec', accent: '#db2777', image: '#b76e8e', codeBg: '#4a2030', codeText: '#fff1f2', highlightBg: '#fbcfe8', highlightText: '#4a2030', highlightBorder: '#f472b6' },
+            mint: { bg: '#effcf4', text: '#1f3b2a', link: '#047857', panel: '#d9f5e5', accent: '#059669', image: '#72a889', codeBg: '#173b2a', codeText: '#ecfdf5', highlightBg: '#bbf7d0', highlightText: '#14532d', highlightBorder: '#4ade80' },
+            lavender: { bg: '#f5f0ff', text: '#34254f', link: '#6d28d9', panel: '#e9ddff', accent: '#7c3aed', image: '#9b83c5', codeBg: '#30204c', codeText: '#faf5ff', highlightBg: '#e9d5ff', highlightText: '#3b0764', highlightBorder: '#c084fc' },
+            gray: { bg: '#3b414b', text: '#f8fafc', link: '#bfdbfe', panel: '#4b5563', accent: '#93c5fd', image: '#e5e7eb', codeBg: '#111827', codeText: '#f9fafb', highlightBg: '#64748b', highlightText: '#ffffff', highlightBorder: '#cbd5e1' },
+            charcoal: { bg: '#252a31', text: '#f8fafc', link: '#bae6fd', panel: '#343b45', accent: '#7dd3fc', image: '#f1f5f9', codeBg: '#0f172a', codeText: '#f8fafc', highlightBg: '#475569', highlightText: '#ffffff', highlightBorder: '#bae6fd' },
+            black: { bg: '#0b0d10', text: '#ffffff', link: '#93c5fd', panel: '#171a1f', accent: '#bfdbfe', image: '#ffffff', codeBg: '#000000', codeText: '#ffffff', highlightBg: '#334155', highlightText: '#ffffff', highlightBorder: '#93c5fd' }
         };
         function applyReaderTheme(name, persist = true) {
             const key = READER_THEMES[name] ? name : 'paper';
@@ -625,7 +626,7 @@
             const select = document.getElementById('readerThemeSelect');
             if (article) {
                 article.dataset.readerTheme = key;
-                Object.entries(theme).forEach(([name, value]) => article.style.setProperty(`--reader-${name.replace('codeBg', 'code-bg').replace('codeText', 'code-text')}`, value));
+                Object.entries(theme).forEach(([name, value]) => article.style.setProperty(`--reader-${name.replace(/[A-Z]/g, letter => '-' + letter.toLowerCase())}`, value));
             }
             if (select) select.value = key;
             if (persist) SafeStorage.set(READER_THEME_KEY, key);
@@ -3912,7 +3913,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${articleTitle}</title>
     <style>
-        :root { --base-font-size: 18px; }
+        :root { --base-font-size: 18px; --reader-highlight-bg: ${selectedTheme.highlightBg}; --reader-highlight-text: ${selectedTheme.highlightText}; --reader-highlight-border: ${selectedTheme.highlightBorder}; }
         
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
@@ -3974,8 +3975,9 @@
         [data-click-read="on"] .readable-item { cursor: pointer; }
         [data-click-read="on"] .readable-item:hover { background-color: #f1f5f9; box-shadow: inset 3px 0 0 #d8b4fe; }
         
-        .reading-highlight { background-color: #f3e8ff !important; border: 2px solid #e9d5ff !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
-        .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
+        .reading-highlight { background-color: var(--reader-highlight-bg, #f3e8ff) !important; color: var(--reader-highlight-text, #312e81) !important; border: 2px solid var(--reader-highlight-border, #e9d5ff) !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
+        .reading-highlight *, .paused-highlight * { color: var(--reader-highlight-text, #312e81) !important; }
+        .paused-highlight { background-color: var(--reader-highlight-bg, #fef08a) !important; color: var(--reader-highlight-text, #422006) !important; border: 2px dashed var(--reader-highlight-border, #eab308) !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
         
         img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; border: 2px solid ${selectedTheme.image}; box-sizing: border-box; }
         blockquote { padding: 1em; color: ${selectedTheme.text}; background-color: ${selectedTheme.panel}; border-left: 4px solid ${selectedTheme.accent}; margin: 0 0 16px 0; position: relative; }
