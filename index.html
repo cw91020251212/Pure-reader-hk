@@ -187,6 +187,25 @@
         #urlHistoryPanel { background-color: #e5e7eb !important; border-color: #94a3b8 !important; }
         .history-item-row { background-color: #f8fafc !important; border-color: #94a3b8 !important; }
         #content-wrapper { background-color: #ffffff; border-radius: 14px; padding: 18px; }
+        #articleContainer[data-reader-theme] { background-color: var(--reader-bg) !important; color: var(--reader-text) !important; }
+        #articleContainer[data-reader-theme] #content-wrapper { background-color: var(--reader-bg) !important; color: var(--reader-text) !important; }
+        #articleContainer[data-reader-theme] #content-wrapper,
+        #articleContainer[data-reader-theme] #content-wrapper h1,
+        #articleContainer[data-reader-theme] #content-wrapper h2,
+        #articleContainer[data-reader-theme] #content-wrapper h3,
+        #articleContainer[data-reader-theme] #content-wrapper h4,
+        #articleContainer[data-reader-theme] #content-wrapper h5,
+        #articleContainer[data-reader-theme] #content-wrapper h6,
+        #articleContainer[data-reader-theme] #content-wrapper p,
+        #articleContainer[data-reader-theme] #content-wrapper li,
+        #articleContainer[data-reader-theme] #content-wrapper figcaption,
+        #articleContainer[data-reader-theme] #content-wrapper td,
+        #articleContainer[data-reader-theme] #content-wrapper th { color: var(--reader-text) !important; }
+        #articleContainer[data-reader-theme] #content-wrapper a { color: var(--reader-link) !important; }
+        #articleContainer[data-reader-theme] #content-wrapper img { border: 2px solid var(--reader-image-outline); box-sizing: border-box; }
+        #articleContainer[data-reader-theme] #content-wrapper blockquote { color: var(--reader-text) !important; background-color: var(--reader-panel) !important; border-left-color: var(--reader-accent) !important; }
+        #articleContainer[data-reader-theme] #content-wrapper pre { background-color: var(--reader-code-bg) !important; color: var(--reader-code-text) !important; }
+        #articleContainer[data-reader-theme] #content-wrapper code { color: inherit !important; }
         .page-shell [class^="border-"],
         .page-shell [class*=" border-"] { border-color: #94a3b8 !important; }
         .page-shell input,
@@ -549,6 +568,19 @@
                     <option value="1.5">極快 1.50x</option>
                 </select>
             </div>
+            <div class="panel-row">
+                <span class="panel-label">閱讀底色</span>
+                <select id="readerThemeSelect" class="custom-select" onchange="changeReaderTheme()" aria-label="選擇閱讀底色">
+                    <option value="paper">米白</option>
+                    <option value="sky">淺藍</option>
+                    <option value="pink">粉紅</option>
+                    <option value="mint">淺綠</option>
+                    <option value="lavender">粉紫</option>
+                    <option value="gray">深灰</option>
+                    <option value="charcoal">炭灰</option>
+                    <option value="black">黑色</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -575,6 +607,34 @@
         const EDIT_RECORDS_KEY = 'pureReadEditRecords_v1';
         const EDIT_RECORD_BACKUP_NAME = 'pureread-edit-records.json';
         const contentArea = document.getElementById('content-wrapper');
+        const READER_THEME_KEY = 'pureReadReaderTheme_v1';
+        const READER_THEMES = {
+            paper: { bg: '#fffdf8', text: '#242424', link: '#1d4ed8', panel: '#f5f1e8', accent: '#b45309', image: '#cbd5e1', codeBg: '#1e293b', codeText: '#f8fafc' },
+            sky: { bg: '#eaf6ff', text: '#17324d', link: '#075985', panel: '#d9efff', accent: '#0284c7', image: '#7aa6c2', codeBg: '#16324f', codeText: '#f0f9ff' },
+            pink: { bg: '#fff0f6', text: '#4a2030', link: '#9d174d', panel: '#ffe0ec', accent: '#db2777', image: '#b76e8e', codeBg: '#4a2030', codeText: '#fff1f2' },
+            mint: { bg: '#effcf4', text: '#1f3b2a', link: '#047857', panel: '#d9f5e5', accent: '#059669', image: '#72a889', codeBg: '#173b2a', codeText: '#ecfdf5' },
+            lavender: { bg: '#f5f0ff', text: '#34254f', link: '#6d28d9', panel: '#e9ddff', accent: '#7c3aed', image: '#9b83c5', codeBg: '#30204c', codeText: '#faf5ff' },
+            gray: { bg: '#3b414b', text: '#f8fafc', link: '#bfdbfe', panel: '#4b5563', accent: '#93c5fd', image: '#e5e7eb', codeBg: '#111827', codeText: '#f9fafb' },
+            charcoal: { bg: '#252a31', text: '#f8fafc', link: '#bae6fd', panel: '#343b45', accent: '#7dd3fc', image: '#f1f5f9', codeBg: '#0f172a', codeText: '#f8fafc' },
+            black: { bg: '#0b0d10', text: '#ffffff', link: '#93c5fd', panel: '#171a1f', accent: '#bfdbfe', image: '#ffffff', codeBg: '#000000', codeText: '#ffffff' }
+        };
+        function applyReaderTheme(name, persist = true) {
+            const key = READER_THEMES[name] ? name : 'paper';
+            const theme = READER_THEMES[key];
+            const article = document.getElementById('articleContainer');
+            const select = document.getElementById('readerThemeSelect');
+            if (article) {
+                article.dataset.readerTheme = key;
+                Object.entries(theme).forEach(([name, value]) => article.style.setProperty(`--reader-${name.replace('codeBg', 'code-bg').replace('codeText', 'code-text')}`, value));
+            }
+            if (select) select.value = key;
+            if (persist) SafeStorage.set(READER_THEME_KEY, key);
+            return key;
+        }
+        function changeReaderTheme() {
+            const select = document.getElementById('readerThemeSelect');
+            applyReaderTheme(select?.value || 'paper');
+        }
         let currentArticleUrl = '';
         let currentEditRecord = null;
         let isApplyingEditRecord = false;
@@ -3828,6 +3888,7 @@
             if (currentH1 && currentH1.textContent.trim()) {
                 articleTitle = currentH1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
             }
+            const selectedTheme = READER_THEMES[SafeStorage.get(READER_THEME_KEY)] || READER_THEMES.paper;
 
             const cloneContent = exportSource.cloneNode(true);
             /* 編輯畫面的圖片位置控制只供 PureRead 內部使用；
@@ -3859,8 +3920,8 @@
             max-width: 800px !important; 
             margin: 0 auto !important; 
             padding: 40px 20px 120px 20px !important;
-            color: #24292e;
-            background-color: #fafafa;
+            color: ${selectedTheme.text};
+            background-color: ${selectedTheme.bg};
             overflow-x: hidden;
             font-size: 16px !important;
         }
@@ -3890,7 +3951,12 @@
             font-size: var(--base-font-size) !important; 
             width: 100%; max-width: 100%; 
             overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; 
+            color: ${selectedTheme.text} !important;
+            background-color: ${selectedTheme.bg} !important;
         }
+        #content-wrapper h1, #content-wrapper h2, #content-wrapper h3, #content-wrapper h4, #content-wrapper h5, #content-wrapper h6,
+        #content-wrapper p, #content-wrapper li, #content-wrapper td, #content-wrapper th, #content-wrapper figcaption { color: ${selectedTheme.text} !important; }
+        #content-wrapper a { color: ${selectedTheme.link} !important; }
         
         h1 { font-size: 2.2em; margin-bottom: 20px; line-height: 1.25; margin-top: 0; }
         h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; }
@@ -3911,8 +3977,8 @@
         .reading-highlight { background-color: #f3e8ff !important; border: 2px solid #e9d5ff !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
         .paused-highlight { background-color: #fef08a !important; border: 2px dashed #eab308 !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
         
-        img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; }
-        blockquote { padding: 1em; color: #475569; background-color: #f8fafc; border-left: 4px solid #c084fc; margin: 0 0 16px 0; position: relative; }
+        img { max-width: 100%; height: auto; border-radius: 8px; margin: 20px auto; display: block; object-fit: contain; border: 2px solid ${selectedTheme.image}; box-sizing: border-box; }
+        blockquote { padding: 1em; color: ${selectedTheme.text}; background-color: ${selectedTheme.panel}; border-left: 4px solid ${selectedTheme.accent}; margin: 0 0 16px 0; position: relative; }
         
         pre { background-color: #1e293b; color: #f8fafc; padding: 16px; border-radius: 8px; overflow-x: hidden; margin-bottom: 16px; font-family: monospace; font-size: 0.9em; white-space: pre-wrap; word-break: break-word; position: relative; max-width: 100%; }
         code { white-space: pre-wrap; word-break: break-word; }
@@ -4317,6 +4383,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
             populateVoices();
+            applyReaderTheme(SafeStorage.get(READER_THEME_KEY) || 'paper', false);
             prepareTTS();
             if (currentIndex > 0 && utterances[currentIndex]) {
                 utterances[currentIndex].el.classList.add('reading-highlight');
