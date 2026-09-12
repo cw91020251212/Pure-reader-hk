@@ -455,6 +455,11 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-2">
                         <span class="px-1 text-xs font-black text-emerald-700">完成文章</span>
+                    <button id="addImageAfterBtn" type="button" onclick="triggerAddImageAfter()" data-title="追加圖片" data-intro="喺文章已經整理好之後，仲可以再貼一張圖入去（例如原站攞唔到嘅標題圖）。預設會插喺 h1 之後，之後可以用 ↑/↓ 移到任何段落之間。" class="w-full sm:w-auto bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-5 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm" title="喺已完成嘅文章加多一張圖片（會自動壓縮）">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <span>追加圖片</span>
+                    </button>
+                    <input id="addImageAfterInput" type="file" accept="image/*" class="hidden" onchange="handleAddImageAfterPick(event)">
                     <button id="downloadBtn" onclick="downloadHTML()" data-title="最後一步：儲存檔案" data-intro="生成獨立檔案。入面會有全新設定同真聲切換功能！" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>儲存檔案</span>
@@ -1993,6 +1998,108 @@
             const file = event.target.files && event.target.files[0];
             ingestCoverImageFile(file);
             event.target.value = '';
+        }
+
+        /**
+         * 「追加圖片」——喺文章已經整理好之後，仍然可以再貼一張圖入去。
+         * 用途：好多網站（例如 WeekendHK、部分 HK01）嘅官方標題圖有防盜鏈
+         *      或者 CSP，本程式抽唔到；就算開盡 rescue mode 都攞唔到，
+         *      唯有由用家手動加。以前只有喺「貼上文字」流程先可以貼圖，
+         *      而家提取／上傳出嚟嘅文章都可以事後補一張。
+         *
+         *  ‑ 壓縮同「標題圖」共用 compressCoverImage()（≤1200px、~150KB、優先 WebP）
+         *  ‑ 預設位置：緊貼 <h1> 之後（同「標題圖」擺位一樣）
+         *  ‑ 之後可以用 figure 上原有嘅 ↑/↓ 掣逐段向下移，一直移到文章尾
+         *  ‑ 有 data-added-image="1" 標記，方便日後識別／管理
+         *  ‑ 立即 saveCurrentEditRecord()，切換清理級別或重開文章都仲喺度
+         */
+        function triggerAddImageAfter() {
+            if (!contentArea || !contentArea.children.length) {
+                showError('⚠️ 請先提取或上傳文章內容，先至可以追加圖片。');
+                return;
+            }
+            const input = document.getElementById('addImageAfterInput');
+            if (input) input.click();
+        }
+
+        async function handleAddImageAfterPick(event) {
+            const file = event.target.files && event.target.files[0];
+            event.target.value = '';
+            if (!file) return;
+            if (!/^image\//i.test(file.type)) {
+                showError('⚠️ 追加嘅檔案必須係圖片（JPG／PNG／WebP／GIF 等）。');
+                return;
+            }
+            if (!contentArea || !contentArea.children.length) {
+                showError('⚠️ 請先提取或上傳文章內容，先至可以追加圖片。');
+                return;
+            }
+            const btn = document.getElementById('addImageAfterBtn');
+            const originalText = btn ? btn.querySelector('span')?.textContent : '';
+            if (btn) {
+                btn.disabled = true;
+                const span = btn.querySelector('span');
+                if (span) span.textContent = '壓縮中…';
+            }
+            try {
+                const originalBytes = file.size;
+                const out = await compressCoverImage(file);
+                const alt = (file.name || 'image').replace(/\.[^.]+$/, '').slice(0, 80);
+                const figure = document.createElement('figure');
+                figure.setAttribute('data-added-image', '1');
+                const img = document.createElement('img');
+                img.src = out.dataUrl;
+                img.alt = alt;
+                img.loading = 'eager';
+                img.style.display = 'block';
+                img.style.maxWidth = '100%';
+                img.style.height = 'auto';
+                img.style.margin = '0 auto';
+                img.style.borderRadius = '10px';
+                figure.appendChild(img);
+
+                // 預設插喺 <h1> 之後；若已有其他 data-added-image / data-pasted-cover，
+                // 排喺佢哋後面，令新加嘅圖唔會擠開原本嘅標題圖。
+                const h1 = contentArea.querySelector('h1');
+                let anchor = h1 || null;
+                if (anchor) {
+                    let next = anchor.nextElementSibling;
+                    while (next && next.tagName === 'FIGURE' &&
+                           (next.hasAttribute('data-pasted-cover') || next.hasAttribute('data-added-image'))) {
+                        anchor = next;
+                        next = next.nextElementSibling;
+                    }
+                    anchor.after(figure);
+                } else {
+                    contentArea.prepend(figure);
+                }
+
+                // 重新掛 ↑/↓ 掣（會先清舊，再全部重建，唔會出現重複）
+                installImageMoveControls(contentArea);
+                saveCurrentEditRecord();
+
+                const saved = originalBytes > 0 ? Math.max(0, Math.round((1 - out.bytes / originalBytes) * 100)) : 0;
+                const label = `✅ 已加入圖片：${out.width}×${out.height}・${formatBytes(out.bytes)}` +
+                    (originalBytes ? `（原本 ${formatBytes(originalBytes)}，減少 ${saved}%）` : '') +
+                    `・格式 ${out.type.replace('image/', '').toUpperCase()}。可用 ↑/↓ 掣移到指定段落。`;
+                if (typeof showShareToast === 'function') {
+                    showShareToast(label);
+                } else {
+                    showError(label);
+                }
+
+                // 順手 scroll 去新加嘅圖，方便用家確認位置
+                try { figure.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+            } catch (err) {
+                console.error('追加圖片失敗:', err);
+                showError('⚠️ 無法處理呢張圖片：' + (err && err.message ? err.message : '未知錯誤'));
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    const span = btn.querySelector('span');
+                    if (span && originalText) span.textContent = originalText;
+                }
+            }
         }
         /**
          * 產生文章。刻意走同「提取網址」完全相同嘅出口（renderContent），
