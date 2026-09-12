@@ -646,7 +646,10 @@
             record.title = articleTitle || record.title;
             record.updatedAt = new Date().toISOString();
             record.cleanupLevel = cleanupLevel;
-            record.currentHTML = sanitizeContentHTML(contentArea.innerHTML);
+            /* 編輯用嘅圖片移動按鈕唔屬於文章內容，唔可以寫入編輯記錄。 */
+            const snapshot = contentArea.cloneNode(true);
+            removeEditorOnlyControls(snapshot);
+            record.currentHTML = sanitizeContentHTML(snapshot.innerHTML);
             if (!record.baseHTML && contentArea.innerHTML.trim()) record.baseHTML = record.currentHTML;
             const records = readEditRecords();
             records[currentArticleUrl] = record;
@@ -2835,6 +2838,12 @@
             });
         }
 
+        function removeEditorOnlyControls(root) {
+            if (!root || !root.querySelectorAll) return root;
+            root.querySelectorAll('.pr-image-move-tools').forEach(el => el.remove());
+            return root;
+        }
+
         function cleanupSelectorsForLevel(level) {
             /* 【修正 2】提取階段已把 class 搬去 data-prc，所以每個 class 選擇器
              * 都要有一個對應嘅 data-prc 版本，否則永遠一個都配唔中。 */
@@ -2900,10 +2909,16 @@
         }
 
         function sanitizeContentHTML(html) {
-            return DOMPurify.sanitize(html, {
+            const clean = DOMPurify.sanitize(html, {
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
                 ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
             });
+            /* 舊版可能已將控制列寫入 localStorage；還原時一併清走，
+             * 避免「上一段／下一段」殘留喺文章或朗讀內容。 */
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = clean;
+            removeEditorOnlyControls(wrapper);
+            return wrapper.innerHTML;
         }
 
         let openccConverter = null;
@@ -3628,9 +3643,16 @@
             units.forEach((el) => {
                 // figure/table/pre 等整體單元連內部文字一齊讀；其餘只讀自己嘅文字。
                 const unitTag = el.tagName.toLowerCase();
-                let text = ATOMIC_TAGS.has(unitTag)
-                    ? (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim()
-                    : ownBlockText(el);
+                let text;
+                if (ATOMIC_TAGS.has(unitTag)) {
+                    /* figure 內含圖片移動控制列，但控制列只係編輯 UI，
+                     * 朗讀時必須從文字來源剔除。 */
+                    const speakable = el.cloneNode(true);
+                    removeEditorOnlyControls(speakable);
+                    text = (speakable.innerText || speakable.textContent || '').replace(/\s+/g, ' ').trim();
+                } else {
+                    text = ownBlockText(el);
+                }
                 if (text) {
                     el.classList.add('readable-item');
                     /* 舊版用 cloneNode + replaceChild 嚟清舊 listener。但單元
