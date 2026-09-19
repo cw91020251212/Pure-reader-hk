@@ -354,6 +354,7 @@
         .reading-highlight { background-color: var(--reader-highlight-bg, #f3e8ff) !important; color: var(--reader-highlight-text, #312e81) !important; border: 2px solid var(--reader-highlight-border, #e9d5ff) !important; box-shadow: 0 2px 8px rgba(233, 213, 255, 0.4) !important; z-index: 10; position: relative; }
         .reading-highlight *, .paused-highlight * { color: var(--reader-highlight-text, #312e81) !important; }
         .paused-highlight { background-color: var(--reader-highlight-bg, #fef08a) !important; color: var(--reader-highlight-text, #422006) !important; border: 2px dashed var(--reader-highlight-border, #eab308) !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
+        #translateArticleBtn.is-translated { background: #ede9fe !important; color: #5b21b6 !important; border-color: #a78bfa !important; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="off">
@@ -468,6 +469,9 @@
                     </button>
                     <button id="convertToTraditionalBtn" onclick="convertToTraditional()" class="advanced-tool hidden w-full sm:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold px-4 py-3 rounded-xl border border-indigo-200 transition-colors flex items-center justify-center gap-2 shadow-sm" title="將簡體中文轉換為繁體中文">
                         <span>🇭🇰 簡轉繁</span>
+                    </button>
+                    <button id="translateArticleBtn" onclick="translateArticle()" class="advanced-tool hidden w-full sm:w-auto bg-violet-50 hover:bg-violet-100 text-violet-800 font-bold px-4 py-3 rounded-xl border border-violet-200 transition-colors flex items-center justify-center gap-2 shadow-sm" title="將文章翻譯成繁體香港中文">
+                        <span>🌐 翻譯成繁中</span>
                     </button>
                     <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <span id="toggleDeleteText">🧹 開始清理</span>
@@ -2803,6 +2807,15 @@
                 ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
                 ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
             });
+            translationOriginalHTML = '';
+            translationActive = false;
+            const translateButton = document.getElementById('translateArticleBtn');
+            if (translateButton) {
+                translateButton.classList.remove('is-translated');
+                translateButton.disabled = false;
+                const label = translateButton.querySelector('span');
+                if (label) label.textContent = '🌐 翻譯成繁中';
+            }
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
             contentArea.innerHTML = cleanHTML;
@@ -3029,6 +3042,112 @@
             } catch (err) {
                 console.error('簡轉繁失敗:', err);
                 showError('⚠️ 簡繁轉換失敗，請重新嘗試。');
+            }
+        }
+        /* 將文章文字分段翻譯成繁體香港中文。MyMemory 支援 CORS，
+         * 所以 GitHub Pages 唔需要後端或將 API key 暴露喺前端。翻譯前保存
+         * 原始 HTML，方便用戶一按還原；短文字節點會合併處理，減少請求數量。 */
+        let translationOriginalHTML = '';
+        let translationActive = false;
+        const translationCache = new Map();
+        const TRANSLATION_ENDPOINT = 'https://api.mymemory.translated.net/get';
+        const TRANSLATION_MAX_CHARS = 480;
+
+        function translationConverter() {
+            try {
+                if (window.OpenCC) return window.OpenCC.Converter({ from: 'tw', to: 'hk' });
+            } catch (e) { console.warn('OpenCC 香港用字轉換未能啟用', e); }
+            return text => text;
+        }
+
+        function getTranslatableTextNodes(root) {
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                acceptNode(node) {
+                    const parent = node.parentElement;
+                    if (!parent || !node.nodeValue.trim() || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|INPUT|BUTTON|SELECT)$/i.test(parent.tagName)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (parent.closest('.pr-image-move-tools, .reading-highlight, .paused-highlight')) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+            const nodes = [];
+            let node;
+            while ((node = walker.nextNode())) nodes.push(node);
+            return nodes;
+        }
+
+        async function translateText(text) {
+            const source = text.trim();
+            if (!source || /^[\d\s\W_]+$/.test(source)) return text;
+            if (translationCache.has(source)) return text.replace(source, translationCache.get(source));
+            const url = `${TRANSLATION_ENDPOINT}?q=${encodeURIComponent(source)}&langpair=autodetect%7Czh-TW`;
+            const response = await fetch(url, { headers: { Accept: 'application/json' } });
+            if (!response.ok) throw new Error(`翻譯服務回應 ${response.status}`);
+            const data = await response.json();
+            const translated = data?.responseData?.translatedText;
+            if (!translated || data.responseStatus && data.responseStatus !== 200) throw new Error(data?.responseDetails || '翻譯服務未返回結果');
+            translationCache.set(source, translated);
+            return text.replace(source, translated);
+        }
+
+        async function translateArticle() {
+            const button = document.getElementById('translateArticleBtn');
+            if (!contentArea || !contentArea.children.length) {
+                showError('⚠️ 請先提取文章內容。');
+                return;
+            }
+            if (translationActive) {
+                contentArea.innerHTML = translationOriginalHTML;
+                translationActive = false;
+                button.classList.remove('is-translated');
+                button.querySelector('span').textContent = '🌐 翻譯成繁中';
+                installImageMoveControls(contentArea);
+                prepareTTS();
+                injectSmartButtons();
+                saveCurrentEditRecord();
+                showError('✅ 已還原原文。');
+                return;
+            }
+            translationOriginalHTML = contentArea.innerHTML;
+            const nodes = getTranslatableTextNodes(contentArea);
+            const converter = translationConverter();
+            const total = nodes.length;
+            if (!total) { showError('⚠️ 呢篇文章暫時冇可翻譯文字。'); return; }
+            button.disabled = true;
+            button.querySelector('span').textContent = `⏳ 翻譯中（0/${total}）`;
+            try {
+                for (let i = 0; i < nodes.length; i++) {
+                    if (!nodes[i].isConnected) continue;
+                    const original = nodes[i].nodeValue;
+                    const pieces = original.match(new RegExp(`[\\s\\S]{1,${TRANSLATION_MAX_CHARS}}`, 'g')) || [original];
+                    const translatedPieces = [];
+                    for (const piece of pieces) translatedPieces.push(await translateText(piece));
+                    nodes[i].nodeValue = translatedPieces.join('');
+                    button.querySelector('span').textContent = `⏳ 翻譯中（${i + 1}/${total}）`;
+                }
+                if (articleTitle) articleTitle = converter(articleTitle);
+                const translatedTitle = contentArea.querySelector('h1');
+                if (translatedTitle) translatedTitle.textContent = converter(translatedTitle.textContent);
+                const finalWalker = document.createTreeWalker(contentArea, NodeFilter.SHOW_TEXT);
+                let finalNode;
+                while ((finalNode = finalWalker.nextNode())) {
+                    if (finalNode.nodeValue && finalNode.nodeValue.trim()) finalNode.nodeValue = converter(finalNode.nodeValue);
+                }
+                translationActive = true;
+                button.classList.add('is-translated');
+                button.querySelector('span').textContent = '↩️ 還原原文';
+                prepareTTS();
+                injectSmartButtons();
+                saveCurrentEditRecord();
+                showError('✅ 已翻譯成繁體香港中文。翻譯由公開服務提供，專有名詞可能需要自行校對。');
+            } catch (error) {
+                contentArea.innerHTML = translationOriginalHTML;
+                installImageMoveControls(contentArea);
+                showError(`⚠️ 翻譯未完成：${error.message}。請稍後再試。`);
+            } finally {
+                button.disabled = false;
+                if (!translationActive) button.querySelector('span').textContent = '🌐 翻譯成繁中';
             }
         }
 
