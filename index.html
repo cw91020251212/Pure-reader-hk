@@ -31,7 +31,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-    <!-- 本機文件只喺瀏覽器處理：PDF 抽文字、DOCX 轉 HTML，檔案唔會上載。 -->
+    <!-- 本機文件只喺瀏覽器處理：PDF／Word／OpenDocument 等均不會上載。 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     
@@ -371,7 +371,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.52</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.53</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -379,7 +379,7 @@
                 </button>
             </div>
             
-            <p class="text-slate-600 font-medium text-sm mb-6">可用網址提取、上傳檔案，或直接<b>貼上文字</b>產生文章；PDF／DOCX 都可直接匯入，亦可連續加入多張壓縮圖片並自由排序。</p>
+            <p class="text-slate-600 font-medium text-sm mb-6">可用網址提取、上傳檔案，或直接<b>貼上文字</b>產生文章；支援 PDF、Word、Markdown、文字及更多常見格式，亦可一次加入多張壓縮圖片並自由排序。</p>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
@@ -390,10 +390,10 @@
                     <span id="btnText">提取網址</span>
                     <div id="loadingIcon" class="loader hidden"></div>
                 </button>
-                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="直接上傳檔案，系統會自動重整排版。支援 HTML、Markdown、純文字、PDF 同 Word DOCX。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
+                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="直接選擇文件，系統會在本機自動重整排版。支援 PDF、DOC、DOCX、Markdown、純文字、HTML、RTF、ODT、EPUB、PowerPoint、Excel 同 CSV。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     上傳檔案
-                    <input type="file" id="fileInput" accept=".html,.htm,.md,.txt,.pdf,.docx,.doc,text/html,text/markdown,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" class="hidden" onchange="handleFileUpload(event)">
+                    <input type="file" id="fileInput" accept=".html,.htm,.md,.markdown,.txt,.pdf,.doc,.docx,.docm,.rtf,.odt,.epub,.ppt,.pps,.pot,.pptx,.pptm,.ppsx,.ppsm,.xls,.xlsx,.xlsm,.xlsb,.csv,text/html,text/markdown,text/plain,text/csv,text/rtf,application/pdf,application/msword,application/rtf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-word.document.macroEnabled.12,application/vnd.oasis.opendocument.text,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden" onchange="handleFileUpload(event)">
                 </label>
                 <button id="pasteToggleBtn" type="button" onclick="togglePastePanel()" data-title="或者：貼上文字" data-intro="直接貼上文字內容，即時整理成文章。" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold px-6 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
@@ -1730,6 +1730,67 @@
             return String(file?.name || '').split('.').pop().toLowerCase();
         }
 
+        /*
+         * 舊式 .doc 係 OLE 二進位格式，Mammoth 只處理 .docx，直接把 .doc
+         * 丟畀 Mammoth 會必然失敗。需要時才載入 anydoc WebAssembly：
+         *  - 解析完全在瀏覽器本機進行，文件不會上載；
+         *  - 約 3MB 壓縮下載只會在使用 DOC／RTF／ODT 等格式時發生；
+         *  - Promise 會被重用，連續開文件不會重複載入 6MB WASM。
+         */
+        const ANYDOC_WASM_MODULE_URL = 'https://cdn.jsdelivr.net/npm/@firecrawl/anydoc-wasm@0.2.4/anydoc_wasm.js';
+        let anydocModulePromise = null;
+
+        async function loadAnydocModule() {
+            if (!anydocModulePromise) {
+                anydocModulePromise = import(ANYDOC_WASM_MODULE_URL).then(async module => {
+                    await module.default();
+                    return module;
+                }).catch(error => {
+                    anydocModulePromise = null;
+                    throw error;
+                });
+            }
+            return anydocModulePromise;
+        }
+
+        const ANYDOC_EXTENSIONS = new Set([
+            'doc', 'docm', 'rtf', 'odt', 'epub',
+            'ppt', 'pps', 'pot', 'pptx', 'pptm', 'ppsx', 'ppsm',
+            'xls', 'xlsx', 'xlsm', 'xlsb', 'csv'
+        ]);
+
+        function anydocFormatHint(extension) {
+            if (['doc'].includes(extension)) return 'doc';
+            if (['docm'].includes(extension)) return 'docx';
+            if (['ppt', 'pps', 'pot'].includes(extension)) return 'ppt';
+            if (['pptx', 'pptm', 'ppsx', 'ppsm'].includes(extension)) return 'pptx';
+            if (['xls', 'xlsx', 'xlsm', 'xlsb'].includes(extension)) return 'xlsx';
+            return ['rtf', 'odt', 'epub', 'csv'].includes(extension) ? extension : null;
+        }
+
+        function explainAnydocError(error, extension) {
+            const code = String(error?.code || '');
+            if (code === 'encrypted') return '檔案受密碼保護，請先移除密碼後再匯入';
+            if (code === 'needsOcr') return '檔案只包含掃描圖片，未能直接抽取文字';
+            if (code === 'resourceLimit') return '檔案過大或內容過於複雜，已為安全起見停止解析';
+            if (code === 'malformed' || code === 'missingPart') return '檔案內容損壞或不完整';
+            if (code === 'unsupported') return `未能辨識 .${extension || '此'} 檔案格式`;
+            return error?.message || '文件解析器未能載入，請檢查網絡後再試';
+        }
+
+        async function extractOfficeMarkdown(file, extension) {
+            try {
+                const module = await loadAnydocModule();
+                const bytes = new Uint8Array(await file.arrayBuffer());
+                const hint = anydocFormatHint(extension);
+                const markdown = module.toMarkdownBytes(bytes, hint || undefined);
+                if (!String(markdown || '').trim()) throw new Error('文件內冇可讀文字');
+                return marked.parse(markdown);
+            } catch (error) {
+                throw new Error(explainAnydocError(error, extension));
+            }
+        }
+
         async function extractPdfText(file) {
             if (!window.pdfjsLib) throw new Error('PDF 閱讀器未能載入');
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -1771,11 +1832,9 @@
             articleTitle = String(file.name || '未命名文章').replace(/\.[^/.]+$/, '') || '未命名文章';
             if (extension === 'pdf' || file.type === 'application/pdf') return extractPdfText(file);
             if (extension === 'docx' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return extractDocxHtml(file);
-            if (extension === 'doc' || file.type === 'application/msword') {
-                throw new Error('舊式 .doc 未能喺瀏覽器直接解析，請先另存做 .docx 再匯入');
-            }
+            if (ANYDOC_EXTENSIONS.has(extension) || file.type === 'application/msword') return extractOfficeMarkdown(file, extension || 'doc');
             const text = await file.text();
-            if (extension === 'md' || extension === 'txt') return marked.parse(text);
+            if (extension === 'md' || extension === 'markdown' || extension === 'txt') return marked.parse(text);
             return extractNuclear(text);
         }
 
@@ -2073,7 +2132,22 @@
                         pastedCoverImages.splice(index, 1);
                         renderCoverImagePreviews();
                     });
-                    item.append(preview, order, remove);
+                    const controls = document.createElement('div');
+                    controls.className = 'mt-1 grid grid-cols-2 gap-1';
+                    const up = document.createElement('button');
+                    const down = document.createElement('button');
+                    up.type = down.type = 'button';
+                    up.className = down.className = 'rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-black text-amber-900 disabled:cursor-not-allowed disabled:opacity-40';
+                    up.textContent = '↑ 前移';
+                    down.textContent = '↓ 後移';
+                    up.title = `將第 ${index + 1} 張圖片向前移`;
+                    down.title = `將第 ${index + 1} 張圖片向後移`;
+                    up.disabled = index === 0;
+                    down.disabled = index === pastedCoverImages.length - 1;
+                    up.addEventListener('click', event => movePreparedCoverImage(index, -1, event));
+                    down.addEventListener('click', event => movePreparedCoverImage(index, 1, event));
+                    controls.append(up, down);
+                    item.append(preview, order, remove, controls);
                     list.appendChild(item);
                 });
                 empty.classList.add('hidden');
@@ -2084,6 +2158,14 @@
                 result.classList.add('hidden');
                 empty.classList.remove('hidden');
             }
+        }
+
+        function movePreparedCoverImage(index, direction, event) {
+            if (event) { event.preventDefault(); event.stopPropagation(); }
+            const target = index + direction;
+            if (index < 0 || target < 0 || target >= pastedCoverImages.length) return;
+            [pastedCoverImages[index], pastedCoverImages[target]] = [pastedCoverImages[target], pastedCoverImages[index]];
+            renderCoverImagePreviews();
         }
 
         function clearCoverImages(event) {
@@ -2948,6 +3030,21 @@
 
         function installImageMoveControls(container) {
             if (!container) return;
+            /* Markdown、HTML、Word 等來源未必會用 <figure> 包住圖片。
+             * 先將所有獨立圖片包成 figure，保留 <picture> 同純圖片連結，
+             * 確保每張圖片——唔只手動追加嗰批——都有同一套排序控制。 */
+            Array.from(container.querySelectorAll('img')).forEach(img => {
+                if (img.closest('figure')) return;
+                let mediaNode = img.closest('picture') || img;
+                const link = mediaNode.parentElement;
+                if (link?.tagName === 'A' && link.querySelectorAll('img').length === 1 && !(link.textContent || '').trim()) {
+                    mediaNode = link;
+                }
+                const figure = document.createElement('figure');
+                figure.setAttribute('data-pr-image-wrapper', '1');
+                mediaNode.before(figure);
+                figure.appendChild(mediaNode);
+            });
             /* 圖片經網站正文抽取後有時被包喺多層 div／p 入面。舊版用
              * figure.previousElementSibling / nextElementSibling，所以只會喺自己嗰個
              * 小容器內移動，到中間就好似「卡住」。先把每個圖片 figure 提升為

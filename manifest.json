@@ -2,7 +2,7 @@
   "name": "PureRead HK｜純淨閱讀器",
   "short_name": "PureRead HK",
   "description": "純淨閱讀、文章整理與文字朗讀工具。",
-  "version": "1.51",
+  "version": "1.53",
   "lang": "zh-HK",
   "start_url": "./index.html",
   "scope": "./",
@@ -44,10 +44,35 @@
           ".htm"
         ],
         "text/markdown": [
-          ".md"
+          ".md",
+          ".markdown"
         ],
         "text/plain": [
           ".txt"
+        ],
+        "application/pdf": [
+          ".pdf"
+        ],
+        "application/msword": [
+          ".doc"
+        ],
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
+          ".docx"
+        ],
+        "application/vnd.ms-word.document.macroEnabled.12": [
+          ".docm"
+        ],
+        "application/rtf": [
+          ".rtf"
+        ],
+        "application/vnd.oasis.opendocument.text": [
+          ".odt"
+        ],
+        "application/epub+zip": [
+          ".epub"
+        ],
+        "text/csv": [
+          ".csv"
         ]
       }
     }
@@ -69,8 +94,25 @@
             ".htm",
             "text/markdown",
             ".md",
+            ".markdown",
             "text/plain",
-            ".txt"
+            ".txt",
+            "application/pdf",
+            ".pdf",
+            "application/msword",
+            ".doc",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ".docx",
+            "application/vnd.ms-word.document.macroEnabled.12",
+            ".docm",
+            "application/rtf",
+            ".rtf",
+            "application/vnd.oasis.opendocument.text",
+            ".odt",
+            "application/epub+zip",
+            ".epub",
+            "text/csv",
+            ".csv"
           ]
         }
       ]
