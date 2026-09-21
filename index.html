@@ -209,6 +209,19 @@
         #articleContainer[data-reader-theme] #content-wrapper blockquote { color: var(--reader-text) !important; background-color: var(--reader-panel) !important; border-left-color: var(--reader-accent) !important; }
         #articleContainer[data-reader-theme] #content-wrapper pre { background-color: var(--reader-code-bg) !important; color: var(--reader-code-text) !important; }
         #articleContainer[data-reader-theme] #content-wrapper code { color: inherit !important; }
+        /* PDF 參考編號只用 CSS 顯示，元素本身冇文字節點，避免朗讀器當成數量讀出。 */
+        #content-wrapper .pdf-citation {
+            display: inline-block;
+            margin: 0 0.08em;
+            color: #6366f1 !important;
+            font-size: 0.62em;
+            font-weight: 800;
+            line-height: 1;
+            vertical-align: super;
+            white-space: nowrap;
+            user-select: none;
+        }
+        #content-wrapper .pdf-citation::before { content: "〔" attr(data-reference) "〕"; }
         .page-shell [class^="border-"],
         .page-shell [class*=" border-"] { border-color: #94a3b8 !important; }
         .page-shell input,
@@ -371,7 +384,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.58</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.59</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -444,7 +457,7 @@
                         <div class="min-w-0 flex-1">
                             <p class="font-black text-indigo-950">或者選擇文檔</p>
                             <p class="mt-1 text-xs font-medium leading-5 text-indigo-800">PDF、DOC、DOCX、MD、TXT、HTML、RTF、ODT、EPUB、PPT、XLS、CSV</p>
-                            <p class="mt-1 text-xs font-bold leading-5 text-indigo-700">PDF 會自動偵測橫向及多欄版面，重排成手機直向單欄閱讀。</p>
+                            <p class="mt-1 text-xs font-bold leading-5 text-indigo-700">PDF 會自動偵測橫向及多欄版面；細字參考編號會以小括號顯示，朗讀時自動略過。</p>
                             <p id="documentPickerFileName" class="mt-2 truncate text-sm font-bold text-slate-700">尚未選擇文檔</p>
                             <p id="documentPickerStatus" class="mt-1 text-xs font-medium text-slate-500" aria-live="polite">文檔只會在本機瀏覽器解析，不會上傳。</p>
                         </div>
@@ -1874,27 +1887,57 @@
             };
         }
 
-        function joinPdfTextItems(items) {
+        function isPdfReferenceText(text) {
+            return /^\d{1,3}(?:\s*(?:[,，;；]\s*|\s+)\d{1,3})*$/.test(String(text || '').trim());
+        }
+
+        function normalizePdfReferenceNumbers(text) {
+            return (String(text || '').match(/\d{1,3}/g) || []).join('、');
+        }
+
+        function joinPdfTextItems(items, pageFont = 0, rowBaselineY = NaN) {
             const sorted = [...items].sort((a, b) => a.x - b.x);
             let result = '';
             let previous = null;
+            const baselineItems = sorted.filter(item => !isPdfReferenceText(item.text));
+            const baselineFont = pageFont || pdfMedian((baselineItems.length ? baselineItems : sorted).map(item => item.fontSize)) || 10;
+            const baselineY = baselineItems.length ? pdfMedian(baselineItems.map(item => item.y)) : rowBaselineY;
             for (const item of sorted) {
+                const isReference = isPdfReferenceText(item.text)
+                    && item.fontSize <= baselineFont * 0.82
+                    && Number.isFinite(baselineY)
+                    && item.y <= baselineY - Math.max(1.2, baselineFont * 0.12);
                 if (previous) {
                     const gap = item.x - previous.endX;
                     const boundary = `${previous.text.slice(-1)}${item.text.charAt(0)}`;
                     const touchesCjk = /[\u3400-\u9fff][\u3400-\u9fff]/.test(boundary);
                     const punctuation = /^[,.;:!?，。！？、；：）】》」』]/.test(item.text);
                     const opening = /[(（【《「『]$/.test(previous.text);
-                    if (gap > Math.max(1.5, previous.fontSize * 0.12) && !touchesCjk && !punctuation && !opening) result += ' ';
+                    if (!isReference && gap > Math.max(1.5, previous.fontSize * 0.12) && !touchesCjk && !punctuation && !opening) result += ' ';
                 }
-                result += item.text;
+                result += isReference ? `{{PDFREF:${normalizePdfReferenceNumbers(item.text)}}}` : item.text;
                 previous = item;
             }
             return result.replace(/\s+([,.;:!?，。！？、；：）】》」』])/g, '$1').trim();
         }
 
+        function pdfTextWithSilentReferences(text) {
+            let output = '';
+            let cursor = 0;
+            const pattern = /\{\{PDFREF:([\d、]{1,15})\}\}/g;
+            let match;
+            while ((match = pattern.exec(String(text || '')))) {
+                output += escapeHtmlText(String(text).slice(cursor, match.index));
+                output += `<sup class="pdf-citation" data-reference="${match[1]}" data-no-read="true" aria-hidden="true"></sup>`;
+                cursor = match.index + match[0].length;
+            }
+            return output + escapeHtmlText(String(text || '').slice(cursor));
+        }
+
         function buildPdfVisualRows(items, pageWidth) {
             const medianHeight = pdfMedian(items.map(item => item.height)) || 10;
+            const pageFont = pdfMedian(items.filter(item => !isPdfReferenceText(item.text)).map(item => item.fontSize))
+                || pdfMedian(items.map(item => item.fontSize)) || medianHeight;
             const yTolerance = pdfClamp(medianHeight * 0.48, 2.5, 9);
             const rows = [];
             for (const item of [...items].sort((a, b) => a.y - b.y || a.x - b.x)) {
@@ -1907,14 +1950,36 @@
                 row.y = row.items.reduce((sum, entry) => sum + entry.y, 0) / row.items.length;
             }
 
-            return rows.sort((a, b) => a.y - b.y).map((row, rowIndex) => {
+            /* PDF 有時會將上標引用抽成獨立一行。若小字數字位於正文行尾上方，
+             * 將它重新併回最近的正文行，避免變成獨立段落或被當成數量。 */
+            const detachedReferences = rows.filter(row => row.items.every(item => isPdfReferenceText(item.text) && item.fontSize <= pageFont * 0.82));
+            for (const referenceRow of detachedReferences) {
+                const referenceX = Math.min(...referenceRow.items.map(item => item.x));
+                const target = rows
+                    .filter(row => row !== referenceRow && !detachedReferences.includes(row))
+                    .map(row => {
+                        const endX = Math.max(...row.items.map(item => item.endX));
+                        return { row, verticalGap: row.y - referenceRow.y, horizontalGap: referenceX - endX };
+                    })
+                    .filter(candidate => candidate.verticalGap >= 1 && candidate.verticalGap <= pageFont * 0.95
+                        && candidate.horizontalGap >= -pageFont && candidate.horizontalGap <= pageFont * 4.5)
+                    .sort((a, b) => Math.abs(a.verticalGap) - Math.abs(b.verticalGap) || Math.abs(a.horizontalGap) - Math.abs(b.horizontalGap))[0];
+                if (target) {
+                    target.row.items.push(...referenceRow.items);
+                    referenceRow.attached = true;
+                }
+            }
+
+            return rows.filter(row => !row.attached).sort((a, b) => a.y - b.y).map((row, rowIndex) => {
                 const sorted = row.items.sort((a, b) => a.x - b.x);
                 const medianFont = pdfMedian(sorted.map(item => item.fontSize)) || medianHeight;
                 const segmentGap = Math.max(pageWidth * 0.028, medianFont * 2.6);
                 const groups = [];
                 for (const item of sorted) {
                     const current = groups[groups.length - 1];
-                    if (!current || item.x - Math.max(...current.map(entry => entry.endX)) > segmentGap) groups.push([item]);
+                    const gap = current ? item.x - Math.max(...current.map(entry => entry.endX)) : Infinity;
+                    const nearbyReference = current && isPdfReferenceText(item.text) && item.fontSize <= pageFont * 0.82 && gap <= pageFont * 4.5;
+                    if (!current || (gap > segmentGap && !nearbyReference)) groups.push([item]);
                     else current.push(item);
                 }
                 return {
@@ -1924,7 +1989,7 @@
                         const x = Math.min(...group.map(item => item.x));
                         const endX = Math.max(...group.map(item => item.endX));
                         return {
-                            text: joinPdfTextItems(group),
+                            text: joinPdfTextItems(group, pageFont, pdfMedian(group.filter(item => !isPdfReferenceText(item.text)).map(item => item.y))),
                             x,
                             endX,
                             width: endX - x,
@@ -2011,11 +2076,12 @@
             for (const line of lines) {
                 const text = line.text.trim();
                 if (!text || isPdfPageNumber(text)) continue;
-                const heading = line.fontSize >= medianFont * 1.28 && text.length <= 100;
-                const bullet = /^(?:[-•●▪◦‣]|\d+[.)、])\s*/.test(text);
+                const plainText = text.replace(/\{\{PDFREF:[\d、]{1,15}\}\}/g, '');
+                const heading = line.fontSize >= medianFont * 1.28 && plainText.length <= 100;
+                const bullet = /^(?:[-•●▪◦‣]|\d+[.)、])\s*/.test(plainText);
                 const gap = current ? line.y - current.lastY : Infinity;
                 const regionChanged = current && current.region !== line.region;
-                const previousEnded = current && /[。！？.!?：:]$/.test(current.text);
+                const previousEnded = current && /[。！？.!?：:]$/.test(current.text.replace(/\{\{PDFREF:[\d、]{1,15}\}\}\s*$/, ''));
                 const shouldStart = !current || heading || bullet || regionChanged || gap > medianHeight * 1.75 || previousEnded;
                 if (shouldStart) {
                     current = { text, heading, region: line.region, lastY: line.y };
@@ -2069,8 +2135,8 @@
                 const blocks = pdfLinesToBlocks(cleanedLines);
                 if (!blocks.length) continue;
                 const html = blocks.map(block => block.heading
-                    ? `<h2>${escapeHtmlText(block.text)}</h2>`
-                    : `<p>${escapeHtmlText(block.text)}</p>`).join('\n');
+                    ? `<h2>${pdfTextWithSilentReferences(block.text)}</h2>`
+                    : `<p>${pdfTextWithSilentReferences(block.text)}</p>`).join('\n');
                 sections.push(`<section data-pdf-page="${layout.pageNumber}">${html}</section>`);
             }
             if (!sections.length) throw new Error('呢份 PDF 冇可重排嘅文字內容');
@@ -2080,9 +2146,11 @@
             const details = [];
             if (landscapePages) details.push(`${landscapePages} 頁橫向版面`);
             if (multiColumnPages) details.push(`${multiColumnPages} 頁多欄內容`);
+            const referenceCount = sections.join('').match(/class="pdf-citation"/g)?.length || 0;
+            const referenceMessage = referenceCount ? `另已標示 ${referenceCount} 個參考編號，朗讀時會自動略過。` : '';
             lastLocalFileImportMessage = details.length
-                ? `✅ PDF 已自動將${details.join('、')}重排成直向單欄文章。`
-                : '✅ PDF 已按版面座標重建段落，適合直向閱讀。';
+                ? `✅ PDF 已自動將${details.join('、')}重排成直向單欄文章。${referenceMessage}`
+                : `✅ PDF 已按版面座標重建段落，適合直向閱讀。${referenceMessage}`;
             return `<h1>${escapeHtmlText(articleTitle || 'PDF 文檔')}</h1>\n${sections.join('\n')}`;
         }
 
@@ -3275,8 +3343,8 @@
 
         function renderContent(rawHTML) {
             const cleanHTML = DOMPurify.sanitize(rawHTML, {
-                ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
+                ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio', 'sup'],
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'aria-hidden', 'data-no-read', 'data-reference', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
             });
             translationOriginalHTML = '';
             translationActive = false;
@@ -3423,6 +3491,12 @@
             return root;
         }
 
+        function removeSpeechExcludedContent(root) {
+            if (!root || !root.querySelectorAll) return root;
+            root.querySelectorAll('[data-no-read="true"], .pdf-citation').forEach(el => el.remove());
+            return root;
+        }
+
         function removeImageInteractionHints(root) {
             if (!root || !root.querySelectorAll) return root;
             /* 原網站有時會將圖片操作提示一併抽入正文，例如「點擊圖片放大」；
@@ -3502,8 +3576,8 @@
 
         function sanitizeContentHTML(html) {
             const clean = DOMPurify.sanitize(html, {
-                ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio'],
-                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
+                ADD_TAGS: ['img', 'picture', 'source', 'figure', 'figcaption', 'video', 'audio', 'sup'],
+                ADD_ATTR: ['src', 'srcset', 'sizes', 'alt', 'title', 'loading', 'controls', 'poster', 'aria-hidden', 'data-no-read', 'data-reference', 'data-src', 'data-srcset', 'data-actualsrc', 'data-lazy-src', 'data-original', 'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-original-srcset', 'data-actual-srcset', 'data-auto-ordered', 'data-auto-gallery', 'data-hk01-block']
             });
             /* 舊版可能已將控制列寫入 localStorage；還原時一併清走，
              * 避免「上一段／下一段」殘留喺文章或朗讀內容。 */
@@ -4349,11 +4423,13 @@
                     const speakable = el.cloneNode(true);
                     removeEditorOnlyControls(speakable);
                     removeImageInteractionHints(speakable);
+                    removeSpeechExcludedContent(speakable);
                     text = (speakable.innerText || speakable.textContent || '').replace(/\s+/g, ' ').trim();
                 } else {
                     const speakable = el.cloneNode(true);
                     removeEditorOnlyControls(speakable);
                     removeImageInteractionHints(speakable);
+                    removeSpeechExcludedContent(speakable);
                     text = ownBlockText(speakable);
                 }
                 if (text) {
@@ -4582,6 +4658,12 @@
         #content-wrapper h1, #content-wrapper h2, #content-wrapper h3, #content-wrapper h4, #content-wrapper h5, #content-wrapper h6,
         #content-wrapper p, #content-wrapper li, #content-wrapper td, #content-wrapper th, #content-wrapper figcaption { color: ${selectedTheme.text} !important; }
         #content-wrapper a { color: ${selectedTheme.link} !important; }
+        #content-wrapper .pdf-citation {
+            display: inline-block; margin: 0 0.08em; color: #6366f1 !important;
+            font-size: 0.62em; font-weight: 800; line-height: 1;
+            vertical-align: super; white-space: nowrap; user-select: none;
+        }
+        #content-wrapper .pdf-citation::before { content: "〔" attr(data-reference) "〕"; }
         
         h1 { font-size: 2.2em; margin-bottom: 20px; line-height: 1.25; margin-top: 0; }
         h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; }
@@ -4927,9 +5009,11 @@
 
             elements.forEach((el) => {
                 const unitTag = el.tagName.toLowerCase();
+                const speakable = el.cloneNode(true);
+                speakable.querySelectorAll('[data-no-read="true"], .pdf-citation').forEach(node => node.remove());
                 const rawText = ATOMIC_TAGS.has(unitTag)
-                    ? (el.innerText || el.textContent || '').replace(/\\s+/g, ' ').trim()
-                    : ownBlockText(el);
+                    ? (speakable.innerText || speakable.textContent || '').replace(/\\s+/g, ' ').trim()
+                    : ownBlockText(speakable);
                 const parts = splitSpeechText(rawText);
                 if (parts.length) {
                     el.classList.add('readable-item');
