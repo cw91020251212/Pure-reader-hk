@@ -49,6 +49,78 @@
             width: 100%; max-width: 100%; 
             overflow-wrap: break-word; word-wrap: break-word; word-break: break-word;
         }
+        /* 通用網址文章重排：不論來源站原本係桌面版、雙欄、浮動圖或固定卡片，
+         * PureRead 內都以手機直向單欄作為最後閱讀版面。 */
+        #content-wrapper.pr-responsive-article,
+        #content-wrapper.pr-responsive-article * {
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+        #content-wrapper.pr-responsive-article {
+            width: 100% !important;
+            min-width: 0 !important;
+            overflow-x: hidden !important;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        #content-wrapper.pr-responsive-article > *,
+        #content-wrapper.pr-responsive-article p,
+        #content-wrapper.pr-responsive-article li,
+        #content-wrapper.pr-responsive-article blockquote,
+        #content-wrapper.pr-responsive-article figure,
+        #content-wrapper.pr-responsive-article section,
+        #content-wrapper.pr-responsive-article article {
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            float: none !important;
+            clear: both;
+        }
+        #content-wrapper.pr-responsive-article [style*="width"],
+        #content-wrapper.pr-responsive-article [width],
+        #content-wrapper.pr-responsive-article [style*="min-width"],
+        #content-wrapper.pr-responsive-article [style*="height"],
+        #content-wrapper.pr-responsive-article [height] {
+            width: auto !important;
+            min-width: 0 !important;
+            max-width: 100% !important;
+            height: auto !important;
+            max-height: none !important;
+        }
+        #content-wrapper.pr-responsive-article [style*="display: grid"],
+        #content-wrapper.pr-responsive-article [style*="display:grid"],
+        #content-wrapper.pr-responsive-article [style*="display: flex"],
+        #content-wrapper.pr-responsive-article [style*="display:flex"],
+        #content-wrapper.pr-responsive-article [style*="column-count"],
+        #content-wrapper.pr-responsive-article [style*="columns:"] {
+            display: block !important;
+            columns: auto !important;
+        }
+        #content-wrapper.pr-responsive-article img,
+        #content-wrapper.pr-responsive-article picture,
+        #content-wrapper.pr-responsive-article svg,
+        #content-wrapper.pr-responsive-article canvas,
+        #content-wrapper.pr-responsive-article video {
+            display: block;
+            width: auto !important;
+            max-width: 100% !important;
+            height: auto !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+        #content-wrapper.pr-responsive-article table {
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }
+        #content-wrapper.pr-responsive-article pre,
+        #content-wrapper.pr-responsive-article code {
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+        }
         .markdown-body h1 { font-size: 2em; padding-bottom: 0.3em; margin-bottom: 16px; font-weight: bold; margin-top: 0; }
         .markdown-body h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; font-weight: bold; }
         .markdown-body h3 { font-size: 1.25em; margin-top: 24px; margin-bottom: 16px; font-weight: bold; }
@@ -384,7 +456,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.59</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.60</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -1635,6 +1707,8 @@
                 if (!hasMedia && !hasText) el.remove();
             });
 
+            applyResponsiveArticleLayout(targetNode);
+
             return targetNode.innerHTML;
         }
 
@@ -1660,6 +1734,40 @@
                     a.title = text;
                 }
             });
+        }
+
+        function applyResponsiveArticleLayout(root) {
+            if (!root || !root.querySelectorAll) return root;
+            root.classList.add('pr-responsive-article');
+            root.querySelectorAll('*').forEach(el => {
+                const tag = el.tagName.toLowerCase();
+                const style = el.style;
+                /* 來源站常用 inline width / height / float / transform 砌桌面版卡片，
+                 * 呢啲值喺手機文章內全部改由 PureRead 容器控制。 */
+                style.maxWidth = '100%';
+                style.minWidth = '0';
+                style.boxSizing = 'border-box';
+                if (['img', 'picture', 'svg', 'canvas', 'video', 'iframe', 'embed', 'object'].includes(tag)) {
+                    style.height = 'auto';
+                    style.float = 'none';
+                    style.marginLeft = 'auto';
+                    style.marginRight = 'auto';
+                } else if (['p', 'li', 'blockquote', 'section', 'article', 'figure', 'div'].includes(tag)) {
+                    style.float = 'none';
+                    style.clear = 'both';
+                }
+                if (style.display === 'grid' || style.display === 'flex') style.display = 'block';
+                if (style.columnCount || style.columns) {
+                    style.columnCount = 'auto';
+                    style.columns = 'auto';
+                }
+            });
+            root.querySelectorAll('table').forEach(table => {
+                table.style.display = 'block';
+                table.style.width = '100%';
+                table.style.overflowX = 'auto';
+            });
+            return root;
         }
 
         /* 外站圖片可能因 hotlink、CDN 或權限規則拒絕嵌入；保留原網址並提供人工開啟。 */
@@ -3358,6 +3466,7 @@
             cleanupPreviewHTML = cleanHTML;
             cleanupBaselineHTML = cleanHTML;
             contentArea.innerHTML = cleanHTML;
+            applyResponsiveArticleLayout(contentArea);
             /* 【修正 1】提取流程由頭到尾都冇叫過 applyCleanupLevel()，所以此刻
              * 畫面上係「完全未按級別過濾」嘅內容。但下拉選單寫死 selected="3"，
              * 於是用戶揀「第 0 級」時，程式只係再畫一次同樣嘅未過濾內容，
@@ -3585,6 +3694,7 @@
             wrapper.innerHTML = clean;
             removeEditorOnlyControls(wrapper);
             removeImageInteractionHints(wrapper);
+            applyResponsiveArticleLayout(wrapper);
             return wrapper.innerHTML;
         }
 
