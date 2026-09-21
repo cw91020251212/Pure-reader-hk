@@ -371,7 +371,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.53</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.54</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -390,15 +390,29 @@
                     <span id="btnText">提取網址</span>
                     <div id="loadingIcon" class="loader hidden"></div>
                 </button>
-                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="直接選擇文件，系統會在本機自動重整排版。支援 PDF、DOC、DOCX、Markdown、純文字、HTML、RTF、ODT、EPUB、PowerPoint、Excel 同 CSV。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
+                <button id="uploadBtn" type="button" onclick="triggerDocumentFilePicker()" data-title="或者：選擇文檔" data-intro="按呢度開啟文件選擇器；亦可直接將文檔拖入下面的選擇文檔區。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                    上傳檔案
-                    <input type="file" id="fileInput" accept=".html,.htm,.md,.markdown,.txt,.pdf,.doc,.docx,.docm,.rtf,.odt,.epub,.ppt,.pps,.pot,.pptx,.pptm,.ppsx,.ppsm,.xls,.xlsx,.xlsm,.xlsb,.csv,text/html,text/markdown,text/plain,text/csv,text/rtf,application/pdf,application/msword,application/rtf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-word.document.macroEnabled.12,application/vnd.oasis.opendocument.text,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden" onchange="handleFileUpload(event)">
-                </label>
+                    選擇文檔
+                </button>
                 <button id="pasteToggleBtn" type="button" onclick="togglePastePanel()" data-title="或者：貼上文字" data-intro="直接貼上文字內容，即時整理成文章。" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold px-6 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                     貼上文字
                 </button>
+            </div>
+            <div id="documentPickerPanel" tabindex="0" role="button" aria-label="選擇或拖入文檔" class="mt-4 rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 p-4 transition-colors hover:border-indigo-500 hover:bg-indigo-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <div class="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
+                    <div class="rounded-full bg-white p-3 text-indigo-700 shadow-sm" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" /></svg>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <p class="font-black text-indigo-950">選擇文檔或拖放到這裡</p>
+                        <p class="mt-1 text-xs font-medium leading-5 text-indigo-800">PDF、DOC、DOCX、MD、TXT、HTML、RTF、ODT、EPUB、PPT、XLS、CSV</p>
+                        <p id="documentPickerFileName" class="mt-2 truncate text-sm font-bold text-slate-700">尚未選擇文檔</p>
+                        <p id="documentPickerStatus" class="mt-1 text-xs font-medium text-slate-500" aria-live="polite">文檔只會在本機瀏覽器解析，不會上傳。</p>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); triggerDocumentFilePicker()" class="w-full rounded-xl bg-indigo-600 px-5 py-3 font-black text-white shadow-sm transition-colors hover:bg-indigo-700 sm:w-auto">瀏覽文檔</button>
+                </div>
+                <input type="file" id="fileInput" accept=".html,.htm,.md,.markdown,.txt,.pdf,.doc,.docx,.docm,.rtf,.odt,.epub,.ppt,.pps,.pot,.pptx,.pptm,.ppsx,.ppsm,.xls,.xlsx,.xlsm,.xlsb,.csv,text/html,text/markdown,text/plain,text/csv,text/rtf,application/pdf,application/msword,application/rtf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-word.document.macroEnabled.12,application/vnd.oasis.opendocument.text,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" class="hidden" onchange="handleFileUpload(event)">
             </div>
             <div id="errorMessage" class="mt-4 p-4 bg-red-50 text-red-700 font-bold rounded-xl text-sm hidden border border-red-300"></div>
 
@@ -1758,6 +1772,55 @@
             'ppt', 'pps', 'pot', 'pptx', 'pptm', 'ppsx', 'ppsm',
             'xls', 'xlsx', 'xlsm', 'xlsb', 'csv'
         ]);
+        const LOCAL_DOCUMENT_EXTENSIONS = new Set([
+            'html', 'htm', 'md', 'markdown', 'txt', 'pdf', 'docx',
+            ...ANYDOC_EXTENSIONS
+        ]);
+
+        function isSupportedDocumentFile(file) {
+            return LOCAL_DOCUMENT_EXTENSIONS.has(localFileExtension(file));
+        }
+
+        function documentFileSize(bytes) {
+            if (!Number.isFinite(bytes) || bytes <= 0) return '';
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+            return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+        }
+
+        function setDocumentPickerState(file, state = 'selected', message = '') {
+            const panel = document.getElementById('documentPickerPanel');
+            const name = document.getElementById('documentPickerFileName');
+            const status = document.getElementById('documentPickerStatus');
+            if (name && file) name.textContent = `${file.name || '未命名文檔'}${file.size ? `・${documentFileSize(file.size)}` : ''}`;
+            if (status) {
+                status.textContent = message || (state === 'loading'
+                    ? '正在本機解析文檔…'
+                    : state === 'success'
+                        ? '✅ 文檔已成功開啟。'
+                        : state === 'error'
+                            ? '❌ 文檔未能開啟，請查看上方提示。'
+                            : '已選擇文檔，準備解析。');
+                status.className = 'mt-1 text-xs font-bold ' + (state === 'success'
+                    ? 'text-emerald-700'
+                    : state === 'error'
+                        ? 'text-red-700'
+                        : state === 'loading'
+                            ? 'text-indigo-700'
+                            : 'text-slate-600');
+            }
+            if (panel) {
+                panel.classList.toggle('border-emerald-400', state === 'success');
+                panel.classList.toggle('bg-emerald-50', state === 'success');
+                panel.classList.toggle('border-red-400', state === 'error');
+                panel.classList.toggle('bg-red-50', state === 'error');
+            }
+        }
+
+        function triggerDocumentFilePicker() {
+            const input = document.getElementById('fileInput');
+            if (input) input.click();
+        }
 
         function anydocFormatHint(extension) {
             if (['doc'].includes(extension)) return 'doc';
@@ -1841,13 +1904,18 @@
         async function processLocalFile(file, sourceLabel = '檔案') {
             if (!file) return;
             resetUI();
+            setDocumentPickerState(file, 'loading');
             document.getElementById('loadingIcon').classList.remove('hidden');
             document.getElementById('btnText').classList.add('hidden');
             try {
                 renderContent(await readLocalFile(file));
+                setDocumentPickerState(file, 'success');
+                return true;
             } catch (error) {
                 console.error(`讀取${sourceLabel}失敗:`, error);
                 showError(`⚠️ ${error.message || `無法讀取${sourceLabel}。`}`);
+                setDocumentPickerState(file, 'error');
+                return false;
             } finally {
                 document.getElementById('loadingIcon').classList.add('hidden');
                 document.getElementById('btnText').classList.remove('hidden');
@@ -1859,8 +1927,43 @@
         function handleFileUpload(event) {
             const file = event.target.files[0];
             event.target.value = '';
+            if (file && !isSupportedDocumentFile(file)) {
+                showError('⚠️ 暫時未支援呢種文檔格式，請選擇 PDF、Word、Markdown、TXT、HTML、RTF、ODT、EPUB、PowerPoint、Excel 或 CSV。');
+                setDocumentPickerState(file, 'error', '❌ 不支援此文檔格式。');
+                return;
+            }
             processLocalFile(file);
         }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const panel = document.getElementById('documentPickerPanel');
+            if (!panel) return;
+            panel.addEventListener('click', event => {
+                if (event.target.closest('button')) return;
+                triggerDocumentFilePicker();
+            });
+            panel.addEventListener('keydown', event => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                event.preventDefault();
+                triggerDocumentFilePicker();
+            });
+            ['dragenter', 'dragover'].forEach(type => panel.addEventListener(type, event => {
+                event.preventDefault();
+                panel.classList.add('border-indigo-600', 'bg-indigo-100');
+            }));
+            ['dragleave', 'drop'].forEach(type => panel.addEventListener(type, event => {
+                event.preventDefault();
+                panel.classList.remove('border-indigo-600', 'bg-indigo-100');
+            }));
+            panel.addEventListener('drop', event => {
+                const file = Array.from(event.dataTransfer?.files || []).find(isSupportedDocumentFile);
+                if (!file) {
+                    showError('⚠️ 請拖入支援的文檔：PDF、Word、Markdown、TXT、HTML、RTF、ODT、EPUB、PowerPoint、Excel 或 CSV。');
+                    return;
+                }
+                processLocalFile(file, '拖入文檔');
+            });
+        });
 
         /* ══════════════════════════════════════════════════════════════
          * 【貼上文字產生文章模組 v1】
