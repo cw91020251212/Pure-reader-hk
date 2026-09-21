@@ -385,7 +385,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.55</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.56</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -410,21 +410,24 @@
                 </button>
             </div>
 
-            <div id="unifiedImportPanel" class="mt-5 rounded-2xl border border-indigo-300 bg-slate-50 p-4 shadow-inner sm:p-6" data-import-mode="document">
+            <div id="unifiedImportPanel" class="mt-5 rounded-2xl border border-indigo-300 bg-slate-50 p-4 shadow-inner sm:p-6" data-import-mode="document" data-import-open="false">
                 <div class="mb-4 flex flex-col gap-3 border-b border-slate-300 pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <h2 class="text-lg font-black text-slate-900">匯入內容</h2>
-                        <p class="mt-1 text-xs font-medium text-slate-600">選擇文檔與貼上文字共用同一個大型工作區。</p>
+                        <p class="mt-1 text-xs font-medium text-slate-600">選擇文檔與貼上文字共用同一介面；未使用時內容區會自動收起。</p>
                     </div>
-                    <button id="importExpandBtn" type="button" onclick="toggleImportPanelExpansion()" aria-expanded="false" class="rounded-xl border border-indigo-300 bg-white px-4 py-2 text-sm font-black text-indigo-800 hover:bg-indigo-50">⛶ 大展開</button>
+                    <div class="flex gap-2">
+                        <button id="importCollapseBtn" type="button" onclick="collapseImportPanel()" class="hidden rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-100">▴ 收起</button>
+                        <button id="importExpandBtn" type="button" onclick="toggleImportPanelExpansion()" aria-expanded="false" class="rounded-xl border border-indigo-300 bg-white px-4 py-2 text-sm font-black text-indigo-800 hover:bg-indigo-50">⛶ 大展開</button>
+                    </div>
                 </div>
 
                 <div class="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-200 p-1" role="tablist" aria-label="匯入方式">
-                    <button id="documentImportTab" type="button" role="tab" aria-selected="true" aria-controls="documentPickerPanel" onclick="switchImportMode('document')" class="rounded-lg bg-white px-4 py-3 font-black text-indigo-800 shadow-sm">📄 選擇文檔</button>
-                    <button id="pasteToggleBtn" type="button" role="tab" aria-selected="false" aria-controls="pastePanel" onclick="switchImportMode('paste')" data-title="貼上文字" data-intro="切換到貼上文字，可同時加入多張圖片。" class="rounded-lg px-4 py-3 font-black text-slate-600">✍️ 貼上文字</button>
+                    <button id="documentImportTab" type="button" role="tab" aria-selected="true" aria-controls="documentPickerPanel" onclick="switchImportMode('document', true)" class="rounded-lg bg-white px-4 py-3 font-black text-indigo-800 shadow-sm">📄 選擇文檔</button>
+                    <button id="pasteToggleBtn" type="button" role="tab" aria-selected="false" aria-controls="pastePanel" onclick="switchImportMode('paste', true)" data-title="貼上文字" data-intro="切換到貼上文字，可同時加入多張圖片。" class="rounded-lg px-4 py-3 font-black text-slate-600">✍️ 貼上文字</button>
                 </div>
 
-                <div id="documentPickerPanel" tabindex="0" role="tabpanel" aria-labelledby="documentImportTab" aria-label="選擇或拖入文檔" class="flex min-h-[280px] items-center rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 p-6 transition-colors hover:border-indigo-500 hover:bg-indigo-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:min-h-[340px]">
+                <div id="documentPickerPanel" tabindex="0" role="tabpanel" aria-labelledby="documentImportTab" aria-label="選擇或拖入文檔" class="hidden min-h-[280px] items-center rounded-xl border-2 border-dashed border-indigo-300 bg-indigo-50 p-6 transition-colors hover:border-indigo-500 hover:bg-indigo-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:min-h-[340px]">
                     <div class="mx-auto flex w-full max-w-xl flex-col items-center gap-4 text-center">
                         <div class="rounded-full bg-white p-5 text-indigo-700 shadow-sm" aria-hidden="true">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" /></svg>
@@ -1843,19 +1846,22 @@
             if (input) input.click();
         }
 
-        function switchImportMode(mode = 'document') {
+        function switchImportMode(mode = 'document', shouldOpen = true) {
             const isPaste = mode === 'paste';
             const unified = document.getElementById('unifiedImportPanel');
             const documentPanel = document.getElementById('documentPickerPanel');
             const pastePanel = document.getElementById('pastePanel');
             const documentTab = document.getElementById('documentImportTab');
             const pasteTab = document.getElementById('pasteToggleBtn');
+            const collapseButton = document.getElementById('importCollapseBtn');
             if (!unified || !documentPanel || !pastePanel) return;
 
             unified.dataset.importMode = isPaste ? 'paste' : 'document';
-            documentPanel.classList.toggle('hidden', isPaste);
-            documentPanel.classList.toggle('flex', !isPaste);
-            pastePanel.classList.toggle('hidden', !isPaste);
+            unified.dataset.importOpen = String(shouldOpen);
+            documentPanel.classList.toggle('hidden', !shouldOpen || isPaste);
+            documentPanel.classList.toggle('flex', shouldOpen && !isPaste);
+            pastePanel.classList.toggle('hidden', !shouldOpen || !isPaste);
+            collapseButton?.classList.toggle('hidden', !shouldOpen);
 
             [[documentTab, !isPaste], [pasteTab, isPaste]].forEach(([tab, active]) => {
                 if (!tab) return;
@@ -1866,10 +1872,17 @@
                 tab.classList.toggle('text-slate-600', !active);
             });
 
-            if (isPaste) {
+            if (shouldOpen && isPaste) {
                 updatePasteStats();
                 requestAnimationFrame(() => document.getElementById('pasteTextInput')?.focus());
             }
+        }
+
+        function collapseImportPanel() {
+            const unified = document.getElementById('unifiedImportPanel');
+            const mode = unified?.dataset.importMode || 'document';
+            switchImportMode(mode, false);
+            toggleImportPanelExpansion(false);
         }
 
         function toggleImportPanelExpansion(forceExpanded) {
@@ -1879,6 +1892,9 @@
             const expanded = typeof forceExpanded === 'boolean'
                 ? forceExpanded
                 : !panel.classList.contains('import-panel-expanded');
+            if (expanded && panel.dataset.importOpen !== 'true') {
+                switchImportMode(panel.dataset.importMode || 'document', true);
+            }
             panel.classList.toggle('import-panel-expanded', expanded);
             document.body.classList.toggle('import-panel-open', expanded);
             if (button) {
@@ -1890,7 +1906,7 @@
 
         function focusUnifiedImportPanel(mode = 'document', expand = true) {
             const panel = document.getElementById('unifiedImportPanel');
-            switchImportMode(mode);
+            switchImportMode(mode, true);
             if (expand) toggleImportPanelExpansion(true);
             else panel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
@@ -1983,6 +1999,7 @@
             try {
                 renderContent(await readLocalFile(file));
                 setDocumentPickerState(file, 'success');
+                collapseImportPanel();
                 return true;
             } catch (error) {
                 console.error(`讀取${sourceLabel}失敗:`, error);
@@ -2067,9 +2084,11 @@
         let pastedCoverImages = [];
 
         function togglePastePanel(forceOpen) {
-            const currentMode = document.getElementById('unifiedImportPanel')?.dataset.importMode || 'document';
-            const showPaste = typeof forceOpen === 'boolean' ? forceOpen : currentMode !== 'paste';
-            switchImportMode(showPaste ? 'paste' : 'document');
+            const panel = document.getElementById('unifiedImportPanel');
+            const isPasteOpen = panel?.dataset.importMode === 'paste' && panel?.dataset.importOpen === 'true';
+            const showPaste = typeof forceOpen === 'boolean' ? forceOpen : !isPasteOpen;
+            if (showPaste) switchImportMode('paste', true);
+            else collapseImportPanel();
         }
 
         function clearPasteInput() {
