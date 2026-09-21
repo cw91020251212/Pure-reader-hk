@@ -31,6 +31,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+    <!-- 本機文件只喺瀏覽器處理：PDF 抽文字、DOCX 轉 HTML，檔案唔會上載。 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/introjs.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intro.js/7.2.0/intro.min.js"></script>
@@ -368,7 +371,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.51</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.52</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -376,7 +379,7 @@
                 </button>
             </div>
             
-            <p class="text-slate-600 font-medium text-sm mb-6">可用網址提取、上傳檔案，或直接<b>貼上文字</b>產生文章（可加壓縮標題圖）。實體檔案將支援「同段暫停」、「強制開關」及「連續點擊刪除」功能。</p>
+            <p class="text-slate-600 font-medium text-sm mb-6">可用網址提取、上傳檔案，或直接<b>貼上文字</b>產生文章；PDF／DOCX 都可直接匯入，亦可連續加入多張壓縮圖片並自由排序。</p>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
@@ -387,10 +390,10 @@
                     <span id="btnText">提取網址</span>
                     <div id="loadingIcon" class="loader hidden"></div>
                 </button>
-                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="直接上傳舊有檔案，系統會自動重整排版。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
+                <label id="uploadBtn" data-title="或者：上傳檔案" data-intro="直接上傳檔案，系統會自動重整排版。支援 HTML、Markdown、純文字、PDF 同 Word DOCX。" class="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-6 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                     上傳檔案
-                    <input type="file" id="fileInput" accept=".html,.htm,.md,.txt" class="hidden" onchange="handleFileUpload(event)">
+                    <input type="file" id="fileInput" accept=".html,.htm,.md,.txt,.pdf,.docx,.doc,text/html,text/markdown,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword" class="hidden" onchange="handleFileUpload(event)">
                 </label>
                 <button id="pasteToggleBtn" type="button" onclick="togglePastePanel()" data-title="或者：貼上文字" data-intro="直接貼上文字內容，即時整理成文章。" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold px-6 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
@@ -400,9 +403,9 @@
             <div id="errorMessage" class="mt-4 p-4 bg-red-50 text-red-700 font-bold rounded-xl text-sm hidden border border-red-300"></div>
 
             <!-- ══════════════════════════════════════════════════════════
-             * 【貼上文字產生文章 v1】
+             * 【貼上文字產生文章】
              * 用途：唔使網址、唔使檔案，直接貼文字就整理成文章；
-             *       另可貼一張標題圖，壓縮後內嵌喺文章最頂做主題圖。
+             *       另可連續加入多張圖片，壓縮後內嵌喺文章最頂。
              * 圖片一定要壓縮：匯出 HTML 用 base64 內嵌，base64 本身
              * 已令體積脹大約 33%，原圖幾 MB 會令匯出檔唔實用。
              * ══════════════════════════════════════════════════════════ -->
@@ -412,19 +415,19 @@
                     <button type="button" onclick="togglePastePanel()" aria-label="收起" title="收起" class="text-xl font-black leading-none text-amber-700 hover:text-amber-900">×</button>
                 </div>
 
-                <!-- 標題圖區：支援貼上（Ctrl/⌘+V）、揀檔、拖放 -->
+                <!-- 圖片區：支援貼上（Ctrl/⌘+V）、多選揀檔、拖放 -->
                 <div id="pasteImageZone" tabindex="0" class="mb-3 cursor-pointer rounded-xl border-2 border-dashed border-amber-400 bg-white p-4 text-center transition-colors hover:bg-amber-100/60">
                     <div id="pasteImageEmpty">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-7 w-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        <p class="mt-2 text-sm font-bold text-amber-900">標題圖（可選）：喺呢度貼上圖片、撳一下揀檔、或者拖入嚟</p>
-                        <p class="mt-1 text-xs text-amber-700">系統會自動壓縮至闊 1200px、約 150KB 以內，內嵌落文章最頂做主題圖。</p>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-7 w-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 00-2-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <p class="mt-2 text-sm font-bold text-amber-900">圖片（可選）：喺呢度貼上、多選揀檔、或者拖入多張圖片</p>
+                        <p class="mt-1 text-xs text-amber-700">可以分批連續加入；每張會自動壓縮至闊 1200px、約 150KB 以內，並可在文章內自由移動。</p>
                     </div>
                     <div id="pasteImageResult" class="hidden">
-                        <img id="pasteImagePreview" alt="標題圖預覽" class="mx-auto max-h-48 w-auto rounded-lg shadow-sm">
-                        <p id="pasteImageInfo" class="mt-2 text-xs font-bold text-emerald-800"></p>
-                        <button type="button" onclick="clearCoverImage(event)" class="mt-2 rounded-lg border border-red-300 bg-white px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50">移除標題圖</button>
+                        <p id="pasteImageInfo" class="mb-2 text-xs font-bold text-emerald-800"></p>
+                        <div id="pasteImagePreviewList" class="grid grid-cols-2 gap-2 sm:grid-cols-3"></div>
+                        <button type="button" onclick="clearCoverImages(event)" class="mt-3 rounded-lg border border-red-300 bg-white px-3 py-1 text-xs font-bold text-red-700 hover:bg-red-50">移除全部圖片</button>
                     </div>
-                    <input type="file" id="pasteImageInput" accept="image/*" class="hidden" onchange="handleCoverImagePick(event)">
+                    <input type="file" id="pasteImageInput" accept="image/*" multiple class="hidden" onchange="handleCoverImagePick(event)">
                 </div>
 
                 <textarea id="pasteTextInput" rows="10" placeholder="喺度貼上文章文字…&#10;&#10;第一行會自動做大標題，其餘就係正文。&#10;如果貼上嘅係 Markdown（# 標題、**粗體**、- 列表），系統會自動辨識並套用格式。" class="w-full resize-y rounded-xl border border-amber-400 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-400" style="font-size:16px; line-height:1.7;"></textarea>
@@ -479,11 +482,11 @@
                     </div>
                     <div class="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-2">
                         <span class="px-1 text-xs font-black text-emerald-700">完成文章</span>
-                    <button id="addImageAfterBtn" type="button" onclick="triggerAddImageAfter()" data-title="追加圖片" data-intro="喺文章已經整理好之後，仲可以再貼一張圖入去（例如原站攞唔到嘅標題圖）。預設會插喺 h1 之後，之後可以用 ↑/↓ 移到任何段落之間。" class="w-full sm:w-auto bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-5 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm" title="喺已完成嘅文章加多一張圖片（會自動壓縮）">
+                    <button id="addImageAfterBtn" type="button" onclick="triggerAddImageAfter()" data-title="追加圖片" data-intro="文章完成後，可分批或一次加入多張圖片。預設插喺標題後面，之後每張都可用 ↑/↓ 自由移到文章任何位置。" class="w-full sm:w-auto bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-5 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm" title="喺已完成嘅文章加一張或多張圖片（會自動壓縮）">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         <span>追加圖片</span>
                     </button>
-                    <input id="addImageAfterInput" type="file" accept="image/*" class="hidden" onchange="handleAddImageAfterPick(event)">
+                    <input id="addImageAfterInput" type="file" accept="image/*" multiple class="hidden" onchange="handleAddImageAfterPick(event)">
                     <button id="downloadBtn" onclick="downloadHTML()" data-title="最後一步：儲存檔案" data-intro="生成獨立檔案。入面會有全新設定同真聲切換功能！" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>儲存檔案</span>
@@ -1009,7 +1012,7 @@
                     },
                     {
                         element: document.querySelector('#uploadBtn'),
-                        intro: '<b>或者：上傳檔案</b><br>如果你已經有 .html 或 .md 檔案，可以直接上傳重整排版。'
+                        intro: '<b>或者：上傳檔案</b><br>可以直接上傳 HTML、Markdown、TXT、PDF 或 Word DOCX，系統會喺瀏覽器抽取文字再重整排版。'
                     },
                     {
                         element: document.querySelector('#pasteToggleBtn'),
@@ -1723,49 +1726,81 @@
             const y = Number(saved);
             if (Number.isFinite(y)) requestAnimationFrame(() => requestAnimationFrame(() => window.scrollTo({ top: y, behavior: 'auto' })));
         }
-        function handleSharedFile(file) {
-            resetUI();
-            document.getElementById('loadingIcon').classList.remove('hidden');
-            document.getElementById('btnText').classList.add('hidden');
-            file.text().then(text => {
-                let rawContent = text;
-                articleTitle = file.name.replace(/\.[^/.]+$/, '');
-                if (/\.(md|txt)$/i.test(file.name)) rawContent = marked.parse(text);
-                else rawContent = extractNuclear(text);
-                renderContent(rawContent);
-            }).catch(error => {
-                console.error('讀取分享檔案失敗:', error);
-                showError('⚠️ 無法讀取分享檔案。');
-            }).finally(() => {
-                document.getElementById('loadingIcon').classList.add('hidden');
-                document.getElementById('btnText').classList.remove('hidden');
-            });
+        function localFileExtension(file) {
+            return String(file?.name || '').split('.').pop().toLowerCase();
         }
 
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
+        async function extractPdfText(file) {
+            if (!window.pdfjsLib) throw new Error('PDF 閱讀器未能載入');
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+            const pages = [];
+            for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                const page = await pdf.getPage(pageNumber);
+                const content = await page.getTextContent();
+                const lines = [];
+                let currentLine = '';
+                let lastY = null;
+                for (const item of content.items) {
+                    const text = String(item.str || '');
+                    const y = item.transform?.[5];
+                    if (lastY !== null && Number.isFinite(y) && Math.abs(y - lastY) > 4) {
+                        if (currentLine.trim()) lines.push(currentLine.trim());
+                        currentLine = '';
+                    }
+                    currentLine += text + (item.hasEOL ? '\n' : ' ');
+                    lastY = y;
+                }
+                if (currentLine.trim()) lines.push(currentLine.trim());
+                pages.push(lines.join('\n'));
+            }
+            const text = pages.join('\n\n');
+            if (!text.trim()) throw new Error('呢份 PDF 似乎係掃描圖片，未能直接抽取文字');
+            return marked.parse(text);
+        }
+
+        async function extractDocxHtml(file) {
+            if (!window.mammoth) throw new Error('Word 閱讀器未能載入');
+            const result = await window.mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+            if (!result.value.trim()) throw new Error('呢份 Word 檔案冇可讀文字');
+            return result.value;
+        }
+
+        async function readLocalFile(file) {
+            const extension = localFileExtension(file);
+            articleTitle = String(file.name || '未命名文章').replace(/\.[^/.]+$/, '') || '未命名文章';
+            if (extension === 'pdf' || file.type === 'application/pdf') return extractPdfText(file);
+            if (extension === 'docx' || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return extractDocxHtml(file);
+            if (extension === 'doc' || file.type === 'application/msword') {
+                throw new Error('舊式 .doc 未能喺瀏覽器直接解析，請先另存做 .docx 再匯入');
+            }
+            const text = await file.text();
+            if (extension === 'md' || extension === 'txt') return marked.parse(text);
+            return extractNuclear(text);
+        }
+
+        async function processLocalFile(file, sourceLabel = '檔案') {
             if (!file) return;
             resetUI();
             document.getElementById('loadingIcon').classList.remove('hidden');
             document.getElementById('btnText').classList.add('hidden');
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const text = e.target.result;
-                let rawContent = text;
-                articleTitle = file.name.replace(/\.[^/.]+$/, ""); 
-                if (file.name.toLowerCase().endsWith('.md') || file.name.toLowerCase().endsWith('.txt')) {
-                    rawContent = marked.parse(text);
-                } else {
-                    rawContent = extractNuclear(text);
-                }
-                renderContent(rawContent);
-                
+            try {
+                renderContent(await readLocalFile(file));
+            } catch (error) {
+                console.error(`讀取${sourceLabel}失敗:`, error);
+                showError(`⚠️ ${error.message || `無法讀取${sourceLabel}。`}`);
+            } finally {
                 document.getElementById('loadingIcon').classList.add('hidden');
                 document.getElementById('btnText').classList.remove('hidden');
-            };
-            reader.readAsText(file);
+            }
+        }
+
+        function handleSharedFile(file) { processLocalFile(file, '分享檔案'); }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
             event.target.value = '';
+            processLocalFile(file);
         }
 
         /* ══════════════════════════════════════════════════════════════
@@ -1788,9 +1823,8 @@
         const COVER_TARGET_BYTES = 150 * 1024;
         const COVER_MIN_QUALITY = 0.45;
 
-        // 目前已備妥嘅標題圖（data URL）同顯示資訊
-        let pastedCoverImage = '';
-        let pastedCoverInfo = '';
+        // 目前已備妥嘅圖片（data URL）；保留加入次序，產生文章時會按此順序插入。
+        let pastedCoverImages = [];
 
         function togglePastePanel(forceOpen) {
             const panel = document.getElementById('pastePanel');
@@ -1807,7 +1841,7 @@
         function clearPasteInput() {
             const box = document.getElementById('pasteTextInput');
             if (box) box.value = '';
-            clearCoverImage();
+            clearCoverImages();
             updatePasteStats();
             if (box) box.focus();
         }
@@ -2006,78 +2040,113 @@
             return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
         }
 
-        function setCoverImage(dataUrl, info) {
-            pastedCoverImage = dataUrl || '';
-            pastedCoverInfo = info || '';
+        function renderCoverImagePreviews() {
             const empty = document.getElementById('pasteImageEmpty');
             const result = document.getElementById('pasteImageResult');
-            const preview = document.getElementById('pasteImagePreview');
+            const list = document.getElementById('pasteImagePreviewList');
             const infoEl = document.getElementById('pasteImageInfo');
-            if (!empty || !result || !preview) return;
-            if (pastedCoverImage) {
-                preview.src = pastedCoverImage;
-                if (infoEl) infoEl.textContent = pastedCoverInfo;
+            if (!empty || !result || !list) return;
+            if (pastedCoverImages.length) {
+                const totalBytes = pastedCoverImages.reduce((total, image) => total + (image.bytes || 0), 0);
+                if (infoEl) infoEl.textContent = `已準備 ${pastedCoverImages.length} 張圖片・合共 ${formatBytes(totalBytes)}；產生後可用 ↑／↓ 自由調整位置。`;
+                list.innerHTML = '';
+                pastedCoverImages.forEach((image, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'relative overflow-hidden rounded-lg border border-amber-200 bg-white p-1';
+                    const preview = document.createElement('img');
+                    preview.src = image.dataUrl;
+                    preview.alt = image.alt || `第 ${index + 1} 張圖片`;
+                    preview.className = 'h-24 w-full rounded object-cover sm:h-28';
+                    preview.title = `${index + 1}. ${image.alt || '圖片'}・${image.info || ''}`;
+                    const order = document.createElement('span');
+                    order.className = 'absolute left-2 top-2 rounded-full bg-slate-900/75 px-2 py-0.5 text-xs font-black text-white';
+                    order.textContent = index + 1;
+                    const remove = document.createElement('button');
+                    remove.type = 'button';
+                    remove.className = 'absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-sm font-black text-red-700 shadow hover:bg-red-50';
+                    remove.title = `移除第 ${index + 1} 張圖片`;
+                    remove.setAttribute('aria-label', remove.title);
+                    remove.textContent = '×';
+                    remove.addEventListener('click', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        pastedCoverImages.splice(index, 1);
+                        renderCoverImagePreviews();
+                    });
+                    item.append(preview, order, remove);
+                    list.appendChild(item);
+                });
                 empty.classList.add('hidden');
                 result.classList.remove('hidden');
             } else {
-                preview.removeAttribute('src');
                 if (infoEl) infoEl.textContent = '';
+                list.innerHTML = '';
                 result.classList.add('hidden');
                 empty.classList.remove('hidden');
             }
         }
 
-        function clearCoverImage(event) {
+        function clearCoverImages(event) {
             if (event) { event.preventDefault(); event.stopPropagation(); }
-            setCoverImage('', '');
+            pastedCoverImages = [];
+            renderCoverImagePreviews();
             const input = document.getElementById('pasteImageInput');
             if (input) input.value = '';
         }
 
-        async function ingestCoverImageFile(file) {
-            if (!file) return;
-            if (!/^image\//i.test(file.type)) {
-                showError('⚠️ 標題圖必須係圖片檔（JPG／PNG／WebP／GIF 等）。');
+        function isImageFile(file) {
+            return /^image\//i.test(file?.type || '') || /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i.test(file?.name || '');
+        }
+
+        async function ingestCoverImageFiles(files) {
+            const imageFiles = Array.from(files || []).filter(isImageFile);
+            if (!imageFiles.length) {
+                showError('⚠️ 請選擇圖片檔（JPG／PNG／WebP／GIF 等）。');
                 return;
             }
-            const infoEl = document.getElementById('pasteImageInfo');
-            setCoverImage('', '');
             const empty = document.getElementById('pasteImageEmpty');
             if (empty) empty.classList.add('opacity-50');
-            try {
-                const originalBytes = file.size;
-                const out = await compressCoverImage(file);
-                const saved = originalBytes > 0 ? Math.max(0, Math.round((1 - out.bytes / originalBytes) * 100)) : 0;
-                const label = `✅ 已壓縮：${out.width}×${out.height}・${formatBytes(out.bytes)}` +
-                    (originalBytes ? `（原本 ${formatBytes(originalBytes)}，減少 ${saved}%）` : '') +
-                    `・格式 ${out.type.replace('image/', '').toUpperCase()}`;
-                setCoverImage(out.dataUrl, label);
-                document.getElementById('errorMessage').classList.add('hidden');
-            } catch (err) {
-                console.error('壓縮標題圖失敗:', err);
-                showError('⚠️ 無法處理呢張圖片：' + (err.message || '未知錯誤'));
-                setCoverImage('', '');
-            } finally {
-                if (empty) empty.classList.remove('opacity-50');
+            const completed = [];
+            const failed = [];
+            for (const file of imageFiles) {
+                try {
+                    const originalBytes = file.size;
+                    const out = await compressCoverImage(file);
+                    const saved = originalBytes > 0 ? Math.max(0, Math.round((1 - out.bytes / originalBytes) * 100)) : 0;
+                    const label = `✅ 已壓縮：${out.width}×${out.height}・${formatBytes(out.bytes)}` +
+                        (originalBytes ? `（原本 ${formatBytes(originalBytes)}，減少 ${saved}%）` : '') +
+                        `・格式 ${out.type.replace('image/', '').toUpperCase()}`;
+                    completed.push({ dataUrl: out.dataUrl, bytes: out.bytes, info: label, alt: (file.name || '圖片').replace(/\.[^.]+$/, '').slice(0, 80) });
+                } catch (err) {
+                    console.error('壓縮圖片失敗:', err);
+                    failed.push(file.name || '未命名圖片');
+                }
             }
+            if (completed.length) {
+                pastedCoverImages.push(...completed);
+                renderCoverImagePreviews();
+                document.getElementById('errorMessage').classList.add('hidden');
+            }
+            if (failed.length) showError(`⚠️ ${failed.length} 張圖片未能處理：${failed.join('、')}`);
+            if (empty) empty.classList.remove('opacity-50');
         }
 
         function handleCoverImagePick(event) {
-            const file = event.target.files && event.target.files[0];
-            ingestCoverImageFile(file);
+            const files = event.target.files;
+            ingestCoverImageFiles(files);
             event.target.value = '';
         }
 
         /**
-         * 「追加圖片」——喺文章已經整理好之後，仍然可以再貼一張圖入去。
+         * 「追加圖片」——喺文章已經整理好之後，仍然可以分批或一次加入多張圖。
          * 用途：好多網站（例如 WeekendHK、部分 HK01）嘅官方標題圖有防盜鏈
          *      或者 CSP，本程式抽唔到；就算開盡 rescue mode 都攞唔到，
          *      唯有由用家手動加。以前只有喺「貼上文字」流程先可以貼圖，
          *      而家提取／上傳出嚟嘅文章都可以事後補一張。
          *
          *  ‑ 壓縮同「標題圖」共用 compressCoverImage()（≤1200px、~150KB、優先 WebP）
-         *  ‑ 預設位置：緊貼 <h1> 之後（同「標題圖」擺位一樣）
-         *  ‑ 之後可以用 figure 上原有嘅 ↑/↓ 掣逐段向下移，一直移到文章尾
+         *  ‑ 預設位置：緊貼 <h1> 之後，並按選檔次序排列
+         *  ‑ 之後可以用 figure 上嘅 ↑/↓ 掣跨過所有內容區塊自由移動
          *  ‑ 有 data-added-image="1" 標記，方便日後識別／管理
          *  ‑ 立即 saveCurrentEditRecord()，切換清理級別或重開文章都仲喺度
          */
@@ -2091,10 +2160,9 @@
         }
 
         async function handleAddImageAfterPick(event) {
-            const file = event.target.files && event.target.files[0];
+            const files = Array.from(event.target.files || []).filter(isImageFile);
             event.target.value = '';
-            if (!file) return;
-            if (!/^image\//i.test(file.type)) {
+            if (!files.length) {
                 showError('⚠️ 追加嘅檔案必須係圖片（JPG／PNG／WebP／GIF 等）。');
                 return;
             }
@@ -2107,27 +2175,12 @@
             if (btn) {
                 btn.disabled = true;
                 const span = btn.querySelector('span');
-                if (span) span.textContent = '壓縮中…';
+                if (span) span.textContent = `壓縮中（0/${files.length}）…`;
             }
+            const inserted = [];
+            const failed = [];
             try {
-                const originalBytes = file.size;
-                const out = await compressCoverImage(file);
-                const alt = (file.name || 'image').replace(/\.[^.]+$/, '').slice(0, 80);
-                const figure = document.createElement('figure');
-                figure.setAttribute('data-added-image', '1');
-                const img = document.createElement('img');
-                img.src = out.dataUrl;
-                img.alt = alt;
-                img.loading = 'eager';
-                img.style.display = 'block';
-                img.style.maxWidth = '100%';
-                img.style.height = 'auto';
-                img.style.margin = '0 auto';
-                img.style.borderRadius = '10px';
-                figure.appendChild(img);
-
-                // 預設插喺 <h1> 之後；若已有其他 data-added-image / data-pasted-cover，
-                // 排喺佢哋後面，令新加嘅圖唔會擠開原本嘅標題圖。
+                // 預設插喺 <h1> 之後；若已有其他手動加入嘅圖，排喺佢哋後面。
                 const h1 = contentArea.querySelector('h1');
                 let anchor = h1 || null;
                 if (anchor) {
@@ -2137,30 +2190,58 @@
                         anchor = next;
                         next = next.nextElementSibling;
                     }
-                    anchor.after(figure);
-                } else {
-                    contentArea.prepend(figure);
                 }
+                const firstChild = contentArea.firstChild;
+                for (const [index, file] of files.entries()) {
+                    if (btn) {
+                        const span = btn.querySelector('span');
+                        if (span) span.textContent = `壓縮中（${index + 1}/${files.length}）…`;
+                    }
+                    try {
+                        const originalBytes = file.size;
+                        const out = await compressCoverImage(file);
+                        const figure = document.createElement('figure');
+                        figure.setAttribute('data-added-image', '1');
+                        const img = document.createElement('img');
+                        img.src = out.dataUrl;
+                        img.alt = (file.name || 'image').replace(/\.[^.]+$/, '').slice(0, 80);
+                        img.loading = 'eager';
+                        img.style.display = 'block';
+                        img.style.maxWidth = '100%';
+                        img.style.height = 'auto';
+                        img.style.margin = '0 auto';
+                        img.style.borderRadius = '10px';
+                        figure.appendChild(img);
+                        if (anchor) anchor.after(figure);
+                        else contentArea.insertBefore(figure, firstChild);
+                        anchor = figure;
+                        inserted.push({ figure, out, originalBytes });
+                    } catch (err) {
+                        console.error('追加圖片失敗:', err);
+                        failed.push(file.name || '未命名圖片');
+                    }
+                }
+
+                if (!inserted.length) throw new Error('所有圖片都未能處理');
 
                 // 重新掛 ↑/↓ 掣（會先清舊，再全部重建，唔會出現重複）
                 installImageMoveControls(contentArea);
                 saveCurrentEditRecord();
 
-                const saved = originalBytes > 0 ? Math.max(0, Math.round((1 - out.bytes / originalBytes) * 100)) : 0;
-                const label = `✅ 已加入圖片：${out.width}×${out.height}・${formatBytes(out.bytes)}` +
-                    (originalBytes ? `（原本 ${formatBytes(originalBytes)}，減少 ${saved}%）` : '') +
-                    `・格式 ${out.type.replace('image/', '').toUpperCase()}。可用 ↑/↓ 掣移到指定段落。`;
+                const totalBytes = inserted.reduce((total, item) => total + item.out.bytes, 0);
+                const label = `✅ 已加入 ${inserted.length} 張圖片・合共 ${formatBytes(totalBytes)}。可用 ↑/↓ 掣跨過標題、段落及其他圖片，自由移到任何位置。`;
                 if (typeof showShareToast === 'function') {
                     showShareToast(label);
                 } else {
                     showError(label);
                 }
+                if (failed.length) showError(`⚠️ 已加入 ${inserted.length} 張；${failed.length} 張未能處理：${failed.join('、')}`);
 
-                // 順手 scroll 去新加嘅圖，方便用家確認位置
-                try { figure.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+                // 順手 scroll 去第一張新加嘅圖，方便用家確認位置
+                try { inserted[0].figure.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
             } catch (err) {
                 console.error('追加圖片失敗:', err);
-                showError('⚠️ 無法處理呢張圖片：' + (err && err.message ? err.message : '未知錯誤'));
+                showError('⚠️ 無法處理圖片：' + (err && err.message ? err.message : '未知錯誤'));
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -2182,8 +2263,8 @@
         function generateFromPastedText() {
             const box = document.getElementById('pasteTextInput');
             const text = box ? box.value : '';
-            if (!text.trim() && !pastedCoverImage) {
-                showError('⚠️ 請先貼上文字內容（或至少貼一張標題圖）。');
+            if (!text.trim() && !pastedCoverImages.length) {
+                showError('⚠️ 請先貼上文字內容（或至少加入一張圖片）。');
                 return;
             }
 
@@ -2191,14 +2272,16 @@
             let innerHTML = built.html;
 
             // 只有圖冇字：仍然可以產生一篇「純標題圖」文章
-            if (!text.trim() && pastedCoverImage) {
+            if (!text.trim() && pastedCoverImages.length) {
                 innerHTML = `<h1>${escapeHtmlText('未命名文章')}</h1>`;
             }
 
-            if (pastedCoverImage) {
-                const alt = escapeHtmlText(built.title || '文章標題圖');
-                const coverHTML = `<figure data-pasted-cover="1"><img src="${pastedCoverImage}" alt="${alt}" style="display:block;max-width:100%;height:auto;margin:0 auto;border-radius:10px;"></figure>`;
-                // 插入第一個 </h1> 之後；冇 h1 就擺最前
+            if (pastedCoverImages.length) {
+                const coverHTML = pastedCoverImages.map((image, index) => {
+                    const alt = escapeHtmlText(image.alt || built.title || `文章圖片 ${index + 1}`);
+                    return `<figure data-pasted-cover="1"><img src="${image.dataUrl}" alt="${alt}" style="display:block;max-width:100%;height:auto;margin:0 auto;border-radius:10px;"></figure>`;
+                }).join('\n');
+                // 插入第一個 </h1> 之後；冇 h1 就擺最前，並保留選圖次序。
                 const h1End = innerHTML.indexOf('</h1>');
                 innerHTML = h1End >= 0
                     ? innerHTML.slice(0, h1End + 5) + '\n' + coverHTML + '\n' + innerHTML.slice(h1End + 5)
@@ -2233,16 +2316,15 @@
             const fileInput = document.getElementById('pasteImageInput');
             if (box) {
                 box.addEventListener('input', updatePasteStats);
-                // 貼文字時順手夾帶圖片（例如 Word／網頁複製）亦即時接住做標題圖
+                // 貼文字時順手夾帶圖片（例如 Word／網頁複製）亦即時接住所有圖片。
                 box.addEventListener('paste', (e) => {
                     const items = e.clipboardData && e.clipboardData.items;
                     if (!items) return;
-                    for (const item of items) {
-                        if (item.kind === 'file' && /^image\//i.test(item.type)) {
-                            const file = item.getAsFile();
-                            if (file) { e.preventDefault(); ingestCoverImageFile(file); return; }
-                        }
-                    }
+                    const files = Array.from(items)
+                        .filter(item => item.kind === 'file' && /^image\//i.test(item.type))
+                        .map(item => item.getAsFile())
+                        .filter(Boolean);
+                    if (files.length) { e.preventDefault(); ingestCoverImageFiles(files); }
                 });
             }
             if (!zone || !fileInput) return;
@@ -2256,12 +2338,11 @@
             zone.addEventListener('paste', (e) => {
                 const items = e.clipboardData && e.clipboardData.items;
                 if (!items) return;
-                for (const item of items) {
-                    if (item.kind === 'file' && /^image\//i.test(item.type)) {
-                        const file = item.getAsFile();
-                        if (file) { e.preventDefault(); ingestCoverImageFile(file); return; }
-                    }
-                }
+                const files = Array.from(items)
+                    .filter(item => item.kind === 'file' && /^image\//i.test(item.type))
+                    .map(item => item.getAsFile())
+                    .filter(Boolean);
+                if (files.length) { e.preventDefault(); ingestCoverImageFiles(files); }
             });
 
             ['dragenter', 'dragover'].forEach(evt => zone.addEventListener(evt, (e) => {
@@ -2273,8 +2354,8 @@
                 zone.classList.remove('bg-amber-100', 'border-amber-600');
             }));
             zone.addEventListener('drop', (e) => {
-                const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
-                if (file) ingestCoverImageFile(file);
+                const files = e.dataTransfer && e.dataTransfer.files;
+                if (files?.length) ingestCoverImageFiles(files);
             });
         });
 
@@ -2867,6 +2948,19 @@
 
         function installImageMoveControls(container) {
             if (!container) return;
+            /* 圖片經網站正文抽取後有時被包喺多層 div／p 入面。舊版用
+             * figure.previousElementSibling / nextElementSibling，所以只會喺自己嗰個
+             * 小容器內移動，到中間就好似「卡住」。先把每個圖片 figure 提升為
+             * contentArea 直接子節點，先可以越過標題、段落及其他圖片自由排序。 */
+            Array.from(container.querySelectorAll('figure')).forEach(figure => {
+                if (!figure.querySelector('img')) return;
+                let outer = figure;
+                while (outer.parentElement && outer.parentElement !== container) outer = outer.parentElement;
+                if (outer.parentElement === container && outer !== figure) outer.before(figure);
+            });
+
+            const contentBlocks = () => Array.from(container.children)
+                .filter(block => !block.classList.contains('pr-image-move-tools'));
             container.querySelectorAll('figure').forEach(figure => {
                 if (!figure.querySelector('img')) return;
                 /* currentHTML 由 localStorage 用 innerHTML 還原時，舊按鈕的
@@ -2887,26 +2981,32 @@
                 figure.appendChild(tools);
 
                 const refresh = () => {
-                    up.disabled = !figure.previousElementSibling;
-                    down.disabled = !figure.nextElementSibling;
+                    const blocks = contentBlocks();
+                    const index = blocks.indexOf(figure);
+                    up.disabled = index <= 0;
+                    down.disabled = index < 0 || index >= blocks.length - 1;
                 };
                 up.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    const previous = figure.previousElementSibling;
+                    const blocks = contentBlocks();
+                    const index = blocks.indexOf(figure);
+                    const previous = index > 0 ? blocks[index - 1] : null;
                     if (!previous) return;
                     previous.before(figure);
-                    refresh();
                     saveCurrentEditRecord();
+                    installImageMoveControls(container);
                 });
                 down.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    const next = figure.nextElementSibling;
+                    const blocks = contentBlocks();
+                    const index = blocks.indexOf(figure);
+                    const next = index >= 0 && index < blocks.length - 1 ? blocks[index + 1] : null;
                     if (!next) return;
                     next.after(figure);
-                    refresh();
                     saveCurrentEditRecord();
+                    installImageMoveControls(container);
                 });
                 refresh();
             });
