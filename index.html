@@ -1132,6 +1132,51 @@
             }
         }
 
+        function prepareTutorialTarget(targetElement, introInstance) {
+            const articleContainer = document.getElementById('articleContainer');
+            const controls = document.getElementById('readerControls');
+            const targetId = targetElement?.id || '';
+            const isArticleTarget = targetId === 'articleContainer'
+                || targetId === 'keepSelectionPanel'
+                || targetId === 'toggleDeleteBtn'
+                || targetId === 'finishToolsToggle'
+                || targetId === 'downloadBtn';
+            const isAdvancedTarget = targetId === 'keepSelectionPanel';
+            const isFinishTarget = targetId === 'finishToolsToggle' || targetId === 'downloadBtn';
+            const isReaderTarget = targetId === 'readerControls' || targetElement?.classList.contains('fab-toggle');
+
+            // 先顯示目標所在的層級，再讓 Intro.js 計算位置，避免提示框指向空白。
+            if (isArticleTarget && articleContainer) articleContainer.classList.remove('hidden');
+
+            if (isAdvancedTarget) {
+                if (finishToolsOpen) toggleFinishTools(false);
+                if (!advancedToolsOpen) toggleAdvancedTools();
+                // 教學可以在尚未載入文章時開始；實際使用時仍由內容狀態控制顯示。
+                document.getElementById('keepSelectionPanel')?.classList.remove('hidden');
+                document.querySelectorAll('.advanced-tool').forEach(el => el.classList.remove('hidden'));
+            } else if (isFinishTarget) {
+                if (advancedToolsOpen) toggleAdvancedTools();
+                toggleFinishTools(true);
+            } else if (targetId === 'toggleDeleteBtn') {
+                if (advancedToolsOpen) toggleAdvancedTools();
+                if (finishToolsOpen) toggleFinishTools(false);
+                cleanupToolsOpen = false;
+                updateCleanupPanels();
+            } else if (isReaderTarget) {
+                if (advancedToolsOpen) toggleAdvancedTools();
+                if (finishToolsOpen) toggleFinishTools(false);
+            } else {
+                if (controls) controls.classList.add('collapsed');
+                if (targetId !== 'pasteImageZone' && targetId !== 'pasteToggleBtn') togglePastePanel(false);
+            }
+
+            if (controls) controls.classList.toggle('collapsed', !isReaderTarget);
+            // Intro.js 在下一個 animation frame 重算一次，避免先定位到隱藏元素的舊尺寸。
+            window.requestAnimationFrame(() => {
+                try { introInstance?.refresh(); } catch (_) {}
+            });
+        }
+
         function startTutorial() {
             const intro = introJs();
             intro.setOptions({
@@ -1205,24 +1250,7 @@
             });
 
             intro.onbeforechange(function(targetElement) {
-                const controls = document.getElementById('readerControls');
-                const articleContainer = document.getElementById('articleContainer');
-                
-                if (targetElement.id === 'readerControls' || targetElement.classList.contains('fab-toggle')) {
-                    controls.classList.remove('collapsed');
-                } else {
-                    controls.classList.add('collapsed');
-                }
-
-                if (['articleContainer', 'keepSelectionPanel', 'toggleDeleteBtn', 'finishToolsToggle', 'downloadBtn'].includes(targetElement.id)) {
-                    articleContainer.classList.remove('hidden');
-                }
-                if (targetElement.id === 'finishToolsToggle' || targetElement.id === 'downloadBtn') toggleFinishTools(true);
-                if (targetElement.id === 'keepSelectionPanel' && !advancedToolsOpen) toggleAdvancedTools();
-                // 離開貼上相關步驟後收起面板，避免遮住後面嘅示範
-                if (targetElement.id !== 'pasteImageZone' && targetElement.id !== 'pasteToggleBtn') {
-                    togglePastePanel(false);
-                }
+                prepareTutorialTarget(targetElement, intro);
             });
 
             intro.oncomplete(function() {
