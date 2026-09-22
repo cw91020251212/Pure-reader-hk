@@ -1278,9 +1278,16 @@
             const centeredLeft = clamp(tr.left + (tr.width - width) / 2, margin, vw - width - margin);
             const centeredTop = clamp(tr.top + (tr.height - height) / 2, margin, vh - height - margin);
             // 上下優先：即使目標闊度等於整個畫面，仍然可以完整看見目標中央及教學內容。
-            const candidates = [
-                { top: tr.bottom + gap, left: centeredLeft },
+            const preferAbove = ['pasteTextInput', 'documentPickerPanel', 'articleContainer'].includes(target.id);
+            const verticalCandidates = preferAbove ? [
                 { top: tr.top - height - gap, left: centeredLeft },
+                { top: tr.bottom + gap, left: centeredLeft }
+            ] : [
+                { top: tr.bottom + gap, left: centeredLeft },
+                { top: tr.top - height - gap, left: centeredLeft }
+            ];
+            const candidates = [
+                ...verticalCandidates,
                 { top: centeredTop, left: tr.right + gap },
                 { top: centeredTop, left: tr.left - width - gap }
             ].map(c => ({ ...c, bottom: c.top + height, right: c.left + width }));
@@ -1343,8 +1350,9 @@
             // Intro.js 會喺 onbeforechange 之後立即計算提示位置，所以所有目標
             // 必須喺呢度已經有真實尺寸；唔可以等到 onafterchange 先開面板。
             if (isArticleTarget && articleContainer) articleContainer.classList.remove('hidden');
-            if (targetId === 'pasteToggleBtn' || targetId === 'pasteImageZone') {
-                // 圖片區係貼上面板入面；用真正「輸入文字或選擇文件」按鈕開啟。
+            if (targetId === 'pasteToggleBtn' || targetId === 'pasteTextInput'
+                || targetId === 'pasteImageZone' || targetId === 'documentPickerPanel') {
+                // 貼上面板內嘅輸入框、圖片區及選檔區都要先由正式按鈕開啟。
                 if (pastePanel?.classList.contains('hidden') && pasteToggle) pasteToggle.click();
             } else if (targetId === 'keepSelectionPanel') {
                 if (isDeleteMode) toggleDeleteMode();
@@ -1423,13 +1431,19 @@
                         intro: '<b>擷取文章</b><br>擷取文章內容，並移除廣告及不必要的內容區塊。'
                     },
                     {
-                        element: document.querySelector('#pasteToggleBtn'),
-                        intro: '<b>輸入文字或選擇文件</b><br>可直接輸入文字、加入圖片，或選擇 PDF、Word、Markdown 等本機文件。'
+                        element: document.querySelector('#pasteTextInput'),
+                        intro: '<b>輸入文章文字</b><br>喺呢度貼上或輸入文章內容。',
+                        position: 'top'
                     },
                     {
                         element: document.querySelector('#pasteImageZone'),
-                        intro: '<b>加入圖片</b><br>可直接貼上、選取或拖放圖片。<br>加入後會顯示壓縮後的尺寸及容量。',
+                        intro: '<b>加入圖片</b><br>貼上、選取或拖放圖片到呢個區域。',
                         position: 'bottom'
+                    },
+                    {
+                        element: document.querySelector('#documentPickerPanel'),
+                        intro: '<b>選擇文件</b><br>撳「選擇文檔」加入本機文件。',
+                        position: 'top'
                     },
                     {
                         element: document.querySelector('#articleContainer'),
