@@ -1132,7 +1132,7 @@
             }
         }
 
-        function prepareTutorialTarget(targetElement, introInstance) {
+        function prepareTutorialTarget(targetElement, introInstance, performAction = false) {
             const articleContainer = document.getElementById('articleContainer');
             const controls = document.getElementById('readerControls');
             const pastePanel = document.getElementById('pastePanel');
@@ -1146,49 +1146,54 @@
                 || targetId === 'toggleDeleteBtn'
                 || targetId === 'finishToolsToggle'
                 || targetId === 'downloadBtn';
-            const isAdvancedTarget = targetId === 'keepSelectionPanel';
-            const isFinishTarget = targetId === 'finishToolsToggle' || targetId === 'downloadBtn';
             const isReaderTarget = targetId === 'readerControls' || targetElement?.classList.contains('fab-toggle');
 
-            // 先顯示目標所在的層級，再讓 Intro.js 計算位置，避免提示框指向空白。
+            // 轉場前只處理可見性，避免 Intro.js 對隱藏元素計算出空白位置。
             if (isArticleTarget && articleContainer) articleContainer.classList.remove('hidden');
+            if (targetId === 'keepSelectionPanel' || targetId === 'finishToolsToggle' || targetId === 'downloadBtn' || targetId === 'toggleDeleteBtn') {
+                if (controls) controls.classList.add('collapsed');
+            }
+            if (isReaderTarget && controls) controls.classList.remove('collapsed');
 
-            if (isAdvancedTarget) {
+            if (!performAction) {
+                window.requestAnimationFrame(() => {
+                    try { introInstance?.refresh(); } catch (_) {}
+                });
+                return;
+            }
+
+            // 轉場完成後才執行實際 UI 操作，確保使用者看得到面板由關閉變成開啟。
+            if (targetId === 'pasteToggleBtn') {
+                if (pastePanel?.classList.contains('hidden') && pasteToggle) pasteToggle.click();
+            } else if (targetId === 'pasteImageZone') {
+                if (pastePanel?.classList.contains('hidden') && pasteToggle) pasteToggle.click();
+            } else if (targetId === 'keepSelectionPanel') {
                 if (isDeleteMode) toggleDeleteMode();
                 if (finishToolsOpen) toggleFinishTools(false);
-                // 以真正的按鈕點擊示範「更多工具」，讓使用者看到面板如何打開。
                 if (!advancedToolsOpen && advancedToggle) advancedToggle.click();
-                // 教學可以在尚未載入文章時開始；實際使用時仍由內容狀態控制顯示。
                 document.getElementById('keepSelectionPanel')?.classList.remove('hidden');
                 document.querySelectorAll('.advanced-tool').forEach(el => el.classList.remove('hidden'));
-            } else if (isFinishTarget) {
-                if (isDeleteMode) toggleDeleteMode();
-                if (advancedToolsOpen) toggleAdvancedTools();
-                // 以真正的按鈕點擊示範「完成文章」工具列，而非只強制改變 CSS。
-                if (!finishToolsOpen && finishToggle) finishToggle.click();
-                else toggleFinishTools(true);
             } else if (targetId === 'toggleDeleteBtn') {
                 if (advancedToolsOpen) toggleAdvancedTools();
                 if (finishToolsOpen) toggleFinishTools(false);
-                // 教學本身也進入清理模式，使用者可以直接看到選取內容的互動方式。
-                if (!isDeleteMode) targetElement.click();
-            } else if (isReaderTarget) {
+                if (!isDeleteMode) targetElement?.click();
+            } else if (targetElement?.classList.contains('fab-toggle')) {
                 if (advancedToolsOpen) toggleAdvancedTools();
                 if (finishToolsOpen) toggleFinishTools(false);
-                // 以真正的圓形按鈕點擊打開朗讀／字體設定面板。
                 if (controls?.classList.contains('collapsed') && readerToggle) readerToggle.click();
-            } else {
-                if (controls) controls.classList.add('collapsed');
-                if (targetId === 'pasteToggleBtn') {
-                    // 只在面板尚未開啟時點擊，避免與步驟本身的開啟回呼互相切換。
-                    if (pastePanel?.classList.contains('hidden') && pasteToggle) pasteToggle.click();
-                } else if (targetId !== 'pasteImageZone') {
-                    togglePastePanel(false);
-                }
+            } else if (targetId === 'readerControls') {
+                if (controls) controls.classList.remove('collapsed');
+            } else if (targetId === 'finishToolsToggle' || targetId === 'downloadBtn') {
+                if (isDeleteMode) toggleDeleteMode();
+                if (advancedToolsOpen) toggleAdvancedTools();
+                if (!finishToolsOpen && finishToggle) finishToggle.click();
+            } else if (controls) {
+                controls.classList.add('collapsed');
             }
 
-            if (controls) controls.classList.toggle('collapsed', !isReaderTarget);
-            // Intro.js 在下一個 animation frame 重算一次，避免先定位到隱藏元素的舊尺寸。
+            if (targetElement && typeof targetElement.scrollIntoView === 'function') {
+                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+            }
             window.requestAnimationFrame(() => {
                 try { introInstance?.refresh(); } catch (_) {}
             });
@@ -1215,12 +1220,7 @@
                     },
                     {
                         element: document.querySelector('#pasteToggleBtn'),
-                        intro: '<b>輸入文字或選擇文件</b><br>可直接輸入文字、加入圖片，或選擇 PDF、Word、Markdown 等本機文件。',
-                        onbeforechange: function() {
-                            const button = document.getElementById('pasteToggleBtn');
-                            const panel = document.getElementById('pastePanel');
-                            if (panel?.classList.contains('hidden')) button?.click();
-                        }
+                        intro: '<b>輸入文字或選擇文件</b><br>可直接輸入文字、加入圖片，或選擇 PDF、Word、Markdown 等本機文件。'
                     },
                     {
                         element: document.querySelector('#pasteImageZone'),
@@ -1229,18 +1229,11 @@
                     },
                     {
                         element: document.querySelector('#articleContainer'),
-                        intro: '<b>閱讀工作區</b><br>文章會先以適合手機閱讀的版面顯示；其他工具可按需要開啟。',
-                        onbeforechange: function() {
-                            document.getElementById('articleContainer').classList.remove('hidden');
-                        }
+                        intro: '<b>閱讀工作區</b><br>文章會先以適合手機閱讀的版面顯示；其他工具可按需要開啟。'
                     },
                     {
                         element: document.querySelector('#keepSelectionPanel'),
-                        intro: '<b>精準保留</b><br>當需要保留少量內容並移除其餘區塊時，可使用此工具。',
-                        onbeforechange: function() {
-                            const button = document.querySelector('[aria-controls="keepSelectionPanel"]');
-                            if (!advancedToolsOpen) button?.click();
-                        }
+                        intro: '<b>精準保留</b><br>當需要保留少量內容並移除其餘區塊時，可使用此工具。'
                     },
                     {
                         element: document.querySelector('#toggleDeleteBtn'),
@@ -1257,11 +1250,7 @@
                     },
                     {
                         element: document.querySelector('#finishToolsToggle'),
-                        intro: '<b>完成文章</b><br>需要加入圖片、儲存或分享時，開啟此工具列。',
-                        onbeforechange: function() {
-                            const button = document.getElementById('finishToolsToggle');
-                            if (!finishToolsOpen) button?.click();
-                        }
+                        intro: '<b>完成文章</b><br>需要加入圖片、儲存或分享時，開啟此工具列。'
                     },
                     {
                         element: document.querySelector('#downloadBtn'),
@@ -1271,7 +1260,11 @@
             });
 
             intro.onbeforechange(function(targetElement) {
-                prepareTutorialTarget(targetElement, intro);
+                prepareTutorialTarget(targetElement, intro, false);
+            });
+
+            intro.onafterchange(function(targetElement) {
+                prepareTutorialTarget(targetElement, intro, true);
             });
 
             intro.oncomplete(function() {
