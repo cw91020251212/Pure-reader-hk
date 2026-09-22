@@ -1135,6 +1135,11 @@
         function prepareTutorialTarget(targetElement, introInstance) {
             const articleContainer = document.getElementById('articleContainer');
             const controls = document.getElementById('readerControls');
+            const pastePanel = document.getElementById('pastePanel');
+            const pasteToggle = document.getElementById('pasteToggleBtn');
+            const advancedToggle = document.querySelector('[aria-controls="keepSelectionPanel"]');
+            const finishToggle = document.getElementById('finishToolsToggle');
+            const readerToggle = document.querySelector('.fab-toggle');
             const targetId = targetElement?.id || '';
             const isArticleTarget = targetId === 'articleContainer'
                 || targetId === 'keepSelectionPanel'
@@ -1149,25 +1154,37 @@
             if (isArticleTarget && articleContainer) articleContainer.classList.remove('hidden');
 
             if (isAdvancedTarget) {
+                if (isDeleteMode) toggleDeleteMode();
                 if (finishToolsOpen) toggleFinishTools(false);
-                if (!advancedToolsOpen) toggleAdvancedTools();
+                // 以真正的按鈕點擊示範「更多工具」，讓使用者看到面板如何打開。
+                if (!advancedToolsOpen && advancedToggle) advancedToggle.click();
                 // 教學可以在尚未載入文章時開始；實際使用時仍由內容狀態控制顯示。
                 document.getElementById('keepSelectionPanel')?.classList.remove('hidden');
                 document.querySelectorAll('.advanced-tool').forEach(el => el.classList.remove('hidden'));
             } else if (isFinishTarget) {
+                if (isDeleteMode) toggleDeleteMode();
                 if (advancedToolsOpen) toggleAdvancedTools();
-                toggleFinishTools(true);
+                // 以真正的按鈕點擊示範「完成文章」工具列，而非只強制改變 CSS。
+                if (!finishToolsOpen && finishToggle) finishToggle.click();
+                else toggleFinishTools(true);
             } else if (targetId === 'toggleDeleteBtn') {
                 if (advancedToolsOpen) toggleAdvancedTools();
                 if (finishToolsOpen) toggleFinishTools(false);
-                cleanupToolsOpen = false;
-                updateCleanupPanels();
+                // 教學本身也進入清理模式，使用者可以直接看到選取內容的互動方式。
+                if (!isDeleteMode) targetElement.click();
             } else if (isReaderTarget) {
                 if (advancedToolsOpen) toggleAdvancedTools();
                 if (finishToolsOpen) toggleFinishTools(false);
+                // 以真正的圓形按鈕點擊打開朗讀／字體設定面板。
+                if (controls?.classList.contains('collapsed') && readerToggle) readerToggle.click();
             } else {
                 if (controls) controls.classList.add('collapsed');
-                if (targetId !== 'pasteImageZone' && targetId !== 'pasteToggleBtn') togglePastePanel(false);
+                if (targetId === 'pasteToggleBtn') {
+                    // 只在面板尚未開啟時點擊，避免與步驟本身的開啟回呼互相切換。
+                    if (pastePanel?.classList.contains('hidden') && pasteToggle) pasteToggle.click();
+                } else if (targetId !== 'pasteImageZone') {
+                    togglePastePanel(false);
+                }
             }
 
             if (controls) controls.classList.toggle('collapsed', !isReaderTarget);
@@ -1200,7 +1217,9 @@
                         element: document.querySelector('#pasteToggleBtn'),
                         intro: '<b>輸入文字或選擇文件</b><br>可直接輸入文字、加入圖片，或選擇 PDF、Word、Markdown 等本機文件。',
                         onbeforechange: function() {
-                            togglePastePanel(true);
+                            const button = document.getElementById('pasteToggleBtn');
+                            const panel = document.getElementById('pastePanel');
+                            if (panel?.classList.contains('hidden')) button?.click();
                         }
                     },
                     {
@@ -1219,7 +1238,8 @@
                         element: document.querySelector('#keepSelectionPanel'),
                         intro: '<b>精準保留</b><br>當需要保留少量內容並移除其餘區塊時，可使用此工具。',
                         onbeforechange: function() {
-                            if (!advancedToolsOpen) toggleAdvancedTools();
+                            const button = document.querySelector('[aria-controls="keepSelectionPanel"]');
+                            if (!advancedToolsOpen) button?.click();
                         }
                     },
                     {
@@ -1239,7 +1259,8 @@
                         element: document.querySelector('#finishToolsToggle'),
                         intro: '<b>完成文章</b><br>需要加入圖片、儲存或分享時，開啟此工具列。',
                         onbeforechange: function() {
-                            toggleFinishTools(true);
+                            const button = document.getElementById('finishToolsToggle');
+                            if (!finishToolsOpen) button?.click();
                         }
                     },
                     {
@@ -1257,6 +1278,8 @@
                 document.getElementById('readerControls').classList.add('collapsed');
                 togglePastePanel(false);
                 toggleFinishTools(false);
+                if (isDeleteMode) toggleDeleteMode();
+                if (isKeepMode) clearKeepSelection();
                 if (advancedToolsOpen) toggleAdvancedTools();
             });
 
@@ -1264,6 +1287,8 @@
                 document.getElementById('readerControls').classList.add('collapsed');
                 togglePastePanel(false);
                 toggleFinishTools(false);
+                if (isDeleteMode) toggleDeleteMode();
+                if (isKeepMode) clearKeepSelection();
                 if (advancedToolsOpen) toggleAdvancedTools();
             });
 
