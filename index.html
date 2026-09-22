@@ -464,18 +464,18 @@
                 </button>
             </div>
             
-            <p class="text-slate-600 font-medium text-sm mb-6">可用網址提取、上傳檔案，或直接<b>貼上文字</b>產生文章；支援 PDF、Word、Markdown、文字及更多常見格式，亦可一次加入多張壓縮圖片並自由排序。</p>
+            <p class="text-slate-600 font-medium text-sm mb-6">支援網址、文字及常見文件格式；內容會在瀏覽器本機整理，圖片亦可加入文章並重新排序。</p>
 
             <div class="flex flex-col sm:flex-row gap-3">
                 <div class="relative flex-1">
-                    <input type="url" id="urlInput" placeholder="請貼上完整網址..." data-title="第一步：輸入網址" data-intro="喺度貼上你想淨化或朗讀嘅文章連結。" class="w-full px-4 py-3 pr-11 rounded-xl border border-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-600 outline-none transition-all text-slate-800 placeholder-slate-500 font-medium">
+                    <input type="url" id="urlInput" placeholder="貼上文章網址..." data-title="輸入文章網址" data-intro="貼上要整理或朗讀的文章網址。" class="w-full px-4 py-3 pr-11 rounded-xl border border-slate-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-600 outline-none transition-all text-slate-800 placeholder-slate-500 font-medium">
                     <button id="clearUrlBtn" type="button" onclick="clearUrlInput()" aria-label="清除網址" title="清除網址" class="absolute right-3 top-1/2 hidden -translate-y-1/2 text-xl font-black leading-none text-red-500 hover:text-red-700">×</button>
                 </div>
-                <button id="fetchBtn" onclick="fetchWithAI()" data-title="第二步：提取內容" data-intro="撳呢度過濾廣告同廢話，剩低最純淨嘅文章。" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 min-w-[120px] shadow-sm">
-                    <span id="btnText">提取網址</span>
+                <button id="fetchBtn" onclick="fetchWithAI()" data-title="擷取文章" data-intro="擷取文章內容，並移除廣告及不必要的內容區塊。" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-xl transition-colors flex items-center justify-center gap-2 min-w-[120px] shadow-sm">
+                    <span id="btnText">擷取文章</span>
                     <div id="loadingIcon" class="loader hidden"></div>
                 </button>
-                <button id="pasteToggleBtn" type="button" onclick="togglePastePanel()" data-title="或者：貼上文字" data-intro="直接貼上文字或加入多張圖片；展開後亦可在下方選擇文檔。" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold px-6 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
+                <button id="pasteToggleBtn" type="button" onclick="togglePastePanel()" data-title="輸入文字或選擇文件" data-intro="直接輸入文字、加入圖片，或選擇 PDF、Word、Markdown 等本機文件。" class="bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold px-6 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
                     貼上文字
                 </button>
@@ -498,8 +498,8 @@
                 <div id="pasteImageZone" tabindex="0" class="mb-3 cursor-pointer rounded-xl border-2 border-dashed border-amber-400 bg-white p-4 text-center transition-colors hover:bg-amber-100/60">
                     <div id="pasteImageEmpty">
                         <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-7 w-7 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 00-2-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                        <p class="mt-2 text-sm font-bold text-amber-900">圖片（可選）：喺呢度貼上、多選揀檔、或者拖入多張圖片</p>
-                        <p class="mt-1 text-xs text-amber-700">可以分批連續加入；每張會自動壓縮至闊 1200px、約 150KB 以內，並可在文章內自由移動。</p>
+                        <p class="mt-2 text-sm font-bold text-amber-900">圖片（可選）：貼上、選取或拖放圖片</p>
+                        <p class="mt-1 text-xs text-amber-700">圖片會自動壓縮至寬度 1200px、約 150KB 以內，並可在文章內重新排序。</p>
                     </div>
                     <div id="pasteImageResult" class="hidden">
                         <p id="pasteImageInfo" class="mb-2 text-xs font-bold text-emerald-800"></p>
@@ -509,7 +509,7 @@
                     <input type="file" id="pasteImageInput" accept="image/*" multiple class="hidden" onchange="handleCoverImagePick(event)">
                 </div>
 
-                <textarea id="pasteTextInput" rows="10" placeholder="喺度貼上文章文字…&#10;&#10;第一行會自動做大標題，其餘就係正文。&#10;如果貼上嘅係 Markdown（# 標題、**粗體**、- 列表），系統會自動辨識並套用格式。" class="w-full resize-y rounded-xl border border-amber-400 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-400" style="font-size:16px; line-height:1.7;"></textarea>
+                <textarea id="pasteTextInput" rows="10" placeholder="輸入或貼上文章文字…&#10;&#10;第一行會自動設為標題，其餘內容會設為正文。&#10;支援 Markdown 格式，例如 # 標題、**粗體**及 - 列表。" class="w-full resize-y rounded-xl border border-amber-400 bg-white px-4 py-3 text-slate-800 placeholder-slate-400 outline-none transition-all focus:border-amber-600 focus:ring-2 focus:ring-amber-400" style="font-size:16px; line-height:1.7;"></textarea>
 
                 <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
                     <span id="pasteTextStats" class="text-xs font-bold text-amber-800">0 字</span>
@@ -559,19 +559,19 @@
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <p class="text-xs font-black uppercase tracking-wider text-indigo-600">閱讀工作區</p>
-                        <h2 class="mt-1 text-xl font-black text-slate-900">先睇文章，需要先整理</h2>
+                        <h2 class="mt-1 text-xl font-black text-slate-900">先閱讀，需要時再整理</h2>
                     </div>
                     <span class="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">工具按需顯示</span>
                 </div>
 
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center" aria-label="文章工具">
-                    <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl border border-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                    <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="手動清理" data-intro="進入清理模式，點選要移除的內容區塊。" class="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl border border-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <span id="toggleDeleteText">🧹 開始清理</span>
                     </button>
                     <button id="finishToolsToggle" type="button" onclick="toggleFinishTools()" class="w-full sm:flex-1 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-100" aria-expanded="false" aria-controls="finishToolsPanel">✅ 完成文章</button>
                     <button type="button" onclick="toggleAdvancedTools()" class="w-full sm:w-auto rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100" aria-expanded="false" aria-controls="keepSelectionPanel">更多工具⌄</button>
                 </div>
-                <p class="text-xs font-medium text-slate-500">閱讀時唔會有其他編輯控制掣擋住內容；清理、轉換、儲存等工具會喺你撳開後先出現。</p>
+                <p class="text-xs font-medium text-slate-500">閱讀時不顯示其他編輯控制；清理、轉換及儲存功能會按需要開啟。</p>
             </div>
 
             <div class="mb-4 flex flex-wrap gap-2">
@@ -589,21 +589,21 @@
                 <div class="mb-3 flex items-center justify-between gap-2">
                     <div>
                         <h3 class="font-black text-emerald-900">完成文章</h3>
-                        <p class="text-xs font-medium text-emerald-700">需要加入圖片、儲存或分享時先開這一格。</p>
+                        <p class="text-xs font-medium text-emerald-700">需要加入圖片、儲存或分享時，開啟此工具列。</p>
                     </div>
                     <button type="button" onclick="toggleFinishTools(false)" class="text-xl font-black leading-none text-emerald-700 hover:text-emerald-900" aria-label="收起完成文章工具">×</button>
                 </div>
                 <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                    <button id="addImageAfterBtn" type="button" onclick="triggerAddImageAfter()" data-title="追加圖片" data-intro="文章完成後，可分批或一次加入多張圖片。預設插喺標題後面，之後每張都可用 ↑/↓ 自由移到文章任何位置。" class="w-full sm:w-auto bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-5 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm" title="喺已完成嘅文章加一張或多張圖片（會自動壓縮）">
+                    <button id="addImageAfterBtn" type="button" onclick="triggerAddImageAfter()" data-title="追加圖片" data-intro="在文章中加入一張或多張圖片；圖片會放在標題後方，並可使用 ↑/↓ 重新排序。" class="w-full sm:w-auto bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-5 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm" title="喺已完成嘅文章加一張或多張圖片（會自動壓縮）">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         <span>追加圖片</span>
                     </button>
                     <input id="addImageAfterInput" type="file" accept="image/*" multiple class="hidden" onchange="handleAddImageAfterPick(event)">
-                    <button id="downloadBtn" onclick="downloadHTML()" data-title="最後一步：儲存檔案" data-intro="生成獨立檔案。入面會有全新設定同真聲切換功能！" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                    <button id="downloadBtn" onclick="downloadHTML()" data-title="儲存檔案" data-intro="將整理後的文章儲存為獨立 HTML 檔案，方便收藏或離線閱讀。" class="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold px-5 py-3 rounded-xl border border-emerald-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         <span>儲存檔案</span>
                     </button>
-                    <button id="shareBtn" onclick="shareArticle()" data-title="分享出去" data-intro="直接將檔案分享去 WhatsApp 等其他 App，唔使離開本程式。" class="w-full sm:w-auto bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-5 py-3 rounded-xl border border-sky-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
+                    <button id="shareBtn" onclick="shareArticle()" data-title="分享檔案" data-intro="將整理後的檔案分享至 WhatsApp 或其他支援分享的應用程式。" class="w-full sm:w-auto bg-sky-50 hover:bg-sky-100 text-sky-800 font-bold px-5 py-3 rounded-xl border border-sky-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342A3 3 0 106.316 10.658m2.368 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684zm0-12.632a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" /></svg>
                         <span>分享</span>
                     </button>
@@ -631,7 +631,7 @@
                     <button onclick="executeKeepSelection()" class="rounded-lg bg-emerald-700 px-3 py-2 font-bold text-white hover:bg-emerald-800">3️⃣ 刪除仍選中內容</button>
                 </div>
                 <button onclick="clearKeepSelection()" class="rounded-lg border border-emerald-300 bg-white px-3 py-2 font-bold text-emerald-800 hover:bg-emerald-100">取消所有選擇</button>
-                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">第 1 步「選擇全部」（全部變黃＝將被刪除）；第 2 步點擊你想保留嘅內容做反選擇（變綠＝會保留）；第 3 步刪除其餘仍然選中（黃色）嘅大部分內容。</p>
+                <p id="keepSelectionNote" class="mt-2 text-xs text-emerald-700">先選擇全部內容，再點選要保留的段落、標題、圖片或列表項，最後刪除其餘已選取的內容。</p>
             </div>
             <div id="content-wrapper" class="markdown-body"></div>
         </div>
@@ -645,7 +645,7 @@
 
     <div class="fab-container">
         <!-- 套用事件攔截，防止瞬間觸發全域點擊事件而關閉選單 -->
-        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
+        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="閱讀設定">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         
@@ -1003,7 +1003,7 @@
                 time.className = 'text-[11px] text-slate-400 min-w-0';
                 time.textContent = `${formatHistoryTime(item.visitedAt)}${readEditRecords()[item.url] ? ' · 已儲存編輯' : ''}`;
                 load.append(title, url, time);
-                load.title = readEditRecords()[item.url] ? '重新提取並套用之前編輯' : '重新提取這個網址';
+                load.title = readEditRecords()[item.url] ? '重新提取並套用已儲存的編輯內容' : '重新提取這個網址';
                 const openItem = async () => {
                     if (row.classList.contains('is-loading')) return;
                     list.querySelectorAll('.history-item-row').forEach(el => {
@@ -1190,61 +1190,61 @@
                 steps: [
                     {
                         element: document.querySelector('#urlInput'),
-                        intro: '<b>第一步：輸入網址</b><br>喺度貼上你想淨化或朗讀嘅文章連結。'
+                        intro: '<b>輸入文章網址</b><br>貼上要整理或朗讀的文章網址。'
                     },
                     {
                         element: document.querySelector('#fetchBtn'),
-                        intro: '<b>第二步：提取內容</b><br>撳呢度過濾廣告同廢話，剩低最純淨嘅文章。'
+                        intro: '<b>擷取文章</b><br>擷取文章內容，並移除廣告及不必要的內容區塊。'
                     },
                     {
                         element: document.querySelector('#pasteToggleBtn'),
-                        intro: '<b>或者：貼上文字</b><br>撳開後可直接貼文字、加入多張圖片；工作頁最下方亦有「選擇文檔」按鈕，支援 PDF、Word、Markdown 等格式。',
+                        intro: '<b>輸入文字或選擇文件</b><br>可直接輸入文字、加入圖片，或選擇 PDF、Word、Markdown 等本機文件。',
                         onbeforechange: function() {
                             togglePastePanel(true);
                         }
                     },
                     {
                         element: document.querySelector('#pasteImageZone'),
-                        intro: '<b>標題圖三種入圖方法</b><br>① 喺呢格直接貼上（Ctrl / ⌘ + V）② 撳一下揀檔 ③ 用滑鼠拖張圖入嚟。<br>入完會即時顯示壓縮後嘅尺寸同容量。',
+                        intro: '<b>加入圖片</b><br>可直接貼上、選取或拖放圖片。<br>加入後會顯示壓縮後的尺寸及容量。',
                         position: 'bottom'
                     },
                     {
                         element: document.querySelector('#articleContainer'),
-                        intro: '<b>第三步：先閱讀文章</b><br>文章會先以手機易讀版顯示；唔需要一開始處理所有工具。',
+                        intro: '<b>閱讀工作區</b><br>文章會先以適合手機閱讀的版面顯示；其他工具可按需要開啟。',
                         onbeforechange: function() {
                             document.getElementById('articleContainer').classList.remove('hidden');
                         }
                     },
                     {
                         element: document.querySelector('#keepSelectionPanel'),
-                        intro: '<b>後備功能：精準保留</b><br>只有大部分內容都要刪除時才需要開「其他工具」；平時可以完全不用理會。',
+                        intro: '<b>精準保留</b><br>當需要保留少量內容並移除其餘區塊時，可使用此工具。',
                         onbeforechange: function() {
                             if (!advancedToolsOpen) toggleAdvancedTools();
                         }
                     },
                     {
                         element: document.querySelector('#toggleDeleteBtn'),
-                        intro: '<b>手動清理</b><br>開啟「開始清理」後，可以逐個點選你想刪除嘅雜質。'
+                        intro: '<b>手動清理</b><br>進入清理模式後，點選要移除的內容區塊。'
                     },
                     {
                         element: document.querySelector('.fab-toggle'),
-                        intro: '<b>第四步：閱讀設定</b><br>撳呢個紫色掣，可以打開朗讀選單同調整字體。'
+                        intro: '<b>閱讀設定</b><br>開啟閱讀設定，可調整朗讀、文字大小、語音及閱讀底色。'
                     },
                     {
                         element: document.querySelector('#readerControls'),
-                        intro: '<b>新功能：真聲朗讀與語速</b><br>喺度可以開啟「點擊朗讀」，仲可以揀唔同嘅人聲同調整快慢。',
+                        intro: '<b>朗讀設定</b><br>可開啟點擊朗讀、選擇語音及調整朗讀速度。',
                         position: 'left'
                     },
                     {
                         element: document.querySelector('#finishToolsToggle'),
-                        intro: '<b>完成後才開這格</b><br>需要加入圖片、儲存或分享時，先按「完成文章」；平時不用讓這些按鈕佔住畫面。',
+                        intro: '<b>完成文章</b><br>需要加入圖片、儲存或分享時，開啟此工具列。',
                         onbeforechange: function() {
                             toggleFinishTools(true);
                         }
                     },
                     {
                         element: document.querySelector('#downloadBtn'),
-                        intro: '<b>最後一步：儲存檔案</b><br>將整理好嘅文章儲存成獨立 HTML 檔，方便永久收藏或離線閱讀。'
+                        intro: '<b>儲存檔案</b><br>將整理後的文章儲存為獨立 HTML 檔案，方便收藏或離線閱讀。'
                     }
                 ]
             });
@@ -2806,7 +2806,7 @@
          */
         function triggerAddImageAfter() {
             if (!contentArea || !contentArea.children.length) {
-                showError('⚠️ 請先提取或上傳文章內容，先至可以追加圖片。');
+                showError('⚠️ 請先擷取或上傳文章內容，才可追加圖片。');
                 return;
             }
             const input = document.getElementById('addImageAfterInput');
@@ -2821,7 +2821,7 @@
                 return;
             }
             if (!contentArea || !contentArea.children.length) {
-                showError('⚠️ 請先提取或上傳文章內容，先至可以追加圖片。');
+                showError('⚠️ 請先擷取或上傳文章內容，才可追加圖片。');
                 return;
             }
             const btn = document.getElementById('addImageAfterBtn');
@@ -3043,12 +3043,12 @@
         }
 
         const FAILURE_TEXT = {
-            blocked:    '此網站拒絕伺服器讀取（403），需要用你自己瀏覽器嘅身份擷取。',
+            blocked:    '此網站拒絕伺服器讀取（403），請使用瀏覽器工作階段協助擷取。',
             notfound:   '找不到該頁面（404），請檢查網址，或文章已被刪除。',
             ratelimit:  '讀取服務暫時繁忙（429），可稍後再試。',
             serverdown: '來源網站伺服器出錯，可稍後再試。',
-            network:    '網絡連線失敗，請檢查你嘅網絡。',
-            empty:      '讀取到頁面但抽唔到正文，可能係動態載入頁。'
+            network:    '網絡連線失敗，請檢查網絡連線。',
+            empty:      '讀取到頁面，但未能擷取正文；該頁面可能需要動態載入。'
         };
 
         function startRescue(url, reason) {
@@ -3061,9 +3061,9 @@
                   <div class="rounded-lg bg-white/70 p-3 font-normal text-slate-700">
                     <div class="mb-1 font-bold text-slate-800">已自動進入「協助擷取」模式</div>
                     <div class="text-xs leading-relaxed">
-                      文章已喺新分頁開啟（用你嘅瀏覽器身份，唔會被 403 擋）。<br>
-                      喺該頁 <b>全選 → 複製</b>，返回本頁 <b>貼上一次</b>，
-                      之後淨化、排版、朗讀全部自動完成。
+                      文章已在新分頁開啟，並會使用瀏覽器工作階段讀取。<br>
+                      在該頁執行 <b>全選 → 複製</b>，再返回本頁貼上內容；
+                      系統會繼續完成整理、排版及朗讀準備。
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
                       <button onclick="reopenRescueTab()" class="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-bold text-white hover:bg-indigo-700">重新開啟文章</button>
@@ -3966,8 +3966,8 @@
                 injectSmartButtons();
                 const note = document.getElementById('cleanupLevelNote');
                 if (note) note.textContent = '已套用第 0 級：完全不自動過濾，100% 保留原文內容'
-                    + (restored ? `（已保留你手動刪除嘅 ${restored} 個區塊）` : '')
-                    + '。如提取結果本身已經好乾淨，畫面可能同之前一樣。';
+                    + (restored ? `（已保留手動刪除的 ${restored} 個區塊）` : '')
+                    + '。若原文已經簡潔，畫面可能沒有明顯變化。';
                 updateCleanupPanels();
                 if (persist) saveCurrentEditRecord();
                 return;
@@ -4037,7 +4037,7 @@
                 } else {
                     noteText += '（本次冇任何內容符合過濾條件，畫面不變）';
                 }
-                if (manualRestored) noteText += `（已保留你手動刪除嘅 ${manualRestored} 個區塊）`;
+                if (manualRestored) noteText += `（已保留手動刪除的 ${manualRestored} 個區塊）`;
                 note.textContent = noteText;
             }
             updateCleanupPanels();
@@ -4221,7 +4221,7 @@
                 el.classList.remove('selected-for-keep');
             });
             const note = document.getElementById('keepSelectionNote');
-            if (note) note.textContent = `已全選 ${markedElements.size} 個區塊（黃色＝將被刪除）。第 2 步：逐個點擊你想「保留」嘅段落做反選擇，佢會變綠色（可以點細至單一段落、標題、圖片或列表項）；最後撳第 3 步刪除其餘黃色內容。`;
+            if (note) note.textContent = `已全選 ${markedElements.size} 個區塊（黃色＝將被刪除）。請點選要保留的段落、標題、圖片或列表項（變綠色），最後刪除其餘黃色內容。`;
             syncDeleteButtons();
             updateCleanupPanels();
         }
@@ -4282,7 +4282,7 @@
                 return;
             }
             if (toRemove.length === selectable.length) {
-                showError('⚠️ 全部區塊都仍處於選中狀態，咁樣會刪除整篇文章。請先於第 2 步點選你想保留嘅區塊（變綠色）。');
+                showError('⚠️ 目前所有區塊仍然選中，執行後會刪除整篇文章。請先點選要保留的區塊，讓它們變成綠色。');
                 return;
             }
             /* 【安全】單元現在有父子關係：
@@ -4949,7 +4949,7 @@
 <body data-click-read="off">
 
     <div class="fab-container">
-        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="選單">
+        <button class="fab-toggle" onclick="toggleReaderControls(event)" title="閱讀設定">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         
@@ -5368,7 +5368,7 @@
             const names = readExportNames();
             const previousName = url ? names[url] : '';
             if (!previousName) return true;
-            return window.confirm(`呢個網址之前已經儲存過「${previousName}」。\n\n今次內容可能有更多圖片或更新，是否取代之前嗰份？\n\n按「確定」繼續儲存；按「取消」保留舊檔。`);
+            return window.confirm(`此網址已有名為「${previousName}」的儲存檔案。\n\n目前內容可能包含更多圖片或更新，是否取代現有檔案？\n\n按「確定」繼續儲存；按「取消」保留現有檔案。`);
         }
 
         async function downloadHTML() {
