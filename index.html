@@ -418,6 +418,7 @@
         .control-panel { 
             background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); padding: 16px; border-radius: 16px; 
             width: 300px !important; max-width: calc(100vw - 40px) !important; 
+            max-height: calc(100vh - 96px); overflow-y: auto; overscroll-behavior: contain;
             box-shadow: -4px 8px 15px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 12px; 
             border: 1px solid rgba(88, 28, 135, 0.4); position: absolute; bottom: 56px; right: 0; 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: bottom right; opacity: 1; transform: scale(1); z-index: 100; 
@@ -443,6 +444,10 @@
         .reading-highlight *, .paused-highlight * { color: var(--reader-highlight-text, #312e81) !important; }
         .paused-highlight { background-color: var(--reader-highlight-bg, #fef08a) !important; color: var(--reader-highlight-text, #422006) !important; border: 2px dashed var(--reader-highlight-border, #eab308) !important; box-shadow: 0 2px 8px rgba(250, 204, 21, 0.3) !important; z-index: 10; position: relative; }
         #translateArticleBtn.is-translated { background: #ede9fe !important; color: #5b21b6 !important; border-color: #a78bfa !important; }
+        @media (max-width: 640px) {
+            .fab-container { right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); }
+            .control-panel { width: min(300px, calc(100vw - 24px)) !important; max-height: calc(100vh - 84px); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans flex flex-col overflow-x-hidden" data-click-read="off">
@@ -1070,6 +1075,35 @@
             renderUrlHistory();
         }
 
+        function bringPanelIntoView(panel, behavior = 'smooth') {
+            if (!panel || panel.classList.contains('hidden')) return;
+            window.requestAnimationFrame(() => {
+                const rect = panel.getBoundingClientRect();
+                const margin = 16;
+                const top = Math.max(0, rect.top - margin);
+                const bottom = Math.min(window.innerHeight, rect.bottom + margin);
+                if (rect.top < margin || rect.bottom > window.innerHeight - margin) {
+                    window.scrollBy({ top: rect.top < margin ? rect.top - margin : rect.bottom - (window.innerHeight - margin), behavior });
+                }
+            });
+        }
+
+        function keepFloatingPanelOnScreen() {
+            const panel = document.getElementById('readerControls');
+            const fab = document.querySelector('.fab-toggle');
+            if (!panel || !fab || panel.classList.contains('collapsed')) return;
+            const margin = 12;
+            const fabRect = fab.getBoundingClientRect();
+            const available = Math.max(160, window.innerHeight - margin * 2 - fabRect.height - 18);
+            panel.style.maxHeight = `${available}px`;
+            panel.style.overflowY = 'auto';
+            window.requestAnimationFrame(() => {
+                const rect = panel.getBoundingClientRect();
+                if (rect.top < margin) panel.style.bottom = `${Math.max(12, window.innerHeight - fabRect.top + 8)}px`;
+                else panel.style.bottom = '';
+            });
+        }
+
         function toggleAdvancedTools() {
             const panel = document.getElementById('keepSelectionPanel');
             const button = document.querySelector('[aria-controls="keepSelectionPanel"]');
@@ -1087,6 +1121,7 @@
                 button.setAttribute('aria-expanded', String(opening));
                 button.textContent = opening ? '收起更多工具⌃' : '更多工具⌄';
             }
+            if (opening) bringPanelIntoView(panel);
         }
 
         function toggleFinishTools(forceOpen) {
@@ -1111,6 +1146,7 @@
                 button.setAttribute('aria-expanded', String(finishToolsOpen));
                 button.textContent = finishToolsOpen ? '✅ 收起完成文章' : '✅ 完成文章';
             }
+            if (finishToolsOpen) bringPanelIntoView(panel);
         }
 
         function clearUrlHistory() {
@@ -1145,7 +1181,7 @@
             return !controls.classList.contains('collapsed');
         }
 
-        function prepareTutorialTarget(targetElement, introInstance, performAction = false) {
+        function prepareTutorialTarget(targetElement, introInstance) {
             const articleContainer = document.getElementById('articleContainer');
             const controls = document.getElementById('readerControls');
             const pastePanel = document.getElementById('pastePanel');
@@ -1161,37 +1197,16 @@
                 || targetId === 'downloadBtn';
             const isReaderTarget = targetId === 'readerControls' || targetElement?.classList.contains('fab-toggle');
 
-            // 轉場前只處理可見性，避免 Intro.js 對隱藏元素計算出空白位置。
+            // Intro.js 會喺 onbeforechange 之後立即計算提示位置，所以所有目標
+            // 必須喺呢度已經有真實尺寸；唔可以等到 onafterchange 先開面板。
             if (isArticleTarget && articleContainer) articleContainer.classList.remove('hidden');
-            if (targetId === 'keepSelectionPanel') {
-                // 先讓 Intro.js 有實際尺寸可定位；轉場完成後仍會由「更多工具」按鈕真正開啟。
-                document.getElementById('keepSelectionPanel')?.classList.remove('hidden');
-            }
-            if (targetId === 'keepSelectionPanel' || targetId === 'finishToolsToggle' || targetId === 'downloadBtn' || targetId === 'toggleDeleteBtn') {
-                if (controls) controls.classList.add('collapsed');
-            }
-            // 圓形按鈕本身必須先保持關閉，讓 onafterchange 真正觸發 click；
-            // 只有下一步直接指向面板時，才預先顯示已由 click 打開的內容。
-            if (targetId === 'readerControls' && controls) controls.classList.remove('collapsed');
-
-            if (!performAction) {
-                window.requestAnimationFrame(() => {
-                    try { introInstance?.refresh(); } catch (_) {}
-                });
-                return;
-            }
-
-            // 轉場完成後才執行實際 UI 操作，確保使用者看得到面板由關閉變成開啟。
-            if (targetId === 'pasteToggleBtn') {
-                if (pastePanel?.classList.contains('hidden') && pasteToggle) pasteToggle.click();
-            } else if (targetId === 'pasteImageZone') {
+            if (targetId === 'pasteToggleBtn' || targetId === 'pasteImageZone') {
+                // 圖片區係貼上面板入面；用真正「輸入文字或選擇文件」按鈕開啟。
                 if (pastePanel?.classList.contains('hidden') && pasteToggle) pasteToggle.click();
             } else if (targetId === 'keepSelectionPanel') {
                 if (isDeleteMode) toggleDeleteMode();
                 if (finishToolsOpen) toggleFinishTools(false);
                 if (!advancedToolsOpen && advancedToggle) advancedToggle.click();
-                document.getElementById('keepSelectionPanel')?.classList.remove('hidden');
-                document.querySelectorAll('.advanced-tool').forEach(el => el.classList.remove('hidden'));
             } else if (targetId === 'toggleDeleteBtn') {
                 if (advancedToolsOpen) toggleAdvancedTools();
                 if (finishToolsOpen) toggleFinishTools(false);
@@ -1203,6 +1218,7 @@
             } else if (targetId === 'readerControls') {
                 if (controls) controls.classList.remove('collapsed');
             } else if (targetId === 'finishToolsToggle' || targetId === 'downloadBtn') {
+                if (controls) controls.classList.add('collapsed');
                 if (isDeleteMode) toggleDeleteMode();
                 if (advancedToolsOpen) toggleAdvancedTools();
                 if (!finishToolsOpen && finishToggle) finishToggle.click();
@@ -1279,11 +1295,7 @@
             });
 
             intro.onbeforechange(function(targetElement) {
-                prepareTutorialTarget(targetElement, intro, false);
-            });
-
-            intro.onafterchange(function(targetElement) {
-                prepareTutorialTarget(targetElement, intro, true);
+                prepareTutorialTarget(targetElement, intro);
             });
 
             intro.oncomplete(function() {
@@ -2503,6 +2515,7 @@
                 updatePasteStats();
                 const box = document.getElementById('pasteTextInput');
                 if (box) setTimeout(() => box.focus(), 60);
+                bringPanelIntoView(panel);
             }
         }
 
@@ -4522,6 +4535,13 @@
             const controls = document.getElementById('readerControls');
             if (controls) {
                 controls.classList.toggle('collapsed');
+                if (!controls.classList.contains('collapsed')) {
+                    keepFloatingPanelOnScreen();
+                } else {
+                    controls.style.bottom = '';
+                    controls.style.maxHeight = '';
+                    controls.style.overflowY = '';
+                }
             }
         }
 
