@@ -425,6 +425,8 @@
             font-size: 14px !important; 
         }
         .control-panel.collapsed { opacity: 0; transform: scale(0.8) translateY(10px); pointer-events: none; }
+        /* 教學高亮嘅係真實設定面板；不可讓收合動畫蓋走內容。 */
+        .control-panel.introjs-showElement { opacity: 1 !important; transform: scale(1) !important; pointer-events: auto !important; }
         .panel-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .panel-label { font-size: 14px !important; font-weight: bold; color: #581c87; white-space: nowrap; }
         .btn-group { display: flex; gap: 8px; flex: 1; justify-content: flex-end; }
@@ -1181,6 +1183,31 @@
             return !controls.classList.contains('collapsed');
         }
 
+        let tutorialReaderSyncTimer = 0;
+        let tutorialReaderObserver = null;
+        function syncTutorialReaderPanel(targetElement, introInstance) {
+            window.clearTimeout(tutorialReaderSyncTimer);
+            // Intro.js 部分版本傳入嘅 target 會喺動畫前更新；以當前真正
+            // 顯示緊嘅高亮元素作準，避免只得到右下角空框。
+            const target = targetElement || document.querySelector('.introjs-showElement');
+            const targetId = target?.id || '';
+            const isReaderStep = targetId === 'readerControls'
+                || target?.classList.contains('fab-toggle');
+            if (!isReaderStep) return;
+
+            const openAfterTransition = () => {
+                const current = document.querySelector('.introjs-showElement');
+                const currentId = current?.id || '';
+                if (currentId !== 'readerControls' && !current?.classList.contains('fab-toggle')) return;
+                // 只透過正式右下角按鈕 click 開啟，唔直接偽造面板內容。
+                openReaderControlsForTutorial();
+                keepFloatingPanelOnScreen();
+                try { introInstance?.refresh(); } catch (_) {}
+            };
+            window.requestAnimationFrame(openAfterTransition);
+            tutorialReaderSyncTimer = window.setTimeout(openAfterTransition, 180);
+        }
+
         function prepareTutorialTarget(targetElement, introInstance) {
             const articleContainer = document.getElementById('articleContainer');
             const controls = document.getElementById('readerControls');
@@ -1216,7 +1243,7 @@
                 if (finishToolsOpen) toggleFinishTools(false);
                 openReaderControlsForTutorial();
             } else if (targetId === 'readerControls') {
-                if (controls) controls.classList.remove('collapsed');
+                openReaderControlsForTutorial();
             } else if (targetId === 'finishToolsToggle' || targetId === 'downloadBtn') {
                 if (controls) controls.classList.add('collapsed');
                 if (isDeleteMode) toggleDeleteMode();
@@ -1236,6 +1263,20 @@
 
         function startTutorial() {
             const intro = introJs();
+            const readerControls = document.getElementById('readerControls');
+            const keepReaderPanelOpenDuringStep = () => {
+                const current = document.querySelector('.introjs-showElement');
+                const isReaderStep = current?.id === 'readerControls'
+                    || current?.classList.contains('fab-toggle');
+                if (isReaderStep && readerControls?.classList.contains('collapsed')) {
+                    // 唔直接改畫面狀態：由右下角正式按鈕觸發原有 click handler。
+                    openReaderControlsForTutorial();
+                    keepFloatingPanelOnScreen();
+                }
+            };
+            tutorialReaderObserver?.disconnect();
+            tutorialReaderObserver = readerControls ? new MutationObserver(keepReaderPanelOpenDuringStep) : null;
+            tutorialReaderObserver?.observe(readerControls, { attributes: true, attributeFilter: ['class'] });
             intro.setOptions({
                 nextLabel: '下一步',
                 prevLabel: '上一步',
@@ -1298,7 +1339,13 @@
                 prepareTutorialTarget(targetElement, intro);
             });
 
+            intro.onafterchange(function(targetElement) {
+                syncTutorialReaderPanel(targetElement, intro);
+            });
+
             intro.oncomplete(function() {
+                tutorialReaderObserver?.disconnect();
+                tutorialReaderObserver = null;
                 document.getElementById('readerControls').classList.add('collapsed');
                 togglePastePanel(false);
                 toggleFinishTools(false);
@@ -1308,6 +1355,8 @@
             });
 
             intro.onexit(function() {
+                tutorialReaderObserver?.disconnect();
+                tutorialReaderObserver = null;
                 document.getElementById('readerControls').classList.add('collapsed');
                 togglePastePanel(false);
                 toggleFinishTools(false);
