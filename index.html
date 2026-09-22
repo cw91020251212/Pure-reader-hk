@@ -555,33 +555,36 @@
         </div>
 
         <div id="articleContainer" class="bg-white rounded-2xl shadow-sm p-6 sm:p-10 border border-slate-300 hidden relative overflow-hidden">
-            <div class="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 pb-6 border-b border-slate-200 gap-4">
-                <div class="flex items-center gap-3">
-                    <h2 class="text-lg font-bold text-slate-500 whitespace-nowrap">提取結果 (編輯區)</h2>
+            <div class="mb-6 flex flex-col gap-4 border-b border-slate-200 pb-6">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-black uppercase tracking-wider text-indigo-600">閱讀工作區</p>
+                        <h2 class="mt-1 text-xl font-black text-slate-900">先睇文章，需要先整理</h2>
+                    </div>
+                    <span class="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">工具按需顯示</span>
                 </div>
-                
-                <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
-                    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 p-2">
-                        <span class="px-1 text-xs font-black text-slate-500">下一步</span>
-                    <button id="executeDeleteBtn" onclick="executeDelete()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl border border-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm hidden" title="刪除所選">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                        <span>刪除所選</span>
-                    </button>
-                    <button id="convertToTraditionalBtn" onclick="convertToTraditional()" class="advanced-tool hidden w-full sm:w-auto bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-bold px-4 py-3 rounded-xl border border-indigo-200 transition-colors flex items-center justify-center gap-2 shadow-sm" title="將簡體中文轉換為繁體中文">
-                        <span>🇭🇰 簡轉繁</span>
-                    </button>
-                    <button id="translateArticleBtn" onclick="translateArticle()" class="advanced-tool hidden w-full sm:w-auto bg-violet-50 hover:bg-violet-100 text-violet-800 font-bold px-4 py-3 rounded-xl border border-violet-200 transition-colors flex items-center justify-center gap-2 shadow-sm" title="將文章翻譯成繁體香港中文">
-                        <span>🌐 翻譯成繁中</span>
-                    </button>
-                    <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold px-5 py-3 rounded-xl border border-slate-300 transition-colors flex items-center justify-center gap-2 shadow-sm">
+
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center" aria-label="文章工具">
+                    <button id="toggleDeleteBtn" onclick="toggleDeleteMode()" data-title="第三步：整理文章" data-intro="開啟「清理內容」後，可以連續點選刪除多段垃圾內容。" class="w-full sm:flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl border border-indigo-700 transition-colors flex items-center justify-center gap-2 shadow-sm">
                         <span id="toggleDeleteText">🧹 開始清理</span>
                     </button>
-                    </div>
-                    <button id="finishToolsToggle" type="button" onclick="toggleFinishTools()" class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-100" aria-expanded="false" aria-controls="finishToolsPanel">✅ 完成文章</button>
-                    <button type="button" onclick="toggleAdvancedTools()" class="rounded-xl border border-slate-400 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100" aria-expanded="false" aria-controls="keepSelectionPanel">🧰 其他工具</button>
+                    <button id="finishToolsToggle" type="button" onclick="toggleFinishTools()" class="w-full sm:flex-1 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-100" aria-expanded="false" aria-controls="finishToolsPanel">✅ 完成文章</button>
+                    <button type="button" onclick="toggleAdvancedTools()" class="w-full sm:w-auto rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100" aria-expanded="false" aria-controls="keepSelectionPanel">更多工具⌄</button>
                 </div>
+                <p class="text-xs font-medium text-slate-500">閱讀時唔會有其他編輯控制掣擋住內容；清理、轉換、儲存等工具會喺你撳開後先出現。</p>
             </div>
-            <p class="mb-5 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">建議流程：先閱讀文章；需要時按「開始清理」；完成後再開「完成文章」儲存或分享。其他備用功能已收好，不用一開始處理。</p>
+
+            <div class="mb-4 flex flex-wrap gap-2">
+                <button id="executeDeleteBtn" onclick="executeDelete()" class="hidden rounded-lg border border-red-700 bg-red-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-red-700" title="刪除所選">
+                    <span>刪除所選</span>
+                </button>
+                <button id="convertToTraditionalBtn" onclick="convertToTraditional()" class="advanced-tool hidden rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-800 hover:bg-indigo-100" title="將簡體中文轉換為繁體中文">
+                    <span>🇭🇰 簡轉繁</span>
+                </button>
+                <button id="translateArticleBtn" onclick="translateArticle()" class="advanced-tool hidden rounded-lg border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-bold text-violet-800 hover:bg-violet-100" title="將文章翻譯成繁體香港中文">
+                    <span>🌐 翻譯成繁中</span>
+                </button>
+            </div>
             <div id="finishToolsPanel" class="hidden mb-6 rounded-xl border border-emerald-300 bg-emerald-50 p-4">
                 <div class="mb-3 flex items-center justify-between gap-2">
                     <div>
@@ -716,6 +719,7 @@
         let cleanupLevel = 0;
         let advancedToolsOpen = false;
         let finishToolsOpen = false;
+        let cleanupToolsOpen = false;
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
         const URL_HISTORY_KEY = 'pureReadUrlHistory_v1';
@@ -1072,11 +1076,16 @@
             if (!panel) return;
             advancedToolsOpen = !advancedToolsOpen;
             const opening = advancedToolsOpen;
+            if (opening) {
+                cleanupToolsOpen = false;
+                toggleFinishTools(false);
+            }
             panel.classList.toggle('hidden', !opening);
             document.querySelectorAll('.advanced-tool').forEach(el => el.classList.toggle('hidden', !opening));
+            updateCleanupPanels();
             if (button) {
                 button.setAttribute('aria-expanded', String(opening));
-                button.textContent = opening ? '🧰 收起工具' : '🧰 編輯工具';
+                button.textContent = opening ? '收起更多工具⌃' : '更多工具⌄';
             }
         }
 
@@ -1085,7 +1094,19 @@
             const button = document.getElementById('finishToolsToggle');
             if (!panel) return;
             finishToolsOpen = typeof forceOpen === 'boolean' ? forceOpen : !finishToolsOpen;
+            if (finishToolsOpen) {
+                advancedToolsOpen = false;
+                cleanupToolsOpen = false;
+                document.querySelectorAll('.advanced-tool').forEach(el => el.classList.add('hidden'));
+                document.getElementById('keepSelectionPanel')?.classList.add('hidden');
+                const advancedButton = document.querySelector('[aria-controls="keepSelectionPanel"]');
+                if (advancedButton) {
+                    advancedButton.setAttribute('aria-expanded', 'false');
+                    advancedButton.textContent = '更多工具⌄';
+                }
+            }
             panel.classList.toggle('hidden', !finishToolsOpen);
+            updateCleanupPanels();
             if (button) {
                 button.setAttribute('aria-expanded', String(finishToolsOpen));
                 button.textContent = finishToolsOpen ? '✅ 收起完成文章' : '✅ 完成文章';
@@ -4024,7 +4045,7 @@
             const panel = document.getElementById('cleanupLevelPanel');
             const keepPanel = document.getElementById('keepSelectionPanel');
             const hasContent = contentArea.children.length > 0;
-            if (panel) panel.classList.toggle('hidden', !hasContent);
+            if (panel) panel.classList.toggle('hidden', !hasContent || !cleanupToolsOpen);
             if (keepPanel) keepPanel.classList.toggle('hidden', !hasContent || !advancedToolsOpen);
         }
 
@@ -4296,6 +4317,8 @@
 
         function resetUI() {
             if(isDeleteMode) toggleDeleteMode();
+            cleanupToolsOpen = false;
+            if (finishToolsOpen) toggleFinishTools(false);
             if(isKeepMode) {
                 isKeepMode = false;
                 contentArea.classList.remove('keep-mode-active');
@@ -4329,6 +4352,19 @@
             const toggleBtn = document.getElementById('toggleDeleteBtn');
             const executeBtn = document.getElementById('executeDeleteBtn');
             const fabExecuteBtn = document.getElementById('fabExecuteDeleteBtn');
+
+            cleanupToolsOpen = isDeleteMode;
+            if (isDeleteMode) {
+                advancedToolsOpen = false;
+                toggleFinishTools(false);
+                document.querySelectorAll('.advanced-tool').forEach(el => el.classList.add('hidden'));
+                document.getElementById('keepSelectionPanel')?.classList.add('hidden');
+                const advancedButton = document.querySelector('[aria-controls="keepSelectionPanel"]');
+                if (advancedButton) {
+                    advancedButton.setAttribute('aria-expanded', 'false');
+                    advancedButton.textContent = '更多工具⌄';
+                }
+            }
             
             if (isDeleteMode) {
                 if(toggleText) toggleText.innerText = '✅ 完成清理';
@@ -4358,6 +4394,7 @@
                 contentArea.querySelectorAll('.selected-for-deletion').forEach(el => el.classList.remove('selected-for-deletion'));
                 selectedElements.clear();
             }
+            updateCleanupPanels();
         }
 
         function executeDelete() {
