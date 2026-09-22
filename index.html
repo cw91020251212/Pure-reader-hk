@@ -456,7 +456,7 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
                         </svg>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.60</span></h1>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-900 whitespace-nowrap">純淨閱讀器 <span class="text-sm sm:text-base font-bold text-slate-500 align-middle">v1.61</span></h1>
                 </div>
                 <button onclick="startTutorial()" class="flex items-center justify-center gap-1 text-xs sm:text-sm font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-full transition-colors whitespace-nowrap shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -562,7 +562,7 @@
                 
                 <div class="flex flex-col sm:flex-row gap-3 w-full xl:w-auto">
                     <div class="flex flex-wrap items-center gap-2 rounded-xl border border-slate-300 bg-slate-50 p-2">
-                        <span class="px-1 text-xs font-black text-slate-500">基本操作</span>
+                        <span class="px-1 text-xs font-black text-slate-500">下一步</span>
                     <button id="executeDeleteBtn" onclick="executeDelete()" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-5 py-3 rounded-xl border border-red-700 transition-colors flex items-center justify-center gap-2 shadow-sm hidden" title="刪除所選">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                         <span>刪除所選</span>
@@ -577,8 +577,20 @@
                         <span id="toggleDeleteText">🧹 開始清理</span>
                     </button>
                     </div>
-                    <div class="flex flex-wrap items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 p-2">
-                        <span class="px-1 text-xs font-black text-emerald-700">完成文章</span>
+                    <button id="finishToolsToggle" type="button" onclick="toggleFinishTools()" class="rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800 hover:bg-emerald-100" aria-expanded="false" aria-controls="finishToolsPanel">✅ 完成文章</button>
+                    <button type="button" onclick="toggleAdvancedTools()" class="rounded-xl border border-slate-400 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100" aria-expanded="false" aria-controls="keepSelectionPanel">🧰 其他工具</button>
+                </div>
+            </div>
+            <p class="mb-5 rounded-lg bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600">建議流程：先閱讀文章；需要時按「開始清理」；完成後再開「完成文章」儲存或分享。其他備用功能已收好，不用一開始處理。</p>
+            <div id="finishToolsPanel" class="hidden mb-6 rounded-xl border border-emerald-300 bg-emerald-50 p-4">
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <div>
+                        <h3 class="font-black text-emerald-900">完成文章</h3>
+                        <p class="text-xs font-medium text-emerald-700">需要加入圖片、儲存或分享時先開這一格。</p>
+                    </div>
+                    <button type="button" onclick="toggleFinishTools(false)" class="text-xl font-black leading-none text-emerald-700 hover:text-emerald-900" aria-label="收起完成文章工具">×</button>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                     <button id="addImageAfterBtn" type="button" onclick="triggerAddImageAfter()" data-title="追加圖片" data-intro="文章完成後，可分批或一次加入多張圖片。預設插喺標題後面，之後每張都可用 ↑/↓ 自由移到文章任何位置。" class="w-full sm:w-auto bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold px-5 py-3 rounded-xl border border-amber-300 transition-colors flex items-center justify-center gap-2 shadow-sm" title="喺已完成嘅文章加一張或多張圖片（會自動壓縮）">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         <span>追加圖片</span>
@@ -592,8 +604,6 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342A3 3 0 106.316 10.658m2.368 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684zm0-12.632a3 3 0 105.368-2.684 3 3 0 00-5.368 2.684z" /></svg>
                         <span>分享</span>
                     </button>
-                    </div>
-                    <button type="button" onclick="toggleAdvancedTools()" class="rounded-xl border border-slate-400 bg-white px-4 py-3 text-sm font-black text-slate-700 hover:bg-slate-100" aria-expanded="false" aria-controls="keepSelectionPanel">🧰 更多工具</button>
                 </div>
             </div>
             <div id="cleanupLevelPanel" class="hidden mb-6 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
@@ -705,6 +715,7 @@
         // 【修正 1】預設 0：提取後畫面確實係未過濾，變數要同畫面一致。
         let cleanupLevel = 0;
         let advancedToolsOpen = false;
+        let finishToolsOpen = false;
         let cleanupPreviewHTML = '';
         let cleanupBaselineHTML = '';
         const URL_HISTORY_KEY = 'pureReadUrlHistory_v1';
@@ -1069,6 +1080,18 @@
             }
         }
 
+        function toggleFinishTools(forceOpen) {
+            const panel = document.getElementById('finishToolsPanel');
+            const button = document.getElementById('finishToolsToggle');
+            if (!panel) return;
+            finishToolsOpen = typeof forceOpen === 'boolean' ? forceOpen : !finishToolsOpen;
+            panel.classList.toggle('hidden', !finishToolsOpen);
+            if (button) {
+                button.setAttribute('aria-expanded', String(finishToolsOpen));
+                button.textContent = finishToolsOpen ? '✅ 收起完成文章' : '✅ 完成文章';
+            }
+        }
+
         function clearUrlHistory() {
             saveUrlHistory([]);
         }
@@ -1121,14 +1144,17 @@
                     },
                     {
                         element: document.querySelector('#articleContainer'),
-                        intro: '<b>第三步：清理級別 (新功能)</b><br>提取後可以喺度揀「清理級別」，自動幫你掃走側欄同推薦內容。',
+                        intro: '<b>第三步：先閱讀文章</b><br>文章會先以手機易讀版顯示；唔需要一開始處理所有工具。',
                         onbeforechange: function() {
                             document.getElementById('articleContainer').classList.remove('hidden');
                         }
                     },
                     {
                         element: document.querySelector('#keepSelectionPanel'),
-                        intro: '<b>進階功能：精準保留 (新功能)</b><br>當大部分內容都要刪除時，用呢個反選擇流程更快：先「選擇全部」（全部變黃），再點選你想保留嘅段落做反選擇（變綠），最後按「刪除仍選中內容」清走其餘黃色部分。'
+                        intro: '<b>後備功能：精準保留</b><br>只有大部分內容都要刪除時才需要開「其他工具」；平時可以完全不用理會。',
+                        onbeforechange: function() {
+                            if (!advancedToolsOpen) toggleAdvancedTools();
+                        }
                     },
                     {
                         element: document.querySelector('#toggleDeleteBtn'),
@@ -1142,6 +1168,13 @@
                         element: document.querySelector('#readerControls'),
                         intro: '<b>新功能：真聲朗讀與語速</b><br>喺度可以開啟「點擊朗讀」，仲可以揀唔同嘅人聲同調整快慢。',
                         position: 'left'
+                    },
+                    {
+                        element: document.querySelector('#finishToolsToggle'),
+                        intro: '<b>完成後才開這格</b><br>需要加入圖片、儲存或分享時，先按「完成文章」；平時不用讓這些按鈕佔住畫面。',
+                        onbeforechange: function() {
+                            toggleFinishTools(true);
+                        }
                     },
                     {
                         element: document.querySelector('#downloadBtn'),
@@ -1160,9 +1193,11 @@
                     controls.classList.add('collapsed');
                 }
 
-                if (['articleContainer', 'keepSelectionPanel', 'toggleDeleteBtn'].includes(targetElement.id)) {
+                if (['articleContainer', 'keepSelectionPanel', 'toggleDeleteBtn', 'finishToolsToggle', 'downloadBtn'].includes(targetElement.id)) {
                     articleContainer.classList.remove('hidden');
                 }
+                if (targetElement.id === 'finishToolsToggle' || targetElement.id === 'downloadBtn') toggleFinishTools(true);
+                if (targetElement.id === 'keepSelectionPanel' && !advancedToolsOpen) toggleAdvancedTools();
                 // 離開貼上相關步驟後收起面板，避免遮住後面嘅示範
                 if (targetElement.id !== 'pasteImageZone' && targetElement.id !== 'pasteToggleBtn') {
                     togglePastePanel(false);
@@ -1172,11 +1207,15 @@
             intro.oncomplete(function() {
                 document.getElementById('readerControls').classList.add('collapsed');
                 togglePastePanel(false);
+                toggleFinishTools(false);
+                if (advancedToolsOpen) toggleAdvancedTools();
             });
 
             intro.onexit(function() {
                 document.getElementById('readerControls').classList.add('collapsed');
                 togglePastePanel(false);
+                toggleFinishTools(false);
+                if (advancedToolsOpen) toggleAdvancedTools();
             });
 
             intro.start();
@@ -3475,6 +3514,8 @@
             cleanupLevel = 0;
             const levelSelect = document.getElementById('cleanupLevel');
             if (levelSelect) levelSelect.value = '0';
+            toggleFinishTools(false);
+            if (advancedToolsOpen) toggleAdvancedTools();
             // 【修正】base 要用「文章來源網址」，唔係 App 自己的 document.baseURI，
             // 否則相對路徑圖片會被解析到 App 網域，變成 404。
             const mediaBase = currentArticleUrl || document.baseURI;
