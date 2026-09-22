@@ -1252,7 +1252,9 @@
             const tooltip = document.querySelector('.introjs-tooltip');
             if (!tooltip) return;
             const margin = 12;
+            const gap = 16;
             const viewportHeight = window.innerHeight;
+            const viewportWidth = window.innerWidth;
             const rect = tooltip.getBoundingClientRect();
             const buttons = tooltip.querySelector('.introjs-tooltipbuttons');
             const buttonRect = buttons?.getBoundingClientRect();
@@ -1269,7 +1271,39 @@
                     const correction = updated.top < margin ? updated.top - margin : updatedBottom - (viewportHeight - margin);
                     window.scrollBy({ top: correction, left: 0, behavior: 'auto' });
                 }
-                try { introInstance?.refresh(); } catch (_) {}
+
+                // Intro.js 預設會將 tooltip 放喺目標旁邊，但窄視窗／底部浮動按鈕
+                // 會令對話框直接壓住目標。計算四個方向，揀一個完全唔重疊嘅位置。
+                const target = document.querySelector('.introjs-showElement');
+                if (!target) return;
+                const targetRect = target.getBoundingClientRect();
+                const tooltipRect = tooltip.getBoundingClientRect();
+                const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+                if (!overlaps(tooltipRect, targetRect)) return;
+
+                const width = Math.min(tooltipRect.width || 320, viewportWidth - margin * 2);
+                const height = Math.min(tooltipRect.height || 220, viewportHeight - margin * 2);
+                const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+                const candidates = [
+                    { top: targetRect.bottom + gap, left: clamp(targetRect.left, margin, viewportWidth - width - margin) },
+                    { top: targetRect.top - height - gap, left: clamp(targetRect.left, margin, viewportWidth - width - margin) },
+                    { top: clamp(targetRect.top, margin, viewportHeight - height - margin), left: targetRect.right + gap },
+                    { top: clamp(targetRect.top, margin, viewportHeight - height - margin), left: targetRect.left - width - gap }
+                ];
+                const usable = candidates.find(candidate => {
+                    const proposed = { top: candidate.top, bottom: candidate.top + height, left: candidate.left, right: candidate.left + width };
+                    return proposed.top >= margin && proposed.left >= margin
+                        && proposed.bottom <= viewportHeight - margin && proposed.right <= viewportWidth - margin
+                        && !overlaps(proposed, targetRect);
+                });
+                if (usable) {
+                    tooltip.style.setProperty('position', 'fixed', 'important');
+                    tooltip.style.setProperty('top', `${usable.top}px`, 'important');
+                    tooltip.style.setProperty('left', `${usable.left}px`, 'important');
+                    tooltip.style.setProperty('right', 'auto', 'important');
+                    tooltip.style.setProperty('bottom', 'auto', 'important');
+                    tooltip.style.setProperty('transform', 'none', 'important');
+                }
             });
         }
 
