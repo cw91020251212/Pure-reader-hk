@@ -1132,6 +1132,19 @@
             }
         }
 
+        function openReaderControlsForTutorial() {
+            const button = document.querySelector('.fab-toggle');
+            const controls = document.getElementById('readerControls');
+            if (!button || !controls) return false;
+            if (controls.classList.contains('collapsed')) {
+                // 真正觸發圓形按鈕的 click handler。
+                button.click();
+            }
+            // click handler 若被全域收合監聽器即時還原，保留剛才 click 後的示範結果。
+            if (controls.classList.contains('collapsed')) controls.classList.remove('collapsed');
+            return !controls.classList.contains('collapsed');
+        }
+
         function prepareTutorialTarget(targetElement, introInstance, performAction = false) {
             const articleContainer = document.getElementById('articleContainer');
             const controls = document.getElementById('readerControls');
@@ -1186,7 +1199,7 @@
             } else if (targetElement?.classList.contains('fab-toggle')) {
                 if (advancedToolsOpen) toggleAdvancedTools();
                 if (finishToolsOpen) toggleFinishTools(false);
-                if (controls?.classList.contains('collapsed') && readerToggle) readerToggle.click();
+                openReaderControlsForTutorial();
             } else if (targetId === 'readerControls') {
                 if (controls) controls.classList.remove('collapsed');
             } else if (targetId === 'finishToolsToggle' || targetId === 'downloadBtn') {
