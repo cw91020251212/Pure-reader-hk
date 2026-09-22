@@ -1248,68 +1248,58 @@
             }, 140);
         }
 
-        function positionTutorialDialog(introInstance) {
+        function positionTutorialDialog() {
             const tooltip = document.querySelector('.introjs-tooltip');
-            if (!tooltip) return;
+            const target = document.querySelector('.introjs-showElement');
+            if (!tooltip || !target) return;
             const margin = 12;
             const gap = 16;
-            const viewportHeight = window.innerHeight;
-            const viewportWidth = window.innerWidth;
-            const rect = tooltip.getBoundingClientRect();
-            const buttons = tooltip.querySelector('.introjs-tooltipbuttons');
-            const buttonRect = buttons?.getBoundingClientRect();
-            const bottom = buttonRect?.bottom || rect.bottom;
-            let delta = 0;
-            if (rect.top < margin) delta = rect.top - margin;
-            else if (bottom > viewportHeight - margin) delta = bottom - (viewportHeight - margin);
-            if (delta) window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
-            window.requestAnimationFrame(() => {
-                const updated = tooltip.getBoundingClientRect();
-                const updatedButtons = tooltip.querySelector('.introjs-tooltipbuttons')?.getBoundingClientRect();
-                const updatedBottom = updatedButtons?.bottom || updated.bottom;
-                if (updated.top < margin || updatedBottom > viewportHeight - margin) {
-                    const correction = updated.top < margin ? updated.top - margin : updatedBottom - (viewportHeight - margin);
-                    window.scrollBy({ top: correction, left: 0, behavior: 'auto' });
-                }
+            const vw = window.innerWidth;
+            const vh = window.innerHeight;
+            // 目標可以係全闊文章區，但教學視窗唔應該跟住變成全闊；先限制尺寸，
+            // 留出清楚可見嘅目標區域，再計算位置。
+            tooltip.style.setProperty('width', `min(280px, calc(100vw - ${margin * 2}px))`, 'important');
+            tooltip.style.setProperty('max-width', `calc(100vw - ${margin * 2}px)`, 'important');
+            tooltip.style.setProperty('max-height', `min(42vh, 360px)`, 'important');
+            tooltip.style.setProperty('overflow-y', 'auto', 'important');
+            tooltip.style.setProperty('box-sizing', 'border-box', 'important');
+            tooltip.style.setProperty('position', 'fixed', 'important');
+            tooltip.style.setProperty('transform', 'none', 'important');
 
-                // Intro.js 預設會將 tooltip 放喺目標旁邊，但窄視窗／底部浮動按鈕
-                // 會令對話框直接壓住目標。計算四個方向，揀一個完全唔重疊嘅位置。
-                const target = document.querySelector('.introjs-showElement');
-                if (!target) return;
-                const targetRect = target.getBoundingClientRect();
-                const tooltipRect = tooltip.getBoundingClientRect();
-                const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
-                if (!overlaps(tooltipRect, targetRect)) return;
-
-                const width = Math.min(tooltipRect.width || 320, viewportWidth - margin * 2);
-                const height = Math.min(tooltipRect.height || 220, viewportHeight - margin * 2);
-                const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
-                const candidates = [
-                    { top: targetRect.bottom + gap, left: clamp(targetRect.left, margin, viewportWidth - width - margin) },
-                    { top: targetRect.top - height - gap, left: clamp(targetRect.left, margin, viewportWidth - width - margin) },
-                    { top: clamp(targetRect.top, margin, viewportHeight - height - margin), left: targetRect.right + gap },
-                    { top: clamp(targetRect.top, margin, viewportHeight - height - margin), left: targetRect.left - width - gap }
-                ];
-                const usable = candidates.find(candidate => {
-                    const proposed = { top: candidate.top, bottom: candidate.top + height, left: candidate.left, right: candidate.left + width };
-                    return proposed.top >= margin && proposed.left >= margin
-                        && proposed.bottom <= viewportHeight - margin && proposed.right <= viewportWidth - margin
-                        && !overlaps(proposed, targetRect);
-                });
-                if (usable) {
-                    tooltip.style.setProperty('position', 'fixed', 'important');
-                    tooltip.style.setProperty('top', `${usable.top}px`, 'important');
-                    tooltip.style.setProperty('left', `${usable.left}px`, 'important');
-                    tooltip.style.setProperty('right', 'auto', 'important');
-                    tooltip.style.setProperty('bottom', 'auto', 'important');
-                    tooltip.style.setProperty('transform', 'none', 'important');
-                }
-            });
+            const tr = target.getBoundingClientRect();
+            const measured = tooltip.getBoundingClientRect();
+            const width = Math.min(measured.width || 280, vw - margin * 2);
+            const height = Math.min(measured.height || 240, vh - margin * 2);
+            const clamp = (value, min, max) => Math.max(min, Math.min(value, max));
+            const overlaps = (a, b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+            const fits = candidate => candidate.top >= margin && candidate.left >= margin
+                && candidate.bottom <= vh - margin && candidate.right <= vw - margin
+                && !overlaps(candidate, tr);
+            const centeredLeft = clamp(tr.left + (tr.width - width) / 2, margin, vw - width - margin);
+            const centeredTop = clamp(tr.top + (tr.height - height) / 2, margin, vh - height - margin);
+            // 上下優先：即使目標闊度等於整個畫面，仍然可以完整看見目標中央及教學內容。
+            const candidates = [
+                { top: tr.bottom + gap, left: centeredLeft },
+                { top: tr.top - height - gap, left: centeredLeft },
+                { top: centeredTop, left: tr.right + gap },
+                { top: centeredTop, left: tr.left - width - gap }
+            ].map(c => ({ ...c, bottom: c.top + height, right: c.left + width }));
+            const usable = candidates.find(fits) || {
+                top: tr.top >= height + gap + margin ? tr.top - height - gap : margin,
+                left: centeredLeft,
+                bottom: 0,
+                right: 0
+            };
+            tooltip.style.setProperty('top', `${clamp(usable.top, margin, vh - height - margin)}px`, 'important');
+            tooltip.style.setProperty('left', `${clamp(usable.left, margin, vw - width - margin)}px`, 'important');
+            tooltip.style.setProperty('right', 'auto', 'important');
+            tooltip.style.setProperty('bottom', 'auto', 'important');
         }
 
         function scheduleTutorialDialogPosition(introInstance) {
-            window.requestAnimationFrame(() => positionTutorialDialog(introInstance));
-            window.setTimeout(() => positionTutorialDialog(introInstance), 220);
+            window.requestAnimationFrame(() => positionTutorialDialog());
+            window.setTimeout(() => positionTutorialDialog(), 220);
+            window.setTimeout(() => positionTutorialDialog(), 520);
         }
         function syncTutorialReaderPanel(targetElement, introInstance) {
             window.clearTimeout(tutorialReaderSyncTimer);
