@@ -372,6 +372,8 @@
         .util-copy-btn { user-select: none; }
         
         .introjs-tooltip { border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); font-family: inherit; }
+        .introjs-tooltip { max-height: calc(100vh - 24px); overflow-y: auto; box-sizing: border-box; }
+        .introjs-tooltipbuttons { position: sticky; bottom: 0; background: inherit; padding-bottom: 2px; }
         .introjs-button { border-radius: 6px; text-shadow: none; background-image: none; }
         .introjs-nextbutton { background-color: #4f46e5 !important; color: white !important; border: none !important; }
         .introjs-prevbutton { color: #4f46e5 !important; }
@@ -1185,6 +1187,96 @@
 
         let tutorialReaderSyncTimer = 0;
         let tutorialReaderObserver = null;
+        let tutorialUiSnapshot = null;
+        let activeTutorial = null;
+        let tutorialAutoStartTimer = 0;
+
+        function removeStaleTutorialDom() {
+            document.querySelectorAll('.introjs-overlay, .introjs-tooltipReferenceLayer, .introjs-helperLayer, .introjs-tooltip').forEach(el => el.remove());
+            document.querySelectorAll('.introjs-showElement, .introjs-relativePosition').forEach(el => {
+                el.classList.remove('introjs-showElement', 'introjs-relativePosition');
+            });
+        }
+        function captureTutorialUiState() {
+            return {
+                articleHidden: document.getElementById('articleContainer')?.classList.contains('hidden') ?? true,
+                pasteOpen: !document.getElementById('pastePanel')?.classList.contains('hidden'),
+                advancedOpen: advancedToolsOpen,
+                finishOpen: finishToolsOpen,
+                deleteMode: isDeleteMode,
+                keepMode: isKeepMode,
+                readerOpen: !document.getElementById('readerControls')?.classList.contains('collapsed')
+            };
+        }
+
+        function restoreTutorialUiState() {
+            const state = tutorialUiSnapshot;
+            tutorialUiSnapshot = null;
+            if (!state) return;
+            tutorialReaderObserver?.disconnect();
+            tutorialReaderObserver = null;
+            window.clearTimeout(tutorialReaderSyncTimer);
+            if (isDeleteMode !== state.deleteMode) toggleDeleteMode();
+            if (isKeepMode !== state.keepMode) {
+                if (state.keepMode) {
+                    if (!isDeleteMode) toggleDeleteMode();
+                    selectAllKeepSelection();
+                } else {
+                    clearKeepSelection();
+                }
+            }
+            if (advancedToolsOpen !== state.advancedOpen) toggleAdvancedTools();
+            if (finishToolsOpen !== state.finishOpen) toggleFinishTools(state.finishOpen);
+            togglePastePanel(state.pasteOpen);
+            const article = document.getElementById('articleContainer');
+            if (article) article.classList.toggle('hidden', state.articleHidden);
+            const controls = document.getElementById('readerControls');
+            const currentlyOpen = controls && !controls.classList.contains('collapsed');
+            if (controls && currentlyOpen !== state.readerOpen) document.querySelector('.fab-toggle')?.click();
+            if (controls && state.readerOpen) keepFloatingPanelOnScreen();
+
+            // Intro.js 會喺 onexit/oncomplete 之後再清理高亮 class，部分版本
+            // 會順手重寫面板 class；延遲一次以原狀態作最後校正，避免手尾被蓋返。
+            window.setTimeout(() => {
+                if (activeTutorial) return;
+                togglePastePanel(state.pasteOpen);
+                const finalControls = document.getElementById('readerControls');
+                if (!finalControls) return;
+                const finalOpen = !finalControls.classList.contains('collapsed');
+                if (finalOpen !== state.readerOpen) document.querySelector('.fab-toggle')?.click();
+                if (state.readerOpen && finalControls.classList.contains('collapsed')) finalControls.classList.remove('collapsed');
+            }, 140);
+        }
+
+        function positionTutorialDialog(introInstance) {
+            const tooltip = document.querySelector('.introjs-tooltip');
+            if (!tooltip) return;
+            const margin = 12;
+            const viewportHeight = window.innerHeight;
+            const rect = tooltip.getBoundingClientRect();
+            const buttons = tooltip.querySelector('.introjs-tooltipbuttons');
+            const buttonRect = buttons?.getBoundingClientRect();
+            const bottom = buttonRect?.bottom || rect.bottom;
+            let delta = 0;
+            if (rect.top < margin) delta = rect.top - margin;
+            else if (bottom > viewportHeight - margin) delta = bottom - (viewportHeight - margin);
+            if (delta) window.scrollBy({ top: delta, left: 0, behavior: 'auto' });
+            window.requestAnimationFrame(() => {
+                const updated = tooltip.getBoundingClientRect();
+                const updatedButtons = tooltip.querySelector('.introjs-tooltipbuttons')?.getBoundingClientRect();
+                const updatedBottom = updatedButtons?.bottom || updated.bottom;
+                if (updated.top < margin || updatedBottom > viewportHeight - margin) {
+                    const correction = updated.top < margin ? updated.top - margin : updatedBottom - (viewportHeight - margin);
+                    window.scrollBy({ top: correction, left: 0, behavior: 'auto' });
+                }
+                try { introInstance?.refresh(); } catch (_) {}
+            });
+        }
+
+        function scheduleTutorialDialogPosition(introInstance) {
+            window.requestAnimationFrame(() => positionTutorialDialog(introInstance));
+            window.setTimeout(() => positionTutorialDialog(introInstance), 220);
+        }
         function syncTutorialReaderPanel(targetElement, introInstance) {
             window.clearTimeout(tutorialReaderSyncTimer);
             // Intro.js 部分版本傳入嘅 target 會喺動畫前更新；以當前真正
@@ -1254,15 +1346,26 @@
             }
 
             if (targetElement && typeof targetElement.scrollIntoView === 'function') {
-                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' });
+                targetElement.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
             }
             window.requestAnimationFrame(() => {
                 try { introInstance?.refresh(); } catch (_) {}
+                scheduleTutorialDialogPosition(introInstance);
             });
         }
 
         function startTutorial() {
+            window.clearTimeout(tutorialAutoStartTimer);
+            if (activeTutorial) {
+                const previousTutorial = activeTutorial;
+                activeTutorial = null;
+                previousTutorial.exit();
+            }
+            removeStaleTutorialDom();
+            if (tutorialUiSnapshot) restoreTutorialUiState();
+            tutorialUiSnapshot = captureTutorialUiState();
             const intro = introJs();
+            activeTutorial = intro;
             const readerControls = document.getElementById('readerControls');
             const keepReaderPanelOpenDuringStep = () => {
                 const current = document.querySelector('.introjs-showElement');
@@ -1282,6 +1385,7 @@
                 prevLabel: '上一步',
                 doneLabel: '明白晒',
                 showStepNumbers: true,
+                scrollToElement: false,
                 // 教學提示不可阻塞主流程；舊版設為 true 會令遮罩攔截
                 // 「提取網址」按鈕，使用者以為按了但 fetchWithAI() 根本沒有執行。
                 disableInteraction: false,
@@ -1341,28 +1445,21 @@
 
             intro.onafterchange(function(targetElement) {
                 syncTutorialReaderPanel(targetElement, intro);
+                scheduleTutorialDialogPosition(intro);
             });
 
             intro.oncomplete(function() {
-                tutorialReaderObserver?.disconnect();
-                tutorialReaderObserver = null;
-                document.getElementById('readerControls').classList.add('collapsed');
-                togglePastePanel(false);
-                toggleFinishTools(false);
-                if (isDeleteMode) toggleDeleteMode();
-                if (isKeepMode) clearKeepSelection();
-                if (advancedToolsOpen) toggleAdvancedTools();
+                if (activeTutorial !== intro) return;
+                restoreTutorialUiState();
+                removeStaleTutorialDom();
+                activeTutorial = null;
             });
 
             intro.onexit(function() {
-                tutorialReaderObserver?.disconnect();
-                tutorialReaderObserver = null;
-                document.getElementById('readerControls').classList.add('collapsed');
-                togglePastePanel(false);
-                toggleFinishTools(false);
-                if (isDeleteMode) toggleDeleteMode();
-                if (isKeepMode) clearKeepSelection();
-                if (advancedToolsOpen) toggleAdvancedTools();
+                if (activeTutorial !== intro) return;
+                restoreTutorialUiState();
+                removeStaleTutorialDom();
+                activeTutorial = null;
             });
 
             intro.start();
@@ -1394,7 +1491,7 @@
             restoreImageReturnPosition();
             window.scrollTo(0, 0);
             if(!SafeStorage.get('tutorialSeen_v7')) {
-                setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v7', 'true'); }, 500);
+                tutorialAutoStartTimer = window.setTimeout(() => { startTutorial(); SafeStorage.set('tutorialSeen_v7', 'true'); }, 500);
             }
             renderUrlHistory();
             updateClearUrlButton();
