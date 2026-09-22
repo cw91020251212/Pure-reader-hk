@@ -1150,10 +1150,16 @@
 
             // 轉場前只處理可見性，避免 Intro.js 對隱藏元素計算出空白位置。
             if (isArticleTarget && articleContainer) articleContainer.classList.remove('hidden');
+            if (targetId === 'keepSelectionPanel') {
+                // 先讓 Intro.js 有實際尺寸可定位；轉場完成後仍會由「更多工具」按鈕真正開啟。
+                document.getElementById('keepSelectionPanel')?.classList.remove('hidden');
+            }
             if (targetId === 'keepSelectionPanel' || targetId === 'finishToolsToggle' || targetId === 'downloadBtn' || targetId === 'toggleDeleteBtn') {
                 if (controls) controls.classList.add('collapsed');
             }
-            if (isReaderTarget && controls) controls.classList.remove('collapsed');
+            // 圓形按鈕本身必須先保持關閉，讓 onafterchange 真正觸發 click；
+            // 只有下一步直接指向面板時，才預先顯示已由 click 打開的內容。
+            if (targetId === 'readerControls' && controls) controls.classList.remove('collapsed');
 
             if (!performAction) {
                 window.requestAnimationFrame(() => {
