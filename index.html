@@ -743,7 +743,7 @@
             <div class="panel-row">
                 <span class="panel-label">閱讀底色</span>
                 <select id="readerThemeSelect" class="custom-select" onchange="changeReaderTheme()" aria-label="選擇閱讀底色">
-                    <option value="paper">米白</option>
+                    <option value="paper" selected>米白</option>
                     <option value="sky">淺藍</option>
                     <option value="pink">粉紅</option>
                     <option value="mint">淺綠</option>
@@ -781,7 +781,9 @@
         const EDIT_RECORDS_KEY = 'pureReadEditRecords_v1';
         const EDIT_RECORD_BACKUP_NAME = 'pureread-edit-records.json';
         const contentArea = document.getElementById('content-wrapper');
-        const READER_THEME_KEY = 'pureReadReaderTheme_v1';
+        // v2 starts with the intended paper default instead of inheriting a stale v1 gray default.
+        const DEFAULT_READER_THEME = 'paper';
+        const READER_THEME_KEY = 'pureReadReaderTheme_v2';
         const READER_THEMES = {
             paper: { bg: '#fffdf8', text: '#242424', link: '#1d4ed8', panel: '#f5f1e8', accent: '#b45309', image: '#cbd5e1', codeBg: '#1e293b', codeText: '#f8fafc', highlightBg: '#f3e8ff', highlightText: '#312e81', highlightBorder: '#c4b5fd' },
             sky: { bg: '#eaf6ff', text: '#17324d', link: '#075985', panel: '#d9efff', accent: '#0284c7', image: '#7aa6c2', codeBg: '#16324f', codeText: '#f0f9ff', highlightBg: '#dbeafe', highlightText: '#172554', highlightBorder: '#93c5fd' },
@@ -793,7 +795,7 @@
             black: { bg: '#0b0d10', text: '#ffffff', link: '#93c5fd', panel: '#171a1f', accent: '#bfdbfe', image: '#ffffff', codeBg: '#000000', codeText: '#ffffff', highlightBg: '#334155', highlightText: '#ffffff', highlightBorder: '#93c5fd' }
         };
         function applyReaderTheme(name, persist = true) {
-            const key = READER_THEMES[name] ? name : 'paper';
+            const key = READER_THEMES[name] ? name : DEFAULT_READER_THEME;
             const theme = READER_THEMES[key];
             const article = document.getElementById('articleContainer');
             const select = document.getElementById('readerThemeSelect');
@@ -807,7 +809,7 @@
         }
         function changeReaderTheme() {
             const select = document.getElementById('readerThemeSelect');
-            applyReaderTheme(select?.value || 'paper');
+            applyReaderTheme(select?.value || DEFAULT_READER_THEME);
         }
         let currentArticleUrl = '';
         let currentEditRecord = null;
@@ -5055,7 +5057,7 @@
             if (currentH1 && currentH1.textContent.trim()) {
                 articleTitle = currentH1.textContent.trim().substring(0, 50).replace(/[\\/:*?"<>|]/g, '');
             }
-            const selectedTheme = READER_THEMES[SafeStorage.get(READER_THEME_KEY)] || READER_THEMES.paper;
+            const selectedTheme = READER_THEMES[SafeStorage.get(READER_THEME_KEY)] || READER_THEMES[DEFAULT_READER_THEME];
 
             const cloneContent = exportSource.cloneNode(true);
             /* 編輯畫面的圖片位置控制只供 PureRead 內部使用；
@@ -5559,7 +5561,7 @@
         window.addEventListener('DOMContentLoaded', () => {
             window.scrollTo(0, 0);
             populateVoices();
-            applyReaderTheme(SafeStorage.get(READER_THEME_KEY) || 'paper', false);
+            applyReaderTheme(SafeStorage.get(READER_THEME_KEY) || DEFAULT_READER_THEME, false);
             prepareTTS();
             if (currentIndex > 0 && utterances[currentIndex]) {
                 utterances[currentIndex].el.classList.add('reading-highlight');
