@@ -668,10 +668,10 @@
                     <label for="cleanupLevel" class="font-bold text-indigo-900 whitespace-nowrap">清理級別</label>
                     <select id="cleanupLevel" onchange="applyCleanupLevel()" class="flex-1 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-indigo-900">
                         <option value="0">第 0 級・完全不攔截（全手動）</option>
-                        <option value="1">第 1 級・保守</option>
-                        <option value="2">第 2 級・輕度</option>
-                        <option value="3">第 3 級・中度</option>
-                        <option value="4">第 4 級・高度</option>
+                        <option value="1">第 1 級・保守（移除明確廣告）</option>
+                        <option value="2">第 2 級・輕度（廣告＋推薦區）</option>
+                        <option value="3">第 3 級・中度（含側欄及熱門內容）</option>
+                        <option value="4">第 4 級・高度（仍保留正文圖片）</option>
                         <option value="5">第 5 級・純文字</option>
                     </select>
                     <button onclick="restoreCleanupPreview()" class="rounded-lg border border-indigo-300 bg-white px-3 py-2 font-bold text-indigo-800 hover:bg-indigo-100">復原</button>
@@ -1746,6 +1746,20 @@
         function normalizeMediaSources(root, baseUrl = '') {
             stripFixedLayout(root);
             root.querySelectorAll('picture source, img, video, audio').forEach(el => {
+                if (el.tagName === 'SOURCE') {
+                    const sourceSet = firstUsableMediaValue(el, [
+                        'data-srcset', 'data-lazy-srcset', 'data-original-srcset', 'data-actual-srcset', 'srcset'
+                    ]);
+                    const resolvedSet = sourceSet.split(',').map(part => {
+                        const bits = part.trim().split(/\s+/);
+                        if (!bits[0] || isPlaceholderImageUrl(bits[0])) return '';
+                        const url = toOriginalImageUrl(resolveMediaUrl(bits[0], baseUrl));
+                        return `${url}${bits.slice(1).length ? ` ${bits.slice(1).join(' ')}` : ''}`;
+                    }).filter(Boolean).join(', ');
+                    if (resolvedSet) el.setAttribute('srcset', resolvedSet);
+                    else el.remove();
+                    return;
+                }
                 const lazySrc = firstUsableMediaValue(el, [
                     'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original', 
                     'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src',
@@ -1885,6 +1899,7 @@
              * 外殼」評分虛高，甚至令收窄行唔落去。extractNuclear 之後
              * 一樣會剷，所以喺呢度提早剷走唔會有副作用。 */
             doc.querySelectorAll('script, style, noscript, template').forEach(el => el.remove());
+            removeObviousAdBlocks(doc.body);
 
             const cands = new Set();
             doc.querySelectorAll(CONTENT_HINT_SELECTOR).forEach(el => cands.add(el));
@@ -1981,6 +1996,17 @@
             return frag.innerHTML + art.innerHTML;
         }
 
+        const OBVIOUS_AD_META_RE = /(?:^|[\s_-])(?:ad|ads|advert(?:isement)?s?|adsbygoogle|adbox|ad[-_ ]?zone|ad[-_ ]?slot|ad[-_ ]?unit|ad[-_ ]?container|native[-_ ]?ad|app[_-]?banner|download[_-]?banner)(?:$|[\s_-])|flyingcarpetbanner/i;
+
+        function removeObviousAdBlocks(root) {
+            if (!root || !root.querySelectorAll) return;
+            root.querySelectorAll('*').forEach(el => {
+                const hasAdData = ['data-ad', 'data-ad-slot', 'data-advertisement'].some(name => el.hasAttribute(name));
+                const meta = `${el.id || ''} ${el.getAttribute('class') || ''} ${el.getAttribute('data-prc') || ''} ${el.getAttribute('aria-label') || ''}`;
+                if (hasAdData || OBVIOUS_AD_META_RE.test(meta)) el.remove();
+            });
+        }
+
         function extractNuclear(htmlText, baseUrl = '', coverOverride = '') {
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
@@ -2004,7 +2030,7 @@
 
             const blackList = 'button, script, style, iframe, nav, footer, aside, form, input, textarea, select, .fab-container, .control-panel, .util-copy-btn, .fab-toggle, .scroll-btn, .trash-btn, #readerControls';
             targetNode.querySelectorAll(blackList).forEach(el => el.remove());
-            targetNode.querySelectorAll('[class~="ad"], [class*="adbox"], [class*="advert"], [class*="adsbygoogle"], [class*="ad-container"], [class*="ad-slot"], [data-ad], [id="ad"], [id^="ad-"], [id^="ad_"]').forEach(el => el.remove());
+            removeObviousAdBlocks(targetNode);
 
             targetNode.querySelectorAll('a').forEach(a => {
                 const href = a.getAttribute('href') || '';
@@ -3999,7 +4025,7 @@
         }
 
         function removeMarkedNonArticleContent(root, level) {
-            const marker = /廣告|推薦|相關文章|熱門文章|你可能感興趣|advert|sponsor|promot|related|recommend|banner|sidebar|native[-_ ]?ad|outbrain|taboola/i;
+            const marker = /廣告|推薦|相關文章|熱門文章|你可能感興趣|advert|sponsor|promot|related|recommend|sidebar|native[-_ ]?ad|outbrain|taboola/i;
             const removable = Array.from(root.querySelectorAll('*')).filter(el => {
                 if (el === root || el.closest('figure')?.querySelector('img') === el) return false;
                 const meta = `${el.id || ''} ${el.className || ''} ${el.getAttribute('data-prc') || ''} ${el.getAttribute('aria-label') || ''} ${el.getAttribute('data-label') || ''}`;
@@ -4223,6 +4249,7 @@
             if (!root) return;
             const blocksBefore = root.children.length;
             const imagesBefore = root.querySelectorAll('img').length;
+            removeObviousAdBlocks(root);
             const levelSelector = cleanupSelectorsForLevel(cleanupLevel);
             if (levelSelector) root.querySelectorAll(levelSelector).forEach(el => el.remove());
             removeMarkedNonArticleContent(root, cleanupLevel);
@@ -4230,28 +4257,10 @@
                 const href = a.getAttribute('href') || '';
                 if (/facebook\.com\/sharer|twitter\.com\/intent|linkedin\.com\/share/i.test(href)) a.remove();
             });
-            /* 【標題圖保護】貼上文章嘅標題圖係用家自己揀嘅主題圖，唔屬於
-             * 「網站雜質」，所以第 1–4 級一律唔准當普通內文圖去抽稀。
-             * （原邏輯靠「index 0 一定係封面」偶然保住，但一旦排版變動就會
-             * 靜靜咁刪走標題圖，所以改成明確排除。）
-             * 只有第 5 級「純文字」會連標題圖一齊清走 —— 呢個係該級別嘅定義。 */
-            const coverImages = new Set(Array.from(root.querySelectorAll('[data-pasted-cover] img')));
-            const allImages = Array.from(root.querySelectorAll('img'))
-                .filter(img => cleanupLevel === 5 || !coverImages.has(img));
-            if (cleanupLevel === 2) {
-                allImages.forEach((img, index) => {
-                    if (index % 2 === 1) (img.closest('figure') || img).remove();
-                });
-            } else if (cleanupLevel === 3) {
-                allImages.forEach((img, index) => {
-                    if (index % 4 !== 0) (img.closest('figure') || img).remove();
-                });
-            } else if (cleanupLevel === 4) {
-                allImages.forEach((img, index) => {
-                    if (index > 0) (img.closest('figure') || img).remove();
-                });
-            } else if (cleanupLevel === 5) {
-                allImages.forEach(img => (img.closest('figure') || img).remove());
+            // 第 1–4 級只清除明確標記的非正文區塊，不再按位置抽稀文章圖片；
+            // 只有「純文字」第 5 級會移除圖片。
+            if (cleanupLevel === 5) {
+                root.querySelectorAll('img').forEach(img => (img.closest('figure') || img).remove());
             }
             const blocksAfter = root.children.length;
             const imagesAfter = root.querySelectorAll('img').length;
@@ -4268,10 +4277,10 @@
             const note = document.getElementById('cleanupLevelNote');
             if (note) {
                 let noteText = `已套用第 ${cleanupLevel} 級；`;
-                if (cleanupLevel === 1) noteText += "盡量保留所有圖片。";
-                else if (cleanupLevel === 2) noteText += "圖片減少約 50%。";
-                else if (cleanupLevel === 3) noteText += "圖片減少約 75%。";
-                else if (cleanupLevel === 4) noteText += "只保留首張主要圖片。";
+                if (cleanupLevel === 1) noteText += "只移除明確標記的廣告；保留所有正文圖片。";
+                else if (cleanupLevel === 2) noteText += "移除廣告、分享及推薦區；保留所有正文圖片。";
+                else if (cleanupLevel === 3) noteText += "另外移除側欄和熱門內容；保留正文圖片。";
+                else if (cleanupLevel === 4) noteText += "較積極移除推廣區塊；保留正文圖片。";
                 else if (cleanupLevel === 5) noteText += "移除所有圖片，僅顯示純文字。";
                 /* 【修正 1】明確講出今次實際改動咗幾多，令用戶唔會再面對
                  * 「揀完好似冇反應」而唔知係成功定失敗。 */
