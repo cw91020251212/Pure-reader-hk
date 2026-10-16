@@ -1641,13 +1641,31 @@
         }
 
         function promoteLinkedImageTargets(root, baseUrl = '') {
-            root.querySelectorAll('a[href]').forEach(a => {
-                const href = a.getAttribute('href') || '';
+            root.querySelectorAll('a[href], a[data-href]').forEach((a, anchorIndex) => {
+                const dataTarget = a.getAttribute('data-href') || '';
+                const href = dataTarget || a.getAttribute('href') || '';
                 if (!isLikelyImageUrl(href)) return;
                 const resolvedHref = resolveMediaUrl(href, baseUrl);
-                const imgs = Array.from(a.querySelectorAll('img'));
+                let imgs = Array.from(a.querySelectorAll('img'));
+                if (dataTarget && !imgs.length) {
+                    const img = document.createElement('img');
+                    img.setAttribute('alt', (a.getAttribute('data-title') || '').trim() || `圖片 ${anchorIndex + 1}`);
+                    img.setAttribute('loading', 'eager');
+                    a.appendChild(img);
+                    imgs = [img];
+                }
                 if (!imgs.length) return;
                 imgs.forEach(img => {
+                    if (dataTarget) {
+                        // 清除會優先顯示縮圖的來源，確保使用連結提供的圖片網址。
+                        a.querySelectorAll('picture source').forEach(source => source.remove());
+                        img.setAttribute('src', resolvedHref);
+                        ['srcset', 'sizes', 'data-srcset', 'data-lazy-srcset', 'data-original-srcset',
+                            'data-actual-srcset', 'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original',
+                            'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-src-small',
+                            'data-src-medium', 'data-src-large'].forEach(name => img.removeAttribute(name));
+                        return;
+                    }
                     const currentSrc = img.getAttribute('src') || '';
                     const currentSrcset = img.getAttribute('srcset') || '';
                     if (!currentSrc || isPlaceholderImageUrl(currentSrc) || isPlaceholderImageUrl(currentSrcset)) {
