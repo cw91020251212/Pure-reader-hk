@@ -1641,13 +1641,35 @@
         }
 
         function promoteLinkedImageTargets(root, baseUrl = '') {
-            root.querySelectorAll('a[href]').forEach(a => {
-                const href = a.getAttribute('href') || '';
+            root.querySelectorAll('a[href], a.photoSwipe[data-href]').forEach((a, anchorIndex) => {
+                const isPhotoSwipe = a.matches('a.photoSwipe[data-href]');
+                // 將放大圖網址放在 data-href，而非一般 href；縮圖可能只有較小尺寸，
+                // 部分相簿項目更完全沒有 img，故需從相簿連結直接還原大圖。
+                const href = isPhotoSwipe ? (a.getAttribute('data-href') || '') : (a.getAttribute('href') || '');
                 if (!isLikelyImageUrl(href)) return;
                 const resolvedHref = resolveMediaUrl(href, baseUrl);
-                const imgs = Array.from(a.querySelectorAll('img'));
+                let imgs = Array.from(a.querySelectorAll('img'));
+                if (isPhotoSwipe && !imgs.length) {
+                    const img = document.createElement('img');
+                    const photoIndex = Number(a.getAttribute('data-photoindex'));
+                    const fallbackIndex = Number.isFinite(photoIndex) ? photoIndex + 1 : anchorIndex + 1;
+                    img.setAttribute('alt', (a.getAttribute('data-title') || '').trim() || `文章圖片 ${fallbackIndex}`);
+                    img.setAttribute('loading', 'eager');
+                    a.appendChild(img);
+                    imgs = [img];
+                }
                 if (!imgs.length) return;
                 imgs.forEach(img => {
+                    if (isPhotoSwipe) {
+                        // <picture><source> 會優先於 img.src；移除縮圖來源，確保顯示 data-href 大圖。
+                        a.querySelectorAll('picture source').forEach(source => source.remove());
+                        img.setAttribute('src', resolvedHref);
+                        ['srcset', 'sizes', 'data-srcset', 'data-lazy-srcset', 'data-original-srcset',
+                            'data-actual-srcset', 'data-src', 'data-actualsrc', 'data-lazy-src', 'data-original',
+                            'data-url', 'data-image', 'data-actual-src', 'data-lazyload-src', 'data-src-small',
+                            'data-src-medium', 'data-src-large'].forEach(name => img.removeAttribute(name));
+                        return;
+                    }
                     const currentSrc = img.getAttribute('src') || '';
                     const currentSrcset = img.getAttribute('srcset') || '';
                     if (!currentSrc || isPlaceholderImageUrl(currentSrc) || isPlaceholderImageUrl(currentSrcset)) {
