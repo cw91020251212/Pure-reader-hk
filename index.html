@@ -954,6 +954,29 @@
                 captureVisibleEditState();
                 return;
             }
+            /* 版面遷移：舊版會把巢狀正文中的圖片提升到 contentArea 直接子節點，
+             * 並把錯誤位置存入 currentHTML。若新鮮擷取仍有相同圖片在內層容器，
+             * 不套用舊的扁平化記錄，避免重開文章後圖片又全部跑到最前。 */
+            if (typeof record.currentHTML === 'string' && record.currentHTML.trim()) {
+                const savedRoot = document.createElement('div');
+                savedRoot.innerHTML = sanitizeContentHTML(record.currentHTML);
+                const imageKey = img => img.getAttribute('src') || img.getAttribute('alt') || '';
+                const freshNestedImageKeys = new Set(Array.from(contentArea.querySelectorAll('figure img'))
+                    .filter(img => img.closest('figure')?.parentElement !== contentArea)
+                    .map(imageKey).filter(Boolean));
+                const hasLegacyLiftedImage = Array.from(savedRoot.children)
+                    .filter(el => el.tagName === 'FIGURE' && el.querySelector('img'))
+                    .some(figure => freshNestedImageKeys.has(imageKey(figure.querySelector('img'))));
+                if (hasLegacyLiftedImage) {
+                    record.currentHTML = '';
+                    record.baseHTML = '';
+                    record.removed = [];
+                    record.cleanupApplied = false;
+                    record.cleanupLevel = 0;
+                    captureVisibleEditState();
+                    return;
+                }
+            }
             const hasSavedHTML = typeof record.currentHTML === 'string' && record.currentHTML.trim();
             if (hasSavedHTML && record.baseHTML) {
                 isApplyingEditRecord = true;
@@ -3890,20 +3913,54 @@
                 figure.setAttribute('data-pr-image-wrapper', '1');
                 mediaNode.before(figure);
                 figure.appendChild(mediaNode);
+                const paragraph = figure.parentElement;
+                if (paragraph?.tagName === 'P' && !paragraph.textContent.trim() &&
+                    paragraph.querySelectorAll('img').length === 1 && paragraph.children.length === 1) {
+                    paragraph.before(figure);
+                    paragraph.remove();
+                }
             });
-            /* 圖片經網站正文抽取後有時被包喺多層 div／p 入面。舊版用
-             * figure.previousElementSibling / nextElementSibling，所以只會喺自己嗰個
-             * 小容器內移動，到中間就好似「卡住」。先把每個圖片 figure 提升為
-             * contentArea 直接子節點，先可以越過標題、段落及其他圖片自由排序。 */
-            Array.from(container.querySelectorAll('figure')).forEach(figure => {
-                if (!figure.querySelector('img')) return;
-                let outer = figure;
-                while (outer.parentElement && outer.parentElement !== container) outer = outer.parentElement;
-                if (outer.parentElement === container && outer !== figure) outer.before(figure);
-            });
-
-            const contentBlocks = () => Array.from(container.children)
-                .filter(block => !block.classList.contains('pr-image-move-tools'));
+            /* 圖片保持原有巢狀位置；只展開正文容器，按文件閱讀順序列出段落、標題及圖片，
+             * 讓圖片可以跨越同一內層容器中的段落移動，而不把整個容器當成一個大區塊。 */
+            const movementBlocks = () => {
+                const blocks = [];
+                const containers = new Set([
+                    'DIV', 'SECTION', 'ARTICLE', 'MAIN', 'BODY', 'HEADER',
+                    'P', 'BLOCKQUOTE', 'UL', 'OL', 'LI', 'TABLE', 'TBODY',
+                    'THEAD', 'TFOOT', 'TR', 'TD', 'TH'
+                ]);
+                const flowTags = new Set([
+                    'P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'FIGURE',
+                    'BLOCKQUOTE', 'PRE', 'UL', 'OL', 'TABLE', 'HR', 'DIV',
+                    'SECTION', 'ARTICLE', 'MAIN', 'HEADER', 'LI'
+                ]);
+                const visit = parent => Array.from(parent.children).forEach(el => {
+                    if (el.classList.contains('pr-image-move-tools')) return;
+                    if (el.tagName === 'FIGURE' && el.querySelector('img')) {
+                        blocks.push(el);
+                        return;
+                    }
+                    const children = Array.from(el.children).filter(child => !child.classList.contains('pr-image-move-tools'));
+                    const hasFlowChildren = children.some(child => flowTags.has(child.tagName));
+                    const hasNestedImageFigure = !!el.querySelector('figure img');
+                    if (containers.has(el.tagName) && (hasFlowChildren || hasNestedImageFigure)) {
+                        visit(el);
+                        return;
+                    }
+                    if ((el.textContent || '').trim() || el.querySelector('img, video, audio, table')) blocks.push(el);
+                });
+                visit(container);
+                return blocks;
+            };
+            const pruneEmptyAncestors = start => {
+                let node = start;
+                while (node && node !== container && !node.children.length && !(node.textContent || '').trim() &&
+                    !node.querySelector('img, video, audio')) {
+                    const parent = node.parentElement;
+                    node.remove();
+                    node = parent;
+                }
+            };
             container.querySelectorAll('figure').forEach(figure => {
                 if (!figure.querySelector('img')) return;
                 /* currentHTML 由 localStorage 用 innerHTML 還原時，舊按鈕的
@@ -3918,13 +3975,13 @@
                 up.type = down.type = 'button';
                 up.textContent = '↑ 移上一段';
                 down.textContent = '↓ 移下一段';
-                up.title = '將圖片移到上一個內容區塊之前';
-                down.title = '將圖片移到下一個內容區塊之後';
+                up.title = '將圖片移到上一個段落或標題之前';
+                down.title = '將圖片移到下一個段落或標題之後';
                 tools.append(up, down);
                 figure.appendChild(tools);
 
                 const refresh = () => {
-                    const blocks = contentBlocks();
+                    const blocks = movementBlocks();
                     const index = blocks.indexOf(figure);
                     up.disabled = index <= 0;
                     down.disabled = index < 0 || index >= blocks.length - 1;
@@ -3932,22 +3989,26 @@
                 up.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    const blocks = contentBlocks();
+                    const blocks = movementBlocks();
                     const index = blocks.indexOf(figure);
                     const previous = index > 0 ? blocks[index - 1] : null;
                     if (!previous) return;
+                    const oldParent = figure.parentElement;
                     previous.before(figure);
+                    pruneEmptyAncestors(oldParent);
                     saveCurrentEditRecord();
                     installImageMoveControls(container);
                 });
                 down.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    const blocks = contentBlocks();
+                    const blocks = movementBlocks();
                     const index = blocks.indexOf(figure);
                     const next = index >= 0 && index < blocks.length - 1 ? blocks[index + 1] : null;
                     if (!next) return;
+                    const oldParent = figure.parentElement;
                     next.after(figure);
+                    pruneEmptyAncestors(oldParent);
                     saveCurrentEditRecord();
                     installImageMoveControls(container);
                 });
